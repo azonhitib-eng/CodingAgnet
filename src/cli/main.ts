@@ -21,7 +21,7 @@
 
 import { resolve } from "node:path";
 import { loadCatalogBundleSync, type CatalogPaths } from "../catalog/bundle.js";
-import { CliError, usageError, EXIT_OK, EXIT_RUNTIME } from "./errors.js";
+import { CliError, usageError, EXIT_OK, EXIT_RUNTIME, EXIT_BLOCKED } from "./errors.js";
 import { printError } from "./format.js";
 import { runDetectHost } from "./commands/detect-host.js";
 import { runListModels } from "./commands/list-models.js";
@@ -32,6 +32,12 @@ import { runRenderPlan } from "./commands/render-plan.js";
 import { runRunWorkflow } from "./commands/run-workflow.js";
 import { detectHost } from "../detection/host-detector.js";
 import { loadHostProfile } from "./host-loader.js";
+
+// ---------------------------------------------------------------------------
+// Package version (kept in sync with package.json)
+// ---------------------------------------------------------------------------
+
+const PKG_VERSION = "0.1.0";
 
 // ---------------------------------------------------------------------------
 // Arg parsing helpers
@@ -70,6 +76,7 @@ Global options:
   --data-dir <path>    Path to catalog data directory (default: ./data)
   --host-file <path>   Use a saved host profile JSON instead of live detection
   --help               Show this help message
+  --version            Show package version
 
 Command-specific options:
   list-models:
@@ -96,6 +103,13 @@ Command-specific options:
                             target_selection, compatibility_evaluation, install_planning,
                             safety_evaluation, rendering
 
+Exit codes:
+  0  Success
+  1  Usage error (wrong flags, missing arguments)
+  2  Input error (bad file, invalid JSON, unknown artifact)
+  3  Runtime error (unexpected internal error)
+  4  Blocked (workflow safety evaluation found blocked violations)
+
 Note: Install plans are INFORMATIONAL ONLY and are NOT executed.
       Use --host-file for deterministic, reproducible results.
 `.trim();
@@ -114,6 +128,11 @@ export async function main(
 
     if (!command || hasFlag(argv, "--help")) {
       writer(USAGE);
+      return EXIT_OK;
+    }
+
+    if (hasFlag(argv, "--version")) {
+      writer(PKG_VERSION);
       return EXIT_OK;
     }
 
@@ -216,7 +235,7 @@ export async function main(
         const host = hostFilePath
           ? loadHostProfile(hostFilePath)
           : await detectHost({ catalogRuntimes: bundle.runtimes.listAll() });
-        runRunWorkflow({
+        const result = runRunWorkflow({
           bundle,
           host,
           artifactId: getFlagValue(argv, "--artifact"),
@@ -224,6 +243,8 @@ export async function main(
           json: jsonMode,
           writer,
         });
+        if (result.status === "blocked") return EXIT_BLOCKED;
+        if (result.status === "failed") return EXIT_RUNTIME;
         return EXIT_OK;
       }
 

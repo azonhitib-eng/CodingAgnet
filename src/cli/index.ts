@@ -3,7 +3,7 @@
  */
 
 export { main } from "./main.js";
-export { CliError, usageError, inputError, EXIT_OK, EXIT_USAGE, EXIT_INPUT, EXIT_RUNTIME } from "./errors.js";
+export { CliError, usageError, inputError, EXIT_OK, EXIT_USAGE, EXIT_INPUT, EXIT_RUNTIME, EXIT_BLOCKED } from "./errors.js";
 export { printOutput, printError, formatKeyValue } from "./format.js";
 export { loadHostProfile, validateHostProfile } from "./host-loader.js";
 

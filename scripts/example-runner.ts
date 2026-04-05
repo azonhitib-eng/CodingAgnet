@@ -7,24 +7,20 @@
  *   npx tsx scripts/example-runner.ts --data-dir ./data
  *
  * This is a developer-facing debug entrypoint, NOT a production CLI.
+ * All install plans are INFORMATIONAL ONLY and are never executed.
  */
 
 import { resolve } from "node:path";
 import {
   loadCatalogBundleSync,
-  type CatalogPaths,
-} from "../src/catalog/bundle.js";
-import { recommend } from "../src/compatibility/recommendation-engine.js";
-import { checkCompatibility } from "../src/compatibility/compatibility-engine.js";
-import {
+  recommend,
+  checkCompatibility,
   generateInstallPlan,
-} from "../src/install-plan/install-planner.js";
-import {
   evaluatePlanSafety,
   defaultExecutionPolicy,
-} from "../src/install-plan/safety-evaluator.js";
-import { renderPlan } from "../src/install-plan/plan-renderer.js";
-import type { HostProfile } from "../src/types/host.js";
+  renderPlan,
+  type HostProfile,
+} from "../src/index.js";
 
 // ---------------------------------------------------------------------------
 // Mock host (simulates a Linux machine with GPU)
@@ -71,7 +67,7 @@ function main(): void {
       : "./data",
   );
 
-  const catalogPaths: CatalogPaths = {
+  const catalogPaths = {
     models: resolve(dataDir, "models"),
     runtimes: resolve(dataDir, "runtimes"),
     agentTools: resolve(dataDir, "agent-tools"),

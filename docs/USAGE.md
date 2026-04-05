@@ -337,6 +337,7 @@ npx tsx src/cli/main.ts <command> [options]
 | `--data-dir <path>` | Path to catalog data directory (default: `./data`) |
 | `--host-file <path>` | Use a saved host profile JSON instead of live detection |
 | `--help` | Show help message |
+| `--version` | Show package version |
 
 ### Host detection behavior
 
@@ -460,6 +461,12 @@ Valid `--stop-after` stages: `catalog_loading`, `host_acquisition`, `recommendat
 
 **⚠ IMPORTANT: This is NOT an execution engine. Plans are INFORMATIONAL ONLY and are NOT executed.**
 
+**Exit code behavior for `run-workflow`:**
+- `completed` and `completed_requires_approval` → exit code `0`
+- `partial` → exit code `0` (user requested early stop)
+- `blocked` → exit code `4` (`EXIT_BLOCKED`)
+- `failed` → exit code `3` (`EXIT_RUNTIME`)
+
 ### JSON output
 
 All commands support `--json` to output structured JSON instead of human-readable text.
@@ -499,6 +506,7 @@ When using `plan-install` or `render-plan`, the safety report uses a 3-state mod
 | `1` | `EXIT_USAGE` | Usage error | Wrong flags, missing arguments, unknown command, invalid filter values |
 | `2` | `EXIT_INPUT` | Input error | File not found, invalid JSON, schema validation failure, unknown artifact ID |
 | `3` | `EXIT_RUNTIME` | Runtime error | Unexpected errors, catalog load failures, internal errors |
+| `4` | `EXIT_BLOCKED` | Blocked | Workflow safety evaluation found blocked violations |
 
 **Error behavior:**
 - All errors print to stderr via `Error: <message>` format

@@ -1,0 +1,33 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+### Added
+
+- **Phase 9B** — Package, release surface, and consumer experience hardening
+  - Explicit `exports` field in package.json with subpath exports (`.`, `./cli`, `./workflow`, `./schemas`)
+  - `files` field to control npm publish surface
+  - `--version` flag for the CLI
+  - Exit code `4` (`EXIT_BLOCKED`) for blocked workflow results
+  - Workflow CLI now returns non-zero exit codes for `blocked` (4) and `failed` (3) statuses
+  - Package keywords and enhanced description
+  - CHANGELOG.md stub
+  - Comprehensive README.md with quick start, library/CLI/workflow usage guides
+  - Smoke and export surface tests
+
+## [0.1.0] — Initial development
+
+### Included (Phases 1–8B)
+
+- **Phase 1** — Type system and Zod schemas for models, runtimes, agent-tools, host profiles, compatibility, install plans, and safety
+- **Phase 2** — Catalog layer: model catalog, runtime registry, agent-tool catalog, manifest loading, bundle loading with cross-catalog validation
+- **Phase 3** — Host detection: OS, CPU, memory, GPU, and runtime detection with confidence levels
+- **Phase 4** — Compatibility engine and recommendation engine with data-driven scoring
+- **Phase 5** — Install plan generator, safety evaluator, plan renderer, execution policies
+- **Phase 6** — High-level API facade (`renderPlanWithSafety`, `runFullFlow`), integration tests, example runner, USAGE.md
+- **Phase 7A** — CLI layer: detect-host, list-models, recommend-models, check-compatibility, plan-install, render-plan commands
+- **Phase 7B** — Host file support (`--host-file`), host profile validation, deterministic CLI paths
+- **Phase 8A** — Workflow orchestration layer: staged pipeline runner with typed inputs/outputs, approval-aware status
+- **Phase 8B** — Workflow CLI entrypoint (`run-workflow` command)
