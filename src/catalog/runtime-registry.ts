@@ -23,7 +23,7 @@ export class RuntimeRegistry {
       throw new CatalogError(
         "DUPLICATE_ID",
         `Duplicate runtime id "${runtime.id}"`,
-        { id: runtime.id, type: "RuntimeEntry" },
+        { entityId: runtime.id, manifestType: "runtime" },
       );
     }
 

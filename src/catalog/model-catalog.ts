@@ -42,7 +42,7 @@ export class ModelCatalog {
       throw new CatalogError(
         "DUPLICATE_ID",
         `Duplicate model family id "${family.id}"`,
-        { id: family.id, type: "ModelFamily" },
+        { entityId: family.id, manifestType: "model" },
       );
     }
 
@@ -52,7 +52,7 @@ export class ModelCatalog {
         throw new CatalogError(
           "DUPLICATE_ID",
           `Duplicate model variant id "${v.id}"`,
-          { id: v.id, type: "ModelVariant" },
+          { entityId: v.id, manifestType: "model" },
         );
       }
     }
@@ -63,7 +63,7 @@ export class ModelCatalog {
         throw new CatalogError(
           "DUPLICATE_ID",
           `Duplicate model artifact id "${a.id}"`,
-          { id: a.id, type: "ModelArtifact" },
+          { entityId: a.id, manifestType: "model" },
         );
       }
     }
@@ -74,7 +74,7 @@ export class ModelCatalog {
         throw new CatalogError(
           "REFERENCE_INTEGRITY_ERROR",
           `Variant "${v.id}" references familyId "${v.familyId}" but manifest family is "${family.id}"`,
-          { variantId: v.id, expected: family.id, found: v.familyId },
+          { entityId: v.id, manifestType: "model", expected: family.id, found: v.familyId },
         );
       }
     }
@@ -86,7 +86,7 @@ export class ModelCatalog {
         throw new CatalogError(
           "REFERENCE_INTEGRITY_ERROR",
           `Artifact "${a.id}" references variantId "${a.variantId}" which does not exist in this manifest`,
-          { artifactId: a.id, variantId: a.variantId },
+          { entityId: a.id, manifestType: "model", variantId: a.variantId },
         );
       }
     }
@@ -108,7 +108,7 @@ export class ModelCatalog {
         throw new CatalogError(
           "REFERENCE_INTEGRITY_ERROR",
           `Artifact "${a.id}" references runtimeId "${a.runtimeId}" which is not in the runtime registry`,
-          { artifactId: a.id, runtimeId: a.runtimeId },
+          { entityId: a.id, manifestType: "model", runtimeId: a.runtimeId },
         );
       }
     }

@@ -23,7 +23,7 @@ export class AgentToolCatalog {
       throw new CatalogError(
         "DUPLICATE_ID",
         `Duplicate agent tool id "${tool.id}"`,
-        { id: tool.id, type: "AgentToolEntry" },
+        { entityId: tool.id, manifestType: "agent-tool" },
       );
     }
 
@@ -42,7 +42,7 @@ export class AgentToolCatalog {
           throw new CatalogError(
             "REFERENCE_INTEGRITY_ERROR",
             `Agent tool "${tool.id}" requires runtime "${rid}" which is not in the runtime registry`,
-            { toolId: tool.id, runtimeId: rid },
+            { entityId: tool.id, manifestType: "agent-tool", runtimeId: rid },
           );
         }
       }
