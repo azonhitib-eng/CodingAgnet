@@ -4,6 +4,9 @@
  * Generates the single-page HTML application that the shell serves.
  * Uses vanilla HTML/CSS/JS — no framework dependencies.
  * Data is fetched from the JSON API endpoints.
+ *
+ * Phase 14: UX hardening — improved status clarity, blocked/approval UX,
+ * form usability, validation/error presentation, and convenience features.
  */
 
 // ---------------------------------------------------------------------------
@@ -32,6 +35,7 @@ ${CSS}
     <option value="demo">Demo</option>
     <option value="real">Real</option>
   </select>
+  <span id="mode-hint" class="mode-hint">Explore pre-built scenarios — no setup required.</span>
 </nav>
 <div id="demo-controls">
   <nav id="scenario-nav">
@@ -42,27 +46,38 @@ ${CSS}
 </div>
 <div id="real-controls" style="display:none;">
   <div class="real-form">
-    <div class="form-row">
-      <label for="data-dir-input">Data Directory:</label>
-      <input type="text" id="data-dir-input" placeholder="path/to/data (contains models/, runtimes/, agent-tools/)" />
-    </div>
-    <div class="form-row">
-      <label for="host-file-input">Host Profile File:</label>
-      <input type="text" id="host-file-input" placeholder="path/to/host-profile.json" />
-    </div>
-    <div class="form-row">
-      <label for="artifact-input">Artifact ID (optional):</label>
-      <input type="text" id="artifact-input" placeholder="e.g. codellama-7b-q4_k_m-ollama" />
-    </div>
-    <div class="form-row">
-      <label for="stop-after-input">Stop After Stage (optional):</label>
-      <select id="stop-after-input"><option value="">— run all stages —</option></select>
-    </div>
-    <div class="form-row">
+    <fieldset class="form-group">
+      <legend>Required Inputs</legend>
+      <div class="form-row">
+        <label for="data-dir-input">Data Directory</label>
+        <input type="text" id="data-dir-input" placeholder="path/to/data" />
+        <span class="field-hint">Directory containing <code>models/</code>, <code>runtimes/</code>, <code>agent-tools/</code></span>
+      </div>
+      <div class="form-row">
+        <label for="host-file-input">Host Profile File</label>
+        <input type="text" id="host-file-input" placeholder="path/to/host-profile.json" />
+        <span class="field-hint">JSON file with a valid HostProfile</span>
+      </div>
+    </fieldset>
+    <fieldset class="form-group">
+      <legend>Optional</legend>
+      <div class="form-row">
+        <label for="artifact-input">Artifact ID</label>
+        <input type="text" id="artifact-input" placeholder="e.g. codellama-7b-q4_k_m-ollama" />
+        <span class="field-hint">Leave empty for auto-recommendation</span>
+      </div>
+      <div class="form-row">
+        <label for="stop-after-input">Stop After Stage</label>
+        <select id="stop-after-input"><option value="">— run all stages —</option></select>
+        <span class="field-hint">Stop workflow early at a specific stage</span>
+      </div>
+    </fieldset>
+    <div class="form-actions">
       <button id="run-workflow-btn" type="button">Run Workflow</button>
       <button id="validate-btn" type="button" class="btn-secondary">Validate Inputs</button>
+      <button id="reset-form-btn" type="button" class="btn-secondary">Reset</button>
     </div>
-    <div id="validation-result" class="muted" style="display:none;"></div>
+    <div id="validation-result" style="display:none;"></div>
   </div>
 </div>
 <main id="app">
@@ -85,6 +100,8 @@ const CSS = `
   --card-bg: #fff; --card-border: #dee2e6; --card-radius: 6px;
   --accent: #0d6efd; --success: #198754; --warning: #ffc107;
   --danger: #dc3545; --critical: #6f42c1; --info: #0dcaf0;
+  --blocked-bg: #f3e8ff; --blocked-border: #c084fc; --blocked-fg: #581c87;
+  --approval-bg: #fef9c3; --approval-border: #facc15; --approval-fg: #713f12;
   font-family: system-ui, -apple-system, sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; }
@@ -105,11 +122,21 @@ main { padding: 1.5rem; max-width: 960px; margin: 0 auto; }
 }
 .card h2 { margin: 0 0 .5rem; font-size: 1.1rem; }
 .card h3 { margin: .75rem 0 .25rem; font-size: .95rem; }
+.card-blocked {
+  background: var(--blocked-bg); border-color: var(--blocked-border);
+}
+.card-approval {
+  background: var(--approval-bg); border-color: var(--approval-border);
+}
+.card-error {
+  background: #fef2f2; border-color: #fca5a5;
+}
 .badge {
-  display: inline-block; padding: .15rem .5rem; border-radius: 3px;
-  font-size: .75rem; font-weight: 600; text-transform: uppercase;
+  display: inline-block; padding: .2rem .6rem; border-radius: 3px;
+  font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .02em;
 }
 .badge-info { background: #cff4fc; color: #055160; }
+.badge-success { background: #d1e7dd; color: #0f5132; }
 .badge-warning { background: #fff3cd; color: #664d03; }
 .badge-error { background: #f8d7da; color: #842029; }
 .badge-critical { background: #e2d9f3; color: #432874; }
@@ -119,26 +146,63 @@ dd { margin: 0 0 0 0; }
 table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--card-border); }
 th { font-size: .8rem; color: var(--muted); text-transform: uppercase; }
+.stage-bar { display: flex; gap: 2px; margin: .75rem 0; border-radius: 4px; overflow: hidden; }
+.stage-segment { flex: 1; height: 8px; background: #e9ecef; transition: background .2s; }
+.stage-segment.completed { background: var(--success); }
+.stage-segment.failed { background: var(--danger); }
+.stage-segment.blocked { background: var(--critical); }
 .stage-list { list-style: none; padding: 0; margin: .5rem 0; }
-.stage-list li { padding: .25rem 0; font-size: .9rem; }
-.stage-list li::before { content: '○ '; color: var(--muted); }
-.stage-list li.completed::before { content: '● '; color: var(--success); }
+.stage-list li { padding: .3rem 0; font-size: .9rem; display: flex; align-items: center; gap: .4rem; }
+.stage-icon { width: 18px; text-align: center; font-size: .85rem; }
+.stage-icon.done { color: var(--success); }
+.stage-icon.pending { color: var(--muted); }
+.stage-icon.fail { color: var(--danger); }
 .step-grid { display: grid; gap: .5rem; }
 .step-item { padding: .5rem .75rem; border: 1px solid var(--card-border); border-radius: 4px; font-size: .9rem; }
+.step-item.step-approval { border-color: var(--approval-border); background: #fffbeb; }
+.step-item.step-blocked { border-color: var(--blocked-border); background: #faf5ff; }
 .step-item code { font-family: 'SF Mono', 'Consolas', monospace; font-size: .82rem; background: #f1f3f5; padding: .1rem .3rem; border-radius: 2px; }
 ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size: .9rem; }
-.error-box { background: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: .75rem; color: #842029; font-size: .9rem; }
+.error-box { background: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: .75rem 1rem; color: #842029; font-size: .9rem; margin-bottom: .75rem; }
+.error-box .error-title { font-weight: 700; margin-bottom: .25rem; }
+.error-box .error-hint { font-style: italic; color: #6b2129; font-size: .82rem; margin-top: .35rem; }
+.warning-box { background: #fff3cd; border: 1px solid #ffecb5; border-radius: 4px; padding: .75rem 1rem; color: #664d03; font-size: .9rem; margin-bottom: .75rem; }
+.blocked-box { background: var(--blocked-bg); border: 1px solid var(--blocked-border); border-radius: 4px; padding: .75rem 1rem; color: var(--blocked-fg); font-size: .9rem; margin-bottom: .75rem; }
+.blocked-box .blocked-title { font-weight: 700; margin-bottom: .25rem; font-size: 1rem; }
+.next-action { background: #e8f4fd; border: 1px solid #b6d4fe; border-radius: 4px; padding: .6rem 1rem; font-size: .85rem; color: #084298; margin-top: .5rem; }
+.next-action strong { font-weight: 700; }
 #mode-nav { padding: .5rem 1.5rem; border-bottom: 1px solid var(--card-border); background: var(--card-bg); display: flex; align-items: center; gap: .75rem; }
 #mode-nav label { font-weight: 600; }
 #mode-nav select { padding: .35rem .5rem; border-radius: 4px; border: 1px solid var(--card-border); }
+.mode-hint { color: var(--muted); font-size: .82rem; font-style: italic; }
 .real-form { padding: .75rem 1.5rem; border-bottom: 1px solid var(--card-border); background: var(--card-bg); }
-.form-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; flex-wrap: wrap; }
-.form-row label { font-weight: 600; font-size: .9rem; min-width: 180px; }
-.form-row input[type="text"] { flex: 1; min-width: 200px; padding: .35rem .5rem; border-radius: 4px; border: 1px solid var(--card-border); font-size: .9rem; }
+.form-group { border: 1px solid var(--card-border); border-radius: 6px; padding: .75rem 1rem; margin-bottom: .75rem; }
+.form-group legend { font-weight: 600; font-size: .9rem; padding: 0 .35rem; color: var(--muted); }
+.form-row { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: .6rem; flex-wrap: wrap; }
+.form-row label { font-weight: 600; font-size: .9rem; min-width: 160px; padding-top: .35rem; }
+.form-row input[type="text"] { flex: 1; min-width: 200px; padding: .4rem .5rem; border-radius: 4px; border: 1px solid var(--card-border); font-size: .9rem; }
+.form-row input[type="text"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(13,110,253,.15); }
+.form-row input.input-error { border-color: var(--danger); }
 .form-row select { padding: .35rem .5rem; border-radius: 4px; border: 1px solid var(--card-border); }
-.form-row button { padding: .4rem 1rem; border-radius: 4px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font-size: .9rem; }
-.form-row button:hover { opacity: .9; }
-.form-row .btn-secondary { background: var(--card-bg); color: var(--fg); border-color: var(--card-border); }
+.field-hint { display: block; width: 100%; font-size: .78rem; color: var(--muted); margin-top: -.2rem; padding-left: 160px; }
+.field-hint code { font-size: .75rem; background: #f1f3f5; padding: .05rem .25rem; border-radius: 2px; }
+.form-actions { display: flex; gap: .5rem; margin-top: .5rem; flex-wrap: wrap; }
+.form-actions button { padding: .45rem 1.1rem; border-radius: 4px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font-size: .9rem; }
+.form-actions button:hover { opacity: .9; }
+.form-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.form-actions .btn-secondary { background: var(--card-bg); color: var(--fg); border-color: var(--card-border); }
+#validation-result { margin-top: .5rem; padding: .5rem .75rem; border-radius: 4px; font-size: .85rem; }
+#validation-result.vr-ok { background: #d1e7dd; color: #0f5132; }
+#validation-result.vr-err { background: #f8d7da; color: #842029; }
+#validation-result.vr-mix { background: #fff3cd; color: #664d03; }
+.collapsible { cursor: pointer; user-select: none; }
+.collapsible::before { content: '\\25b6 '; font-size: .7rem; display: inline-block; transition: transform .15s; }
+.collapsible.open::before { transform: rotate(90deg); }
+.collapsible-body { display: none; margin-top: .25rem; }
+.collapsible.open + .collapsible-body { display: block; }
+.copy-btn { display: inline-block; padding: .15rem .5rem; border: 1px solid var(--card-border); border-radius: 3px; font-size: .72rem; background: var(--card-bg); cursor: pointer; color: var(--muted); margin-left: .5rem; }
+.copy-btn:hover { background: #e9ecef; }
+.progress-label { font-size: .82rem; color: var(--muted); margin-bottom: .25rem; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -148,6 +212,7 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 const CLIENT_JS = `
 (function() {
   var $modeSelect = document.getElementById('mode-select');
+  var $modeHint = document.getElementById('mode-hint');
   var $demoControls = document.getElementById('demo-controls');
   var $realControls = document.getElementById('real-controls');
   var $select = document.getElementById('scenario-select');
@@ -159,7 +224,41 @@ const CLIENT_JS = `
   var $stopAfterInput = document.getElementById('stop-after-input');
   var $runBtn = document.getElementById('run-workflow-btn');
   var $validateBtn = document.getElementById('validate-btn');
+  var $resetBtn = document.getElementById('reset-form-btn');
   var $validationResult = document.getElementById('validation-result');
+
+  // ── Storage helpers ─────────────────────────────────────────────────
+
+  var STORAGE_KEY = 'codingagent_shell_prefs';
+
+  function loadPrefs() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch(e) { return {}; }
+  }
+
+  function savePrefs(prefs) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch(e) {}
+  }
+
+  function restoreInputs() {
+    var p = loadPrefs();
+    if (p.mode) $modeSelect.value = p.mode;
+    if (p.dataDir) $dataDirInput.value = p.dataDir;
+    if (p.hostFile) $hostFileInput.value = p.hostFile;
+    if (p.artifactId) $artifactInput.value = p.artifactId;
+  }
+
+  function persistInputs() {
+    savePrefs({
+      mode: $modeSelect.value,
+      dataDir: $dataDirInput.value,
+      hostFile: $hostFileInput.value,
+      artifactId: $artifactInput.value,
+    });
+  }
+
+  // ── Fetch helpers ───────────────────────────────────────────────────
 
   async function fetchJson(url) {
     var resp = await fetch(url);
@@ -176,6 +275,8 @@ const CLIENT_JS = `
     return resp.json();
   }
 
+  // ── Rendering helpers ───────────────────────────────────────────────
+
   function badge(severity) {
     return '<span class="badge badge-' + severity + '">' + severity + '</span>';
   }
@@ -187,10 +288,46 @@ const CLIENT_JS = `
     return d.innerHTML;
   }
 
+  function collapsible(title, bodyHtml, startOpen) {
+    var cls = startOpen ? 'collapsible open' : 'collapsible';
+    return '<span class="' + cls + '" onclick="this.classList.toggle(\\'open\\')">' + title + '</span>'
+      + '<div class="collapsible-body">' + bodyHtml + '</div>';
+  }
+
+  function copyBtn(dataId) {
+    return '<button class="copy-btn" data-copy="' + dataId + '" onclick="window.__copyData(this)" type="button">Copy JSON</button>';
+  }
+
+  // Global copy handler
+  window.__copyData = function(btn) {
+    var id = btn.getAttribute('data-copy');
+    var el = document.getElementById(id);
+    if (!el) return;
+    try {
+      navigator.clipboard.writeText(el.textContent);
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy JSON'; }, 1500);
+    } catch(e) {}
+  };
+
+  // ── Status helpers ──────────────────────────────────────────────────
+
+  var STATUS_CONFIG = {
+    completed: { icon: '\\u2705', cardClass: '', nextAction: 'All stages completed successfully. The install plan is approved and ready for review.' },
+    completed_requires_approval: { icon: '\\u26a0\\ufe0f', cardClass: 'card-approval', nextAction: 'Review the install plan carefully. Some steps require your explicit approval before execution.' },
+    blocked: { icon: '\\ud83d\\udeab', cardClass: 'card-blocked', nextAction: 'This workflow is blocked. The install plan contains unsafe operations that cannot proceed. Do NOT execute this plan.' },
+    failed: { icon: '\\u274c', cardClass: 'card-error', nextAction: 'The workflow failed at one of its stages. Check the error details below and correct the issue.' },
+    partial: { icon: '\\u23f8\\ufe0f', cardClass: '', nextAction: 'The workflow stopped early as requested. Only a subset of stages were executed.' },
+  };
+
+  function getStatusConfig(status) {
+    return STATUS_CONFIG[status] || STATUS_CONFIG.failed;
+  }
+
   // ── Host summary ──────────────────────────────────────────────────────
 
   function renderHost(h) {
-    return '<div class="card"><h2>Host Summary</h2>'
+    return '<div class="card"><h2>\\ud83d\\udcbb Host Summary</h2>'
       + '<p><strong>' + esc(h.summary) + '</strong></p>'
       + '<dl>'
       + '<dt>OS / Arch</dt><dd>' + esc(h.os) + ' ' + esc(h.arch) + '</dd>'
@@ -205,23 +342,23 @@ const CLIENT_JS = `
   // ── Recommendations ───────────────────────────────────────────────────
 
   function renderRecommendation(r) {
-    if (!r) return '<div class="card"><h2>Recommendation</h2><p class="muted">No recommendation available for this scenario.</p></div>';
-    return '<div class="card"><h2>Recommendation</h2>'
+    if (!r) return '<div class="card"><h2>\\ud83c\\udfaf Recommendation</h2><p class="muted">No recommendation available for this scenario.</p></div>';
+    return '<div class="card"><h2>\\ud83c\\udfaf Recommendation</h2>'
       + '<p><strong>' + esc(r.displayName) + '</strong> ' + badge(r.compatibilitySeverity) + '</p>'
       + '<dl>'
       + '<dt>Score</dt><dd>' + r.score + '</dd>'
       + '<dt>Compatibility</dt><dd>' + esc(r.compatibilityLabel) + '</dd>'
       + '</dl>'
       + '<h3>Explanations</h3><ul class="plain">' + r.explanations.map(function(e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>'
-      + (r.warnings.length > 0 ? '<h3>Warnings</h3><ul class="plain">' + r.warnings.map(function(w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>' : '')
+      + (r.warnings.length > 0 ? '<h3>Warnings</h3><ul class="plain">' + r.warnings.map(function(w) { return '<li>\\u26a0 ' + esc(w) + '</li>'; }).join('') + '</ul>' : '')
       + '</div>';
   }
 
   // ── Compatibility ─────────────────────────────────────────────────────
 
   function renderCompatibility(c) {
-    if (!c) return '<div class="card"><h2>Compatibility</h2><p class="muted">Not evaluated in this scenario.</p></div>';
-    return '<div class="card"><h2>Compatibility Detail</h2>'
+    if (!c) return '<div class="card"><h2>\\ud83d\\udd0d Compatibility</h2><p class="muted">Not evaluated in this scenario.</p></div>';
+    return '<div class="card"><h2>\\ud83d\\udd0d Compatibility Detail</h2>'
       + '<p>' + badge(c.severity) + ' <strong>' + esc(c.label) + '</strong></p>'
       + '<p>' + esc(c.summaryMessage) + '</p>'
       + '<dl>'
@@ -230,7 +367,7 @@ const CLIENT_JS = `
       + (c.effectiveContextWindow != null ? '<dt>Context Window</dt><dd>' + c.effectiveContextWindow + ' tokens</dd>' : '')
       + '</dl>'
       + (c.reasons.length > 0 ? '<h3>Reasons</h3><ul class="plain">' + c.reasons.map(function(r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>' : '')
-      + (c.warnings.length > 0 ? '<h3>Warnings</h3><ul class="plain">' + c.warnings.map(function(w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>' : '')
+      + (c.warnings.length > 0 ? '<h3>Warnings</h3><ul class="plain">' + c.warnings.map(function(w) { return '<li>\\u26a0 ' + esc(w) + '</li>'; }).join('') + '</ul>' : '')
       + (c.settingsAdjustments.length > 0 ? '<h3>Settings Adjustments</h3><table><tr><th>Parameter</th><th>Suggested</th><th>Reason</th></tr>'
         + c.settingsAdjustments.map(function(a) { return '<tr><td>' + esc(a.parameter) + '</td><td>' + esc(a.suggestedValue) + '</td><td>' + esc(a.reason) + '</td></tr>'; }).join('')
         + '</table>' : '')
@@ -240,8 +377,11 @@ const CLIENT_JS = `
   // ── Plan review ───────────────────────────────────────────────────────
 
   function renderPlan(p) {
-    if (!p) return '<div class="card"><h2>Install Plan</h2><p class="muted">No plan generated in this scenario.</p></div>';
-    return '<div class="card"><h2>Install Plan Review</h2>'
+    if (!p) return '<div class="card"><h2>\\ud83d\\udccb Install Plan</h2><p class="muted">No plan generated in this scenario.</p></div>';
+    var safetyCardClass = '';
+    if (p.safety && p.safety.status === 'blocked') safetyCardClass = ' card-blocked';
+    else if (p.safety && p.safety.status === 'requiresHumanApproval') safetyCardClass = ' card-approval';
+    return '<div class="card' + safetyCardClass + '"><h2>\\ud83d\\udccb Install Plan Review</h2>'
       + '<p><strong>' + esc(p.humanSummary) + '</strong></p>'
       + '<dl>'
       + '<dt>Artifact</dt><dd>' + esc(p.artifactId) + '</dd>'
@@ -254,16 +394,20 @@ const CLIENT_JS = `
       + '</dl>'
       + '<h3>Steps</h3><div class="step-grid">'
       + p.steps.map(function(s) {
-          return '<div class="step-item">'
+          var cls = 'step-item';
+          if (s.riskSeverity === 'critical') cls += ' step-blocked';
+          else if (s.requiresApproval) cls += ' step-approval';
+          return '<div class="' + cls + '">'
             + '<strong>Step ' + s.order + '</strong> ' + badge(s.riskSeverity)
             + (s.requiresApproval ? ' <em>(requires approval)</em>' : '')
+            + (s.reversible ? '' : ' <span class="muted">(irreversible)</span>')
             + '<br><code>' + esc(s.command) + '</code>'
             + '<br><span class="muted">' + esc(s.description) + '</span></div>';
         }).join('')
       + '</div>'
       + (p.prerequisites.length > 0 ? '<h3>Prerequisites</h3><ul class="plain">'
         + p.prerequisites.map(function(pr) { return '<li><strong>' + esc(pr.name) + '</strong>: ' + esc(pr.installHint) + '</li>'; }).join('') + '</ul>' : '')
-      + (p.risks.length > 0 ? '<h3>Risks</h3><ul class="plain">' + p.risks.map(function(r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>' : '')
+      + (p.risks.length > 0 ? '<h3>Risks</h3><ul class="plain">' + p.risks.map(function(r) { return '<li>\\u26a0 ' + esc(r) + '</li>'; }).join('') + '</ul>' : '')
       + renderSafety(p.safety)
       + '</div>';
   }
@@ -272,59 +416,159 @@ const CLIENT_JS = `
 
   function renderSafety(s) {
     if (!s) return '';
-    return '<h3>Safety</h3>'
-      + '<p>' + badge(s.severity) + ' <strong>' + esc(s.label) + '</strong></p>'
-      + '<p>' + esc(s.summaryMessage) + '</p>'
-      + (s.violations.length > 0 ? '<table><tr><th>Step</th><th>Type</th><th>Description</th><th>Severity</th></tr>'
+    var out = '<h3>Safety Evaluation</h3>';
+
+    if (s.status === 'blocked') {
+      out += '<div class="blocked-box">'
+        + '<div class="blocked-title">\\ud83d\\udeab BLOCKED — Unsafe Operations Detected</div>'
+        + '<p>' + esc(s.summaryMessage) + '</p>'
+        + '</div>';
+    } else if (s.status === 'requiresHumanApproval') {
+      out += '<div class="warning-box">'
+        + '<strong>\\u26a0\\ufe0f Requires Human Approval</strong><br>'
+        + esc(s.summaryMessage)
+        + '</div>';
+    } else {
+      out += '<p>' + badge(s.severity) + ' <strong>' + esc(s.label) + '</strong></p>'
+        + '<p>' + esc(s.summaryMessage) + '</p>';
+    }
+
+    if (s.violations.length > 0) {
+      out += '<table><tr><th>Step</th><th>Type</th><th>Description</th><th>Severity</th></tr>'
         + s.violations.map(function(v) { return '<tr><td>' + v.stepIndex + '</td><td>' + esc(v.type) + '</td><td>' + esc(v.description) + '</td><td>' + badge(v.severity) + '</td></tr>'; }).join('')
-        + '</table>' : '')
-      + (s.warnings.length > 0 ? '<ul class="plain">' + s.warnings.map(function(w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul>' : '');
+        + '</table>';
+    }
+    if (s.warnings.length > 0) {
+      out += '<ul class="plain">' + s.warnings.map(function(w) { return '<li>\\u26a0 ' + esc(w) + '</li>'; }).join('') + '</ul>';
+    }
+    return out;
   }
 
   // ── Workflow summary ──────────────────────────────────────────────────
 
   function renderWorkflow(w) {
-    return '<div class="card"><h2>Workflow Summary</h2>'
-      + '<p>' + badge(w.statusSeverity) + ' <strong>' + esc(w.statusLabel) + '</strong></p>'
-      + '<p>' + esc(w.statusSummary) + '</p>'
-      + (w.error ? '<div class="error-box"><strong>Error:</strong> ' + esc(w.error) + '</div>' : '')
-      + (w.stoppedAfter ? '<p class="muted">Stopped after: ' + esc(w.stoppedAfter) + '</p>' : '')
-      + '<h3>Stages</h3><ul class="stage-list">'
-      + w.stages.map(function(s) {
-          return '<li class="' + (s.completed ? 'completed' : '') + '">' + esc(s.label) + '</li>';
-        }).join('')
-      + '</ul></div>';
+    var sc = getStatusConfig(w.status);
+    var completedCount = w.stages.filter(function(s) { return s.completed; }).length;
+    var totalCount = w.stages.length;
+    var pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    var out = '<div class="card ' + sc.cardClass + '"><h2>\\ud83d\\udce6 Workflow Summary</h2>';
+
+    // Status line with icon
+    out += '<p>' + sc.icon + ' ' + badge(w.statusSeverity) + ' <strong>' + esc(w.statusLabel) + '</strong></p>';
+    out += '<p>' + esc(w.statusSummary) + '</p>';
+
+    // Next action hint
+    out += '<div class="next-action"><strong>\\u27a1 What to do next:</strong> ' + sc.nextAction + '</div>';
+
+    // Error detail
+    if (w.error) {
+      out += '<div class="error-box" style="margin-top:.75rem;">'
+        + '<div class="error-title">Error at stage: ' + esc(w.failedStage || 'unknown') + '</div>'
+        + esc(w.error)
+        + '</div>';
+    }
+
+    // Stopped-after hint
+    if (w.stoppedAfter) {
+      out += '<p class="muted" style="margin-top:.5rem;">\\u23f8 Stopped after: <strong>' + esc(w.stoppedAfter) + '</strong></p>';
+    }
+
+    // Progress bar
+    out += '<div class="progress-label">Stage progress: ' + completedCount + '/' + totalCount + ' (' + pct + '%)</div>';
+    out += '<div class="stage-bar">';
+    out += w.stages.map(function(s) {
+      var cls = 'stage-segment';
+      if (s.completed) cls += ' completed';
+      if (w.failedStage === s.stage) cls += ' failed';
+      if (w.status === 'blocked' && !s.completed) cls += ' blocked';
+      return '<div class="' + cls + '" title="' + esc(s.label) + '"></div>';
+    }).join('');
+    out += '</div>';
+
+    // Stage list
+    out += '<h3>Stages</h3><ul class="stage-list">';
+    out += w.stages.map(function(s) {
+      var iconClass = s.completed ? 'done' : 'pending';
+      var icon = s.completed ? '\\u2713' : '\\u25cb';
+      if (w.failedStage === s.stage) { iconClass = 'fail'; icon = '\\u2717'; }
+      return '<li><span class="stage-icon ' + iconClass + '">' + icon + '</span> ' + esc(s.label)
+        + (w.failedStage === s.stage ? ' <span class="badge badge-error">FAILED</span>' : '')
+        + '</li>';
+    }).join('');
+    out += '</ul>';
+
+    out += '</div>';
+    return out;
   }
 
   // ── Full render ───────────────────────────────────────────────────────
 
+  var _lastResult = null;
+
   function renderScenario(data) {
+    _lastResult = data;
     return renderHost(data.host)
       + renderRecommendation(data.recommendation)
       + renderCompatibility(data.compatibility)
       + renderPlan(data.planReview)
-      + renderWorkflow(data.workflow);
-  }
-
-  // ── Error render ──────────────────────────────────────────────────────
-
-  function renderError(err) {
-    return '<div class="error-box">'
-      + '<strong>[' + esc(err.code) + ']</strong> ' + esc(err.message)
+      + renderWorkflow(data.workflow)
+      + '<div style="text-align:right;margin-top:.5rem;">'
+      + '<pre id="json-result" style="display:none">' + esc(JSON.stringify(data, null, 2)) + '</pre>'
+      + copyBtn('json-result')
       + '</div>';
   }
 
+  // ── Error render (improved) ──────────────────────────────────────────
+
+  var ERROR_HINTS = {
+    INVALID_INPUT: 'Check your input paths and values. Ensure the data directory exists and the host file is valid JSON.',
+    MISSING_ARTIFACT: 'The specified artifact was not found in the catalog. Remove the artifact ID to use auto-recommendation, or verify the ID.',
+    MISSING_RUNTIME: 'A required runtime is not available. Check installed runtimes on the target host.',
+    BLOCKED_BY_POLICY: 'The workflow was blocked by a safety policy violation. Review the install plan for dangerous operations.',
+    INTERNAL_FAILURE: 'An unexpected internal error occurred. This may be a bug. Check the details below.',
+  };
+
+  function renderError(err) {
+    var hint = ERROR_HINTS[err.code] || '';
+    var out = '<div class="error-box">';
+    out += '<div class="error-title">[' + esc(err.code) + '] ' + esc(err.message) + '</div>';
+    if (hint) out += '<div class="error-hint">' + esc(hint) + '</div>';
+    if (err.details) {
+      out += collapsible('Show details', '<pre style="font-size:.8rem;overflow:auto;max-height:200px;margin:.25rem 0;">' + esc(JSON.stringify(err.details, null, 2)) + '</pre>', false);
+    }
+    out += '</div>';
+    return out;
+  }
+
+  // ── Inline validation error ──────────────────────────────────────────
+
+  var VALIDATION_HINTS = {
+    dataDir: 'The data directory must exist and contain models/, runtimes/, agent-tools/ subdirectories.',
+    hostFile: 'The host file must be a valid JSON file conforming to the HostProfile schema.',
+    stopAfter: 'Use one of the valid stage names shown in the dropdown.',
+  };
+
   // ── Mode switching ────────────────────────────────────────────────────
 
-  $modeSelect.addEventListener('change', function() {
+  var MODE_HINTS = {
+    demo: 'Explore pre-built scenarios \\u2014 no setup required.',
+    real: 'Run the real backend workflow with your own data directory and host profile.',
+  };
+
+  function switchMode() {
     var mode = $modeSelect.value;
     $demoControls.style.display = mode === 'demo' ? '' : 'none';
     $realControls.style.display = mode === 'real' ? '' : 'none';
+    $modeHint.textContent = MODE_HINTS[mode] || '';
     $app.innerHTML = mode === 'demo'
       ? '<p class="muted">Select a scenario above to begin.</p>'
       : '<p class="muted">Configure inputs and click Run Workflow.</p>';
     $validationResult.style.display = 'none';
-  });
+    persistInputs();
+  }
+
+  $modeSelect.addEventListener('change', switchMode);
 
   // ── Demo mode: scenario selection ─────────────────────────────────────
 
@@ -336,7 +580,7 @@ const CLIENT_JS = `
             return '<option value="' + esc(s.id) + '">' + esc(s.label) + '</option>';
           }).join('');
     } catch (e) {
-      $app.innerHTML = '<div class="error-box">Failed to load scenarios: ' + esc(e.message) + '</div>';
+      $app.innerHTML = '<div class="error-box"><div class="error-title">Failed to load scenarios</div>' + esc(e.message) + '</div>';
     }
   }
 
@@ -353,7 +597,7 @@ const CLIENT_JS = `
       $desc.textContent = data.description;
       $app.innerHTML = renderScenario(data);
     } catch (e) {
-      $app.innerHTML = '<div class="error-box">Failed to load scenario: ' + esc(e.message) + '</div>';
+      $app.innerHTML = '<div class="error-box"><div class="error-title">Failed to load scenario</div>' + esc(e.message) + '</div>';
     }
   });
 
@@ -380,22 +624,37 @@ const CLIENT_JS = `
     if ($stopAfterInput.value) body.stopAfter = $stopAfterInput.value;
 
     $validationResult.style.display = '';
+    $validationResult.className = '';
     $validationResult.innerHTML = 'Validating\\u2026';
 
     try {
       var result = await postJson('/api/workflow/validate', body);
       var lines = [];
       var v = result.validations || {};
+      var hasError = false;
+      var hasValid = false;
       for (var k in v) {
         if (v[k].valid) {
-          lines.push('\\u2714 ' + k + ': valid');
+          hasValid = true;
+          lines.push('<div>\\u2714\\ufe0f <strong>' + esc(k) + '</strong>: valid</div>');
         } else {
-          lines.push('\\u2718 ' + k + ': ' + esc(v[k].error));
+          hasError = true;
+          lines.push('<div>\\u274c <strong>' + esc(k) + '</strong>: ' + esc(v[k].error) + '</div>');
+          if (VALIDATION_HINTS[k]) {
+            lines.push('<div style="font-size:.8rem;color:#6b7280;margin-left:1.5rem;margin-bottom:.25rem;">' + esc(VALIDATION_HINTS[k]) + '</div>');
+          }
         }
       }
-      $validationResult.innerHTML = lines.length > 0 ? lines.join('<br>') : 'No fields to validate.';
+      if (lines.length === 0) {
+        $validationResult.innerHTML = 'No fields to validate. Enter a data directory and host file first.';
+        $validationResult.className = 'vr-mix';
+      } else {
+        $validationResult.innerHTML = lines.join('');
+        $validationResult.className = hasError ? (hasValid ? 'vr-mix' : 'vr-err') : 'vr-ok';
+      }
     } catch (e) {
       $validationResult.innerHTML = 'Validation request failed: ' + esc(e.message);
+      $validationResult.className = 'vr-err';
     }
   });
 
@@ -405,15 +664,27 @@ const CLIENT_JS = `
     var dataDir = $dataDirInput.value.trim();
     var hostFile = $hostFileInput.value.trim();
     if (!dataDir || !hostFile) {
-      $app.innerHTML = '<div class="error-box">Data Directory and Host Profile File are required.</div>';
+      $app.innerHTML = '<div class="error-box">'
+        + '<div class="error-title">Missing required fields</div>'
+        + 'Both <strong>Data Directory</strong> and <strong>Host Profile File</strong> are required.'
+        + '<div class="error-hint">Fill in the required inputs above and try again.</div>'
+        + '</div>';
+      // Highlight missing fields
+      if (!dataDir) $dataDirInput.classList.add('input-error');
+      if (!hostFile) $hostFileInput.classList.add('input-error');
       return;
     }
+    $dataDirInput.classList.remove('input-error');
+    $hostFileInput.classList.remove('input-error');
 
     var body = { dataDir: dataDir, hostFile: hostFile };
     if ($artifactInput.value.trim()) body.artifactId = $artifactInput.value.trim();
     if ($stopAfterInput.value) body.stopAfter = $stopAfterInput.value;
 
-    $app.innerHTML = '<p class="muted">Running workflow\\u2026</p>';
+    persistInputs();
+    $app.innerHTML = '<p class="muted">\\u23f3 Running workflow\\u2026</p>';
+    $runBtn.disabled = true;
+    $validateBtn.disabled = true;
     $validationResult.style.display = 'none';
 
     try {
@@ -424,12 +695,37 @@ const CLIENT_JS = `
         $app.innerHTML = renderError(result.error);
       }
     } catch (e) {
-      $app.innerHTML = '<div class="error-box">Workflow request failed: ' + esc(e.message) + '</div>';
+      $app.innerHTML = '<div class="error-box"><div class="error-title">Workflow request failed</div>' + esc(e.message)
+        + '<div class="error-hint">Check that the server is running and try again.</div></div>';
+    } finally {
+      $runBtn.disabled = false;
+      $validateBtn.disabled = false;
     }
   });
 
+  // ── Reset form ────────────────────────────────────────────────────────
+
+  $resetBtn.addEventListener('click', function() {
+    $dataDirInput.value = '';
+    $hostFileInput.value = '';
+    $artifactInput.value = '';
+    $stopAfterInput.value = '';
+    $dataDirInput.classList.remove('input-error');
+    $hostFileInput.classList.remove('input-error');
+    $validationResult.style.display = 'none';
+    $app.innerHTML = '<p class="muted">Configure inputs and click Run Workflow.</p>';
+    savePrefs({ mode: 'real' });
+  });
+
+  // ── Input event listeners for error clearing ─────────────────────────
+
+  $dataDirInput.addEventListener('input', function() { $dataDirInput.classList.remove('input-error'); });
+  $hostFileInput.addEventListener('input', function() { $hostFileInput.classList.remove('input-error'); });
+
   // ── Init ──────────────────────────────────────────────────────────────
 
+  restoreInputs();
+  switchMode();
   initDemo();
   initStages();
 })();
