@@ -21,7 +21,7 @@
 
 import { resolve } from "node:path";
 import { loadCatalogBundleSync, type CatalogPaths } from "../catalog/bundle.js";
-import { CliError, usageError, EXIT_OK, EXIT_RUNTIME, EXIT_BLOCKED } from "./errors.js";
+import { CliError, usageError, EXIT_OK, EXIT_RUNTIME, EXIT_BLOCKED, EXIT_APPROVAL } from "./errors.js";
 import { printError } from "./format.js";
 import { runDetectHost } from "./commands/detect-host.js";
 import { runListModels } from "./commands/list-models.js";
@@ -32,12 +32,7 @@ import { runRenderPlan } from "./commands/render-plan.js";
 import { runRunWorkflow } from "./commands/run-workflow.js";
 import { detectHost } from "../detection/host-detector.js";
 import { loadHostProfile } from "./host-loader.js";
-
-// ---------------------------------------------------------------------------
-// Package version (kept in sync with package.json)
-// ---------------------------------------------------------------------------
-
-const PKG_VERSION = "0.1.0";
+import { getVersion } from "./version.js";
 
 // ---------------------------------------------------------------------------
 // Arg parsing helpers
@@ -75,6 +70,7 @@ Global options:
   --json               Output as JSON
   --data-dir <path>    Path to catalog data directory (default: ./data)
   --host-file <path>   Use a saved host profile JSON instead of live detection
+  --strict             Strict/CI mode: non-zero exit for approval-required workflows
   --help               Show this help message
   --version            Show package version
 
@@ -109,6 +105,7 @@ Exit codes:
   2  Input error (bad file, invalid JSON, unknown artifact)
   3  Runtime error (unexpected internal error)
   4  Blocked (workflow safety evaluation found blocked violations)
+  5  Requires approval (--strict mode only: workflow needs human review)
 
 Note: Install plans are INFORMATIONAL ONLY and are NOT executed.
       Use --host-file for deterministic, reproducible results.
@@ -132,11 +129,12 @@ export async function main(
     }
 
     if (hasFlag(argv, "--version")) {
-      writer(PKG_VERSION);
+      writer(getVersion());
       return EXIT_OK;
     }
 
     const jsonMode = hasFlag(argv, "--json");
+    const strictMode = hasFlag(argv, "--strict");
 
     // Commands that don't need catalog
     if (command === "detect-host") {
@@ -245,6 +243,7 @@ export async function main(
         });
         if (result.status === "blocked") return EXIT_BLOCKED;
         if (result.status === "failed") return EXIT_RUNTIME;
+        if (strictMode && result.status === "completed_requires_approval") return EXIT_APPROVAL;
         return EXIT_OK;
       }
 

@@ -14,6 +14,8 @@ export const EXIT_USAGE = 1;
 export const EXIT_INPUT = 2;
 export const EXIT_RUNTIME = 3;
 export const EXIT_BLOCKED = 4;
+/** Strict/CI mode only: workflow completed but requires human approval. */
+export const EXIT_APPROVAL = 5;
 
 // ---------------------------------------------------------------------------
 // CLI error class
