@@ -50,7 +50,6 @@ import {
   cloneWorkspace,
   validateLocalPath,
   validateCloneUrl,
-  validateCloneTarget,
 } from "../session/index.js";
 import type { GitExecutor } from "../session/index.js";
 

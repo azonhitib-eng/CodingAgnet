@@ -21,7 +21,6 @@ import { resolve, isAbsolute } from "node:path";
 import type {
   Workspace,
   RepositoryMeta,
-  WorkspaceReadiness,
   SessionEvent,
 } from "./types.js";
 import {
