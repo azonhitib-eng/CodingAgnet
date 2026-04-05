@@ -96,3 +96,30 @@ export type {
   CloneRequest,
   CloneWorkspaceResult,
 } from "./repo-lifecycle.js";
+
+/* persistence (Phase 25) */
+export {
+  SessionPersistence,
+  DEFAULT_PERSISTENCE_DIR,
+  extractMeta,
+  toPersistedSession,
+  fromPersistedSession,
+} from "./persistence.js";
+
+export type {
+  PersistedResource,
+  PersistedSessionMeta,
+  PersistedSession,
+  SessionIndex,
+} from "./persistence.js";
+
+/* recent sessions (Phase 25) */
+export {
+  RecentSessions,
+  buildRestoreWarnings,
+} from "./recent-sessions.js";
+
+export type {
+  SessionOrigin,
+  RestoredSession,
+} from "./recent-sessions.js";
