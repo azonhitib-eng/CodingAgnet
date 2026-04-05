@@ -65,6 +65,14 @@ export interface SessionSummary {
     readonly label: string;
     readonly ready: boolean;
   }>;
+  /** Number of agents currently attached. */
+  readonly agentCount: number;
+  /** Attached agents with their ready status. */
+  readonly agents: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly ready: boolean;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -230,6 +238,9 @@ export class SessionManager {
     const mcpResources = session.attachedResources.filter(
       (r) => r.kind === "mcp_server",
     );
+    const agentResources = session.attachedResources.filter(
+      (r) => r.kind === "agent",
+    );
     return {
       id: session.id,
       createdAt: session.createdAt,
@@ -252,6 +263,12 @@ export class SessionManager {
       attachedResourceCount: session.attachedResources.length,
       mcpServerCount: mcpResources.length,
       mcpServers: mcpResources.map((r) => ({
+        id: r.id,
+        label: r.label,
+        ready: r.ready,
+      })),
+      agentCount: agentResources.length,
+      agents: agentResources.map((r) => ({
         id: r.id,
         label: r.label,
         ready: r.ready,

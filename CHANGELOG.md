@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 23** — Attached Agent Registry and Agent Attachment Model
+  - New `src/agents/` module with 4 files: `types.ts`, `session-integration.ts`, `agent-registry.ts`, `index.ts`
+  - 10 agent domain types: `AgentId`, `AgentKind`, `AgentStatus`, `AgentCapability`, `AgentStageAffinity`, `AgentDefinition`, `AgentAttachmentStatus`, `AgentAttachment`, `AgentSummary`, `AgentRecord`
+  - 6 agent kinds: `system`, `coding`, `review`, `planning`, `testing`, `external`
+  - 8 typed capabilities: `planning`, `reviewing`, `testing`, `editing`, `repo_exploration`, `mcp_interaction`, `shell_assistance`, `session_narration`
+  - `AgentRegistry`: register agent definitions, attach/detach to sessions, enable/disable, mark failed, query attachments, derive summaries
+  - 7 agent session event kinds: `agent_attach_requested`, `agent_attached`, `agent_detached`, `agent_enabled`, `agent_disabled`, `agent_failed`, `agent_capabilities_updated`
+  - `SessionEventKind` union extended with 7 agent event kinds
+  - `SessionSummary` extended with `agentCount` and `agents` fields
+  - Timeline classification for all agent events in `timeline-helpers.ts`
+  - Agent event helpers: `isAgentEvent()`, `filterAgentEvents()`, `buildAgentEventSummary()`
+  - Event factory functions for all 7 agent lifecycle events
+  - Agents are explicitly separate from MCP servers — clean domain boundary
+  - Subpath export: `./agents` in package.json
+  - 106 new tests covering agent registration, attach/detach, duplicate handling, status transitions, capability exposure, session summary exposure, event emission, edge cases, agent/MCP separation, timeline classification
+  - New documentation: `docs/AGENTS.md`
+
 - **Phase 21** — Repository Open/Clone Lifecycle and Workspace Bootstrap
   - Extended Workspace model with `repoMeta` (RepositoryMeta) for git repo detection
   - New `bootstrapping` workspace status for in-progress clone operations
