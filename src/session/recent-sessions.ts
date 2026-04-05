@@ -55,7 +55,8 @@ export function buildRestoreWarnings(session: Session): string[] {
   if (mcpServers.length > 0) {
     warnings.push(
       `${mcpServers.length} MCP server(s) were attached in the original session. ` +
-      `They are not running — reattach or restart required.`,
+      `They are restored as stale — health and discovery data is historical. ` +
+      `Reattach, restart, or refresh to regain live status.`,
     );
   }
   if (agents.length > 0) {

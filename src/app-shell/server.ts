@@ -22,6 +22,10 @@
  *   POST /api/sessions/save         — save current session to disk
  *   GET  /api/sessions/:id/restore  — restore a persisted session
  *   DELETE /api/sessions/:id        — delete a persisted session
+ *   GET  /api/session/:id/mcp/status — MCP server statuses for a session
+ *   GET  /api/mcp/:id/info          — runtime info for a specific MCP server
+ *   POST /api/mcp/:id/refresh-health — refresh health for an MCP server
+ *   POST /api/mcp/:id/refresh-discovery — refresh discovery for an MCP server
  *
  * Usage:
  *   npx tsx src/app-shell/server.ts [--port 3000]
@@ -63,6 +67,7 @@ import {
   DEFAULT_PERSISTENCE_DIR,
 } from "../session/index.js";
 import type { GitExecutor } from "../session/index.js";
+import { McpManager } from "../mcp/index.js";
 import { classifyEvent } from "./timeline-helpers.js";
 import { buildConsoleFeed } from "./console-helpers.js";
 
@@ -328,6 +333,36 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
     return;
   }
 
+  // --- MCP status/refresh endpoints (Phase 26) ---
+
+  // API: list MCP server statuses for a session (GET)
+  const mcpStatusMatch = path.match(/^\/api\/session\/([^/]+)\/mcp\/status$/);
+  if (mcpStatusMatch && method === "GET") {
+    handleMcpStatus(decodeURIComponent(mcpStatusMatch[1]), res);
+    return;
+  }
+
+  // API: get runtime info for a specific MCP server (GET)
+  const mcpServerInfoMatch = path.match(/^\/api\/mcp\/([^/]+)\/info$/);
+  if (mcpServerInfoMatch && method === "GET") {
+    handleMcpServerInfo(decodeURIComponent(mcpServerInfoMatch[1]), res);
+    return;
+  }
+
+  // API: refresh health for a specific MCP server (POST)
+  const mcpRefreshHealthMatch = path.match(/^\/api\/mcp\/([^/]+)\/refresh-health$/);
+  if (mcpRefreshHealthMatch && method === "POST") {
+    handleMcpRefreshHealth(req, decodeURIComponent(mcpRefreshHealthMatch[1]), res);
+    return;
+  }
+
+  // API: refresh discovery for a specific MCP server (POST)
+  const mcpRefreshDiscoveryMatch = path.match(/^\/api\/mcp\/([^/]+)\/refresh-discovery$/);
+  if (mcpRefreshDiscoveryMatch && method === "POST") {
+    handleMcpRefreshDiscovery(req, decodeURIComponent(mcpRefreshDiscoveryMatch[1]), res);
+    return;
+  }
+
   notFound(res);
 }
 
@@ -516,6 +551,25 @@ export function getRecentSessions(): RecentSessions {
 export function setSessionPersistence(persistence: SessionPersistence | null): void {
   _sessionPersistence = persistence;
   _recentSessions = persistence ? new RecentSessions(persistence) : null;
+}
+
+// ---------------------------------------------------------------------------
+// MCP Manager (Phase 26)
+// ---------------------------------------------------------------------------
+
+let _mcpManager: McpManager | null = null;
+
+/** Get or lazily create the MCP manager. */
+export function getMcpManager(): McpManager {
+  if (!_mcpManager) {
+    _mcpManager = new McpManager(_workspaceSessionManager);
+  }
+  return _mcpManager;
+}
+
+/** Override MCP manager (for testing). */
+export function setMcpManager(manager: McpManager | null): void {
+  _mcpManager = manager;
 }
 
 // ---------------------------------------------------------------------------
@@ -757,6 +811,114 @@ async function handleDeleteSession(id: string, res: ServerResponse): Promise<voi
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return json(res, { ok: false, error: `Failed to delete session: ${message}` }, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MCP status/refresh handlers (Phase 26)
+// ---------------------------------------------------------------------------
+
+function handleMcpStatus(sessionId: string, res: ServerResponse): void {
+  const session = _workspaceSessionManager.getSession(sessionId);
+  if (!session) {
+    return notFound(res, `Session not found: ${sessionId}`);
+  }
+
+  const mcpManager = getMcpManager();
+  const attachments = mcpManager.listSessionAttachments(sessionId);
+
+  const servers = attachments.map((a) => {
+    const info = mcpManager.getRuntimeInfo(a.serverId);
+    return {
+      serverId: a.serverId,
+      attachmentStatus: a.status,
+      attachedAt: a.attachedAt,
+      failureReason: a.failureReason,
+      ...(info
+        ? {
+            name: info.config.name,
+            transport: info.config.transport,
+            serverStatus: info.status,
+            health: info.health,
+            healthReport: info.healthReport,
+            discoveryState: info.discoveryState,
+            pid: info.pid,
+            toolCount: info.tools.length,
+            resourceCount: info.resources.length,
+            promptCount: info.prompts.length,
+          }
+        : { name: null, serverStatus: null }),
+    };
+  });
+
+  return json(res, { sessionId, mcpServerCount: servers.length, servers });
+}
+
+function handleMcpServerInfo(serverId: string, res: ServerResponse): void {
+  const mcpManager = getMcpManager();
+  const info = mcpManager.getRuntimeInfo(serverId);
+  if (!info) {
+    return notFound(res, `MCP server not found: ${serverId}`);
+  }
+  return json(res, info);
+}
+
+async function handleMcpRefreshHealth(
+  req: IncomingMessage,
+  serverId: string,
+  res: ServerResponse,
+): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  const sessionId = typeof input.sessionId === "string" ? input.sessionId : undefined;
+
+  try {
+    const mcpManager = getMcpManager();
+    const healthReport = mcpManager.refreshHealth(serverId, sessionId);
+    return json(res, { ok: true, serverId, healthReport });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json(res, { ok: false, error: message }, 400);
+  }
+}
+
+async function handleMcpRefreshDiscovery(
+  req: IncomingMessage,
+  serverId: string,
+  res: ServerResponse,
+): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  const sessionId = typeof input.sessionId === "string" ? input.sessionId : undefined;
+
+  // In this phase, discovery refresh accepts an optional mock result.
+  // Real protocol-driven discovery is deferred.
+  const discoveryResult = {
+    tools: Array.isArray(input.tools)
+      ? (input.tools as Array<{ name: string; description?: string }>)
+      : [],
+    resources: Array.isArray(input.resources)
+      ? (input.resources as Array<{ uri: string; name: string; description?: string }>)
+      : [],
+    prompts: Array.isArray(input.prompts)
+      ? (input.prompts as Array<{ name: string; description?: string }>)
+      : [],
+    complete: input.complete !== false,
+    error: typeof input.error === "string" ? input.error : undefined,
+    source: (typeof input.source === "string" ? input.source : "manual") as "manual" | "runtime" | "restored" | "placeholder",
+  };
+
+  try {
+    const mcpManager = getMcpManager();
+    const discoveryState = mcpManager.refreshDiscovery(serverId, discoveryResult, sessionId);
+    return json(res, { ok: true, serverId, discoveryState });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json(res, { ok: false, error: message }, 400);
   }
 }
 

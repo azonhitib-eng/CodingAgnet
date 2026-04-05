@@ -678,8 +678,8 @@ describe("MCP Session Integration", () => {
   });
 
   describe("MCP_EVENT_KINDS", () => {
-    it("contains all 9 MCP event kinds", () => {
-      expect(MCP_EVENT_KINDS).toHaveLength(9);
+    it("contains all 13 MCP event kinds", () => {
+      expect(MCP_EVENT_KINDS).toHaveLength(13);
       expect(MCP_EVENT_KINDS).toContain("mcp_attach_requested");
       expect(MCP_EVENT_KINDS).toContain("mcp_attached");
       expect(MCP_EVENT_KINDS).toContain("mcp_starting");
@@ -689,6 +689,10 @@ describe("MCP Session Integration", () => {
       expect(MCP_EVENT_KINDS).toContain("mcp_discovered_tools");
       expect(MCP_EVENT_KINDS).toContain("mcp_discovered_resources");
       expect(MCP_EVENT_KINDS).toContain("mcp_discovered_prompts");
+      expect(MCP_EVENT_KINDS).toContain("mcp_health_refreshed");
+      expect(MCP_EVENT_KINDS).toContain("mcp_health_degraded");
+      expect(MCP_EVENT_KINDS).toContain("mcp_discovery_refreshed");
+      expect(MCP_EVENT_KINDS).toContain("mcp_stale");
     });
   });
 
