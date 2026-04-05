@@ -6,6 +6,38 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 25** — Session Persistence and Recent Sessions
+  - New `src/session/persistence.ts` module — JSON file-based session persistence adapter
+    - `SessionPersistence` class: save, load, list, delete sessions with file I/O isolated in one adapter
+    - Each session stored as individual JSON file under `~/.codingagent/sessions/sessions/`
+    - `index.json` tracks recent session metadata for fast listing, ordered by recency
+    - `extractMeta()`: extract lightweight metadata from live sessions for the index
+    - `toPersistedSession()` / `fromPersistedSession()`: serialisation/deserialisation with honest runtime state
+    - Attached resources persisted with `ready: false` — MCP servers and agents are not treated as running after restore
+    - `workflowResultRef` cleared on restore — opaque runtime references do not survive persistence
+  - New `src/session/recent-sessions.ts` module — recent sessions service layer
+    - `RecentSessions` class: save, list, restore, delete, exists — bridges domain and persistence
+    - `RestoredSession` type: session + origin (`"live"` | `"restored"`) + warnings + `restoredAt` timestamp
+    - `buildRestoreWarnings()`: generates human-readable warnings about MCP servers, agents, workflow refs that need reattachment
+    - Clear distinction between historical/restored sessions and live/active sessions
+  - New API endpoints in `src/app-shell/server.ts`:
+    - `GET /api/sessions/recent` — list recent persisted sessions (metadata only)
+    - `POST /api/sessions/save` — save a live session to disk by session ID
+    - `GET /api/sessions/:id/restore` — restore a persisted session with warnings and origin flag
+    - `DELETE /api/sessions/:id` — delete a persisted session
+    - Lazy initialization of persistence layer with configurable test override via `setSessionPersistence()`
+  - Session domain (`types.ts`, `session-manager.ts`) unchanged — persistence is a clean adapter
+  - Barrel exports updated in `src/session/index.ts` and `src/app-shell/index.ts`
+  - 66 new tests covering:
+    - Save/load round-trip, recent list ordering, index updates, delete
+    - Restored session semantics (resources `ready: false`, `workflowResultRef` null)
+    - Historical sessions do not falsely imply live MCP/agent/runtime state
+    - Timeline integrity (event ordering, timestamps, kinds, detail payloads)
+    - Edge cases (empty events, many events, clone workspaces, corrupt index, blocked/failed status)
+    - SessionManager ↔ persistence integration
+    - Server persistence bridge behavior
+  - New documentation: `docs/SESSION-PERSISTENCE.md`
+
 - **Phase 24** — Chat-like Session Console
   - New `src/app-shell/console-helpers.ts` module with actor/card classification, grouping, presence, and feed builders
   - 5 console actors: `system`, `workspace`, `mcp`, `agent`, `workflow` — every event kind mapped to an actor

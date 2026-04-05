@@ -17,7 +17,11 @@
  *   GET  /api/session/current       — latest session summary + events
  *   GET  /api/session/:id/summary   — session summary for a given session
  *   GET  /api/session/:id/timeline  — session events with classification
- *   GET  /api/session/:id/console  — console feed with grouping/presence
+ *   GET  /api/session/:id/console   — console feed with grouping/presence
+ *   GET  /api/sessions/recent       — list recent persisted sessions
+ *   POST /api/sessions/save         — save current session to disk
+ *   GET  /api/sessions/:id/restore  — restore a persisted session
+ *   DELETE /api/sessions/:id        — delete a persisted session
  *
  * Usage:
  *   npx tsx src/app-shell/server.ts [--port 3000]
@@ -54,6 +58,9 @@ import {
   cloneWorkspace,
   validateLocalPath,
   validateCloneUrl,
+  SessionPersistence,
+  RecentSessions,
+  DEFAULT_PERSISTENCE_DIR,
 } from "../session/index.js";
 import type { GitExecutor } from "../session/index.js";
 import { classifyEvent } from "./timeline-helpers.js";
@@ -293,6 +300,34 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
     return json(res, scenario);
   }
 
+  // --- Session persistence endpoints (Phase 25) ---
+
+  // API: list recent sessions (GET)
+  if (path === "/api/sessions/recent" && method === "GET") {
+    handleRecentSessions(res);
+    return;
+  }
+
+  // API: save current session (POST)
+  if (path === "/api/sessions/save" && method === "POST") {
+    handleSaveSession(req, res);
+    return;
+  }
+
+  // API: restore a persisted session (GET)
+  const restoreMatch = path.match(/^\/api\/sessions\/([^/]+)\/restore$/);
+  if (restoreMatch && method === "GET") {
+    handleRestoreSession(decodeURIComponent(restoreMatch[1]), res);
+    return;
+  }
+
+  // API: delete a persisted session (DELETE)
+  const deleteSessionMatch = path.match(/^\/api\/sessions\/([^/]+)$/);
+  if (deleteSessionMatch && method === "DELETE") {
+    handleDeleteSession(decodeURIComponent(deleteSessionMatch[1]), res);
+    return;
+  }
+
   notFound(res);
 }
 
@@ -447,6 +482,43 @@ export function setGitExecutor(executor: GitExecutor | undefined): void {
 }
 
 // ---------------------------------------------------------------------------
+// Session persistence (Phase 25)
+// ---------------------------------------------------------------------------
+
+import { join as pathJoin } from "node:path";
+import { homedir } from "node:os";
+
+let _sessionPersistence: SessionPersistence | null = null;
+let _recentSessions: RecentSessions | null = null;
+
+/** Resolve the persistence base directory. */
+function defaultPersistenceDir(): string {
+  return pathJoin(homedir(), DEFAULT_PERSISTENCE_DIR);
+}
+
+/** Get or lazily create the session persistence adapter. */
+export function getSessionPersistence(): SessionPersistence {
+  if (!_sessionPersistence) {
+    _sessionPersistence = new SessionPersistence(defaultPersistenceDir());
+  }
+  return _sessionPersistence;
+}
+
+/** Get or lazily create the recent sessions service. */
+export function getRecentSessions(): RecentSessions {
+  if (!_recentSessions) {
+    _recentSessions = new RecentSessions(getSessionPersistence());
+  }
+  return _recentSessions;
+}
+
+/** Override persistence (for testing). */
+export function setSessionPersistence(persistence: SessionPersistence | null): void {
+  _sessionPersistence = persistence;
+  _recentSessions = persistence ? new RecentSessions(persistence) : null;
+}
+
+// ---------------------------------------------------------------------------
 // POST /api/workspace/open
 // ---------------------------------------------------------------------------
 
@@ -593,6 +665,99 @@ function handleWorkspaceState(sessionId: string, res: ServerResponse): void {
     workspaceEvents,
     summary,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Session persistence handlers (Phase 25)
+// ---------------------------------------------------------------------------
+
+async function handleRecentSessions(res: ServerResponse): Promise<void> {
+  try {
+    const recent = getRecentSessions();
+    const sessions = await recent.list();
+    return json(res, { sessions });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json(res, { error: `Failed to list recent sessions: ${message}` }, 500);
+  }
+}
+
+async function handleSaveSession(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  const sessionId = typeof input.sessionId === "string" ? input.sessionId : null;
+
+  if (!sessionId) {
+    return badRequest(res, "Missing required field: sessionId");
+  }
+
+  const session = _workspaceSessionManager.getSession(sessionId);
+  if (!session) {
+    return notFound(res, `Session not found: ${sessionId}`);
+  }
+
+  try {
+    const recent = getRecentSessions();
+    await recent.save(session);
+    return json(res, { ok: true, sessionId });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json(res, { ok: false, error: `Failed to save session: ${message}` }, 500);
+  }
+}
+
+async function handleRestoreSession(id: string, res: ServerResponse): Promise<void> {
+  try {
+    const recent = getRecentSessions();
+    const restored = await recent.restore(id);
+    if (!restored) {
+      return notFound(res, `Persisted session not found: ${id}`);
+    }
+    const session = restored.session;
+    const events = session.events.map((e) => ({
+      ...e,
+      category: classifyEvent(e.kind),
+    }));
+    return json(res, {
+      sessionId: session.id,
+      origin: restored.origin,
+      restoredAt: restored.restoredAt,
+      warnings: restored.warnings,
+      session: {
+        id: session.id,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        stage: session.stage,
+        status: session.status,
+        workspacePath: session.workspace?.path ?? null,
+        workspaceSource: session.workspace?.source ?? null,
+        eventCount: session.events.length,
+        agentCount: session.attachedResources.filter((r) => r.kind === "agent").length,
+        mcpCount: session.attachedResources.filter((r) => r.kind === "mcp_server").length,
+        attachedResources: session.attachedResources,
+      },
+      events,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json(res, { error: `Failed to restore session: ${message}` }, 500);
+  }
+}
+
+async function handleDeleteSession(id: string, res: ServerResponse): Promise<void> {
+  try {
+    const recent = getRecentSessions();
+    const deleted = await recent.delete(id);
+    if (!deleted) {
+      return notFound(res, `Persisted session not found: ${id}`);
+    }
+    return json(res, { ok: true, sessionId: id });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json(res, { ok: false, error: `Failed to delete session: ${message}` }, 500);
+  }
 }
 
 // ---------------------------------------------------------------------------
