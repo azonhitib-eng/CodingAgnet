@@ -163,8 +163,23 @@ npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json
 
 All CLI commands support `--json` for structured, machine-readable output. JSON output is deterministic for the same inputs.
 
+## App shell (local web UI)
+
+The app shell provides a browser-based UI for viewing model compatibility, recommendations, install plans, and workflow summaries.
+
+```bash
+npm run app-shell          # Start on port 3000 (demo mode by default)
+npm run preflight          # Check environment readiness
+```
+
+Open http://localhost:3000 — demo mode works out of the box with no setup.
+
+For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)**.
+
 ## Documentation
 
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** — Quick start guide (demo + real mode)
+- **[docs/APP-SHELL.md](docs/APP-SHELL.md)** — App shell architecture and API reference
 - **[docs/USAGE.md](docs/USAGE.md)** — Full usage guide with library, CLI, and workflow documentation
 - **[CHANGELOG.md](CHANGELOG.md)** — Release notes
 

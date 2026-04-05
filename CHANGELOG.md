@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 15** — Packaging and distribution readiness
+  - `docs/QUICKSTART.md` — comprehensive quick start guide with demo-mode and real-mode walkthroughs
+  - `scripts/preflight.ts` — environment readiness checker (Node version, dependencies, data directory, docs)
+  - Enhanced startup output with mode guidance, tips, and URL display
+  - `resolvePort()` function: supports `--port` flag, `PORT` env var, and default 3000
+  - `--help` flag for the app shell server
+  - New npm scripts: `app-shell:demo`, `app-shell:help`, `generate-host-profile`, `preflight`
+  - 47 new tests: port resolution, package script sanity, source/docs/data directory checks, QUICKSTART content alignment
+  - Updated CHANGELOG, README, and APP-SHELL.md with Phase 15 documentation
+
 - **Phase 12** — Minimal app shell
   - New module: `src/app-shell/` (5 files: `index.ts`, `data-provider.ts`, `demo-scenarios.ts`, `server.ts`, `views.ts`)
   - Local web app shell served via Node.js built-in HTTP server (zero new dependencies)

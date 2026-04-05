@@ -13,6 +13,8 @@ The shell is built with **zero additional dependencies** — it uses Node.js bui
 
 **Phase 14** improved the UX with: enhanced status clarity, distinct blocked/approval presentation, better form usability, structured error presentation, and convenience features (copy JSON, reset, localStorage persistence, collapsible sections).
 
+**Phase 15** improved packaging and distribution readiness: enhanced startup output with mode guidance, `--help` flag, `PORT` env var support, `resolvePort()` utility, preflight check script, `generate-host-profile` convenience script, and comprehensive `QUICKSTART.md`.
+
 ## Architecture
 
 ```
@@ -77,14 +79,28 @@ The shell is built with **zero additional dependencies** — it uses Node.js bui
 # Install dependencies (if not done already)
 npm install
 
+# Run preflight check (optional — verifies environment)
+npm run preflight
+
 # Start the app shell (default port 3000)
 npm run app-shell
 
 # Or with a custom port
-npx tsx src/app-shell/server.ts --port 8080
+npm run app-shell -- --port 8080
+
+# Or using the PORT environment variable
+PORT=4000 npm run app-shell
+
+# Show app shell help
+npm run app-shell:help
+
+# Generate a host profile for real mode
+npm run generate-host-profile > my-host.json
 ```
 
 Then open http://localhost:3000 in a browser.
+
+For detailed setup instructions, see **[docs/QUICKSTART.md](QUICKSTART.md)**.
 
 ## Demo mode
 
