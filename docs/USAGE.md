@@ -15,7 +15,6 @@ The CodingAgent backend is a **local-first, portable** toolkit for:
 ## What this system does NOT do
 
 - **Execute commands** — plans are informational only; the backend never runs shell commands
-- **Provide a CLI product** — there is a minimal example runner for development, not a production CLI
 - **Support YAML manifests** — only JSON manifests are supported
 - **Connect to cloud/remote services** — all operations are local
 - **Provide a plugin marketplace** — catalogs are loaded from local directories
@@ -200,6 +199,145 @@ npx tsx scripts/example-runner.ts --data-dir ./data
 ```
 
 This loads the bundled catalog data, uses a mock host profile, and runs the full flow with rendered output.
+
+## Developer CLI
+
+A minimal developer-facing CLI is provided for backend verification and developer usability.
+The CLI is a thin wrapper over the existing backend modules — it does NOT execute install plans
+or perform any mutation side effects.
+
+### Running the CLI
+
+```bash
+npx tsx src/cli/main.ts <command> [options]
+```
+
+### Global options
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Output as JSON instead of human-readable text |
+| `--data-dir <path>` | Path to catalog data directory (default: `./data`) |
+| `--help` | Show help message |
+
+### Commands
+
+#### `detect-host`
+
+Detect the local machine's capabilities (OS, CPU, memory, GPU, installed runtimes).
+
+```bash
+npx tsx src/cli/main.ts detect-host
+npx tsx src/cli/main.ts detect-host --json
+npx tsx src/cli/main.ts detect-host --data-dir ./data   # enables runtime detection
+```
+
+#### `list-models`
+
+List known model artifacts from the catalog with optional filtering.
+
+```bash
+npx tsx src/cli/main.ts list-models --data-dir ./data
+npx tsx src/cli/main.ts list-models --data-dir ./data --json
+npx tsx src/cli/main.ts list-models --data-dir ./data --status supported
+npx tsx src/cli/main.ts list-models --data-dir ./data --runtime ollama
+npx tsx src/cli/main.ts list-models --data-dir ./data --capability coding
+```
+
+| Filter | Values |
+|--------|--------|
+| `--status` | `supported`, `experimental`, `deprecated` |
+| `--runtime` | Any runtime ID (e.g. `ollama`, `llamacpp`) |
+| `--capability` | `coding`, `agenticToolUse`, `autocomplete`, `longContext` |
+
+#### `recommend-models`
+
+Rank all catalog artifacts for the detected host, best first.
+
+```bash
+npx tsx src/cli/main.ts recommend-models --data-dir ./data
+npx tsx src/cli/main.ts recommend-models --data-dir ./data --json
+npx tsx src/cli/main.ts recommend-models --data-dir ./data --include-unsupported
+```
+
+#### `check-compatibility`
+
+Check compatibility of a specific model artifact against the detected host.
+
+```bash
+npx tsx src/cli/main.ts check-compatibility --data-dir ./data --artifact codellama-7b-q4_k_m-ollama
+npx tsx src/cli/main.ts check-compatibility --data-dir ./data --artifact codellama-7b-q4_k_m-ollama --json
+```
+
+Output includes: classification, bottlenecks, operating limits, suggested adjustments, and warnings.
+
+#### `plan-install`
+
+Generate an install plan for a model artifact on the detected host.
+
+```bash
+npx tsx src/cli/main.ts plan-install --data-dir ./data --artifact codellama-7b-q4_k_m-ollama
+npx tsx src/cli/main.ts plan-install --data-dir ./data --artifact codellama-7b-q4_k_m-ollama --json
+```
+
+**⚠ IMPORTANT: Install plans are INFORMATIONAL ONLY and are NOT executed.**
+
+The plan describes what commands would need to run, their risk levels, prerequisites,
+resource estimates, and verification steps — but the CLI never executes any of them.
+
+#### `render-plan`
+
+Render a previously saved install plan JSON file with safety evaluation.
+
+```bash
+npx tsx src/cli/main.ts render-plan --plan-file ./my-plan.json
+npx tsx src/cli/main.ts render-plan --plan-file ./my-plan.json --json
+```
+
+### JSON output
+
+All commands support `--json` to output structured JSON instead of human-readable text.
+This is useful for piping to other tools or programmatic consumption:
+
+```bash
+npx tsx src/cli/main.ts list-models --data-dir ./data --json | jq '.[].artifactId'
+npx tsx src/cli/main.ts check-compatibility --data-dir ./data --artifact <id> --json | jq '.classification'
+```
+
+### Safety status interpretation
+
+When using `plan-install` or `render-plan`, the safety report uses a 3-state model:
+
+| Status | Meaning |
+|--------|---------|
+| **`approved`** | Plan is safe to execute without further review. No blocked violations, no dangerous commands, and no steps requiring approval. |
+| **`requiresHumanApproval`** | Plan contains dangerous commands, steps marked for approval, or policy mismatches. A human must review and explicitly approve before any execution. The `violations` and `warnings` arrays describe what needs attention. |
+| **`blocked`** | Plan contains at least one blocked-severity violation (e.g. `rm -rf /`, filesystem format, raw device write). **The plan must not be executed.** |
+
+**Precedence:**
+- `blocked` takes absolute precedence
+- `requiresHumanApproval` only applies when not blocked
+- `approved` is true only when neither blocked nor requiresHumanApproval
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Usage error (wrong flags, missing arguments) |
+| `2` | Input error (file not found, invalid ID) |
+| `3` | Runtime error |
+
+### Command → backend module mapping
+
+| CLI Command | Backend Module(s) |
+|---|---|
+| `detect-host` | `detectHost()` from `src/detection/host-detector.ts` |
+| `list-models` | `ModelCatalog` queries from `src/catalog/model-catalog.ts` |
+| `recommend-models` | `recommend()` from `src/compatibility/recommendation-engine.ts` |
+| `check-compatibility` | `checkCompatibility()` from `src/compatibility/compatibility-engine.ts` |
+| `plan-install` | `generateInstallPlan()`, `evaluatePlanSafety()`, `renderPlan()` from `src/install-plan/` |
+| `render-plan` | `evaluatePlanSafety()`, `renderPlan()` from `src/install-plan/` |
 
 ## Testing
 
