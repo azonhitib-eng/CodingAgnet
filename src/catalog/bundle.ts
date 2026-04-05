@@ -58,7 +58,7 @@ function wrapLoadError(
 ): CatalogError {
   if (err instanceof CatalogError) {
     // Enrich with filePath / manifestType if not already present.
-    if (!err.filePath || !err.manifestType) {
+    if (err.filePath === undefined || err.manifestType === undefined) {
       return new CatalogError(err.code, err.message, {
         ...err.details,
         filePath,

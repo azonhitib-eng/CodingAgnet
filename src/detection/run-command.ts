@@ -40,6 +40,8 @@ export interface RunCommandOptions {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_TIMEOUT_MS = 5_000;
+/** 512 KiB — generous for detection command output. */
+const DEFAULT_MAX_BUFFER = 1024 * 512;
 
 /**
  * Run a command, returning a structured result.
@@ -57,7 +59,7 @@ export async function runCommand(
       const child = execFile(
         command,
         args,
-        { timeout, maxBuffer: 1024 * 512, shell: false },
+        { timeout, maxBuffer: DEFAULT_MAX_BUFFER, shell: false },
         (error, stdout, stderr) => {
           if (error && "code" in error && error.code === "ENOENT") {
             // Command not found
