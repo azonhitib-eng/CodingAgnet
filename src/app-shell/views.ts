@@ -26,11 +26,45 @@ ${CSS}
   <h1>CodingAgent</h1>
   <p class="subtitle">Local Model Compatibility &amp; Install Planner</p>
 </header>
-<nav id="scenario-nav">
-  <label for="scenario-select">Scenario:</label>
-  <select id="scenario-select"><option value="">Loading…</option></select>
-  <span id="scenario-desc" class="muted"></span>
+<nav id="mode-nav">
+  <label for="mode-select">Mode:</label>
+  <select id="mode-select">
+    <option value="demo">Demo</option>
+    <option value="real">Real</option>
+  </select>
 </nav>
+<div id="demo-controls">
+  <nav id="scenario-nav">
+    <label for="scenario-select">Scenario:</label>
+    <select id="scenario-select"><option value="">Loading…</option></select>
+    <span id="scenario-desc" class="muted"></span>
+  </nav>
+</div>
+<div id="real-controls" style="display:none;">
+  <div class="real-form">
+    <div class="form-row">
+      <label for="data-dir-input">Data Directory:</label>
+      <input type="text" id="data-dir-input" placeholder="path/to/data (contains models/, runtimes/, agent-tools/)" />
+    </div>
+    <div class="form-row">
+      <label for="host-file-input">Host Profile File:</label>
+      <input type="text" id="host-file-input" placeholder="path/to/host-profile.json" />
+    </div>
+    <div class="form-row">
+      <label for="artifact-input">Artifact ID (optional):</label>
+      <input type="text" id="artifact-input" placeholder="e.g. codellama-7b-q4_k_m-ollama" />
+    </div>
+    <div class="form-row">
+      <label for="stop-after-input">Stop After Stage (optional):</label>
+      <select id="stop-after-input"><option value="">— run all stages —</option></select>
+    </div>
+    <div class="form-row">
+      <button id="run-workflow-btn" type="button">Run Workflow</button>
+      <button id="validate-btn" type="button" class="btn-secondary">Validate Inputs</button>
+    </div>
+    <div id="validation-result" class="muted" style="display:none;"></div>
+  </div>
+</div>
 <main id="app">
   <p class="muted">Select a scenario above to begin.</p>
 </main>
@@ -94,6 +128,17 @@ th { font-size: .8rem; color: var(--muted); text-transform: uppercase; }
 .step-item code { font-family: 'SF Mono', 'Consolas', monospace; font-size: .82rem; background: #f1f3f5; padding: .1rem .3rem; border-radius: 2px; }
 ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size: .9rem; }
 .error-box { background: #f8d7da; border: 1px solid #f5c2c7; border-radius: 4px; padding: .75rem; color: #842029; font-size: .9rem; }
+#mode-nav { padding: .5rem 1.5rem; border-bottom: 1px solid var(--card-border); background: var(--card-bg); display: flex; align-items: center; gap: .75rem; }
+#mode-nav label { font-weight: 600; }
+#mode-nav select { padding: .35rem .5rem; border-radius: 4px; border: 1px solid var(--card-border); }
+.real-form { padding: .75rem 1.5rem; border-bottom: 1px solid var(--card-border); background: var(--card-bg); }
+.form-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; flex-wrap: wrap; }
+.form-row label { font-weight: 600; font-size: .9rem; min-width: 180px; }
+.form-row input[type="text"] { flex: 1; min-width: 200px; padding: .35rem .5rem; border-radius: 4px; border: 1px solid var(--card-border); font-size: .9rem; }
+.form-row select { padding: .35rem .5rem; border-radius: 4px; border: 1px solid var(--card-border); }
+.form-row button { padding: .4rem 1rem; border-radius: 4px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; font-size: .9rem; }
+.form-row button:hover { opacity: .9; }
+.form-row .btn-secondary { background: var(--card-bg); color: var(--fg); border-color: var(--card-border); }
 `;
 
 // ---------------------------------------------------------------------------
@@ -102,13 +147,32 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 
 const CLIENT_JS = `
 (function() {
-  const $select = document.getElementById('scenario-select');
-  const $desc = document.getElementById('scenario-desc');
-  const $app = document.getElementById('app');
+  var $modeSelect = document.getElementById('mode-select');
+  var $demoControls = document.getElementById('demo-controls');
+  var $realControls = document.getElementById('real-controls');
+  var $select = document.getElementById('scenario-select');
+  var $desc = document.getElementById('scenario-desc');
+  var $app = document.getElementById('app');
+  var $dataDirInput = document.getElementById('data-dir-input');
+  var $hostFileInput = document.getElementById('host-file-input');
+  var $artifactInput = document.getElementById('artifact-input');
+  var $stopAfterInput = document.getElementById('stop-after-input');
+  var $runBtn = document.getElementById('run-workflow-btn');
+  var $validateBtn = document.getElementById('validate-btn');
+  var $validationResult = document.getElementById('validation-result');
 
   async function fetchJson(url) {
-    const resp = await fetch(url);
+    var resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return resp.json();
+  }
+
+  async function postJson(url, body) {
+    var resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
     return resp.json();
   }
 
@@ -118,7 +182,7 @@ const CLIENT_JS = `
 
   function esc(s) {
     if (s == null) return '';
-    const d = document.createElement('div');
+    var d = document.createElement('div');
     d.textContent = String(s);
     return d.innerHTML;
   }
@@ -242,12 +306,32 @@ const CLIENT_JS = `
       + renderWorkflow(data.workflow);
   }
 
-  // ── Init ──────────────────────────────────────────────────────────────
+  // ── Error render ──────────────────────────────────────────────────────
 
-  async function init() {
+  function renderError(err) {
+    return '<div class="error-box">'
+      + '<strong>[' + esc(err.code) + ']</strong> ' + esc(err.message)
+      + '</div>';
+  }
+
+  // ── Mode switching ────────────────────────────────────────────────────
+
+  $modeSelect.addEventListener('change', function() {
+    var mode = $modeSelect.value;
+    $demoControls.style.display = mode === 'demo' ? '' : 'none';
+    $realControls.style.display = mode === 'real' ? '' : 'none';
+    $app.innerHTML = mode === 'demo'
+      ? '<p class="muted">Select a scenario above to begin.</p>'
+      : '<p class="muted">Configure inputs and click Run Workflow.</p>';
+    $validationResult.style.display = 'none';
+  });
+
+  // ── Demo mode: scenario selection ─────────────────────────────────────
+
+  async function initDemo() {
     try {
       var scenarios = await fetchJson('/api/scenarios');
-      $select.innerHTML = '<option value="">— choose a scenario —</option>'
+      $select.innerHTML = '<option value="">\\u2014 choose a scenario \\u2014</option>'
         + scenarios.map(function(s) {
             return '<option value="' + esc(s.id) + '">' + esc(s.label) + '</option>';
           }).join('');
@@ -263,7 +347,7 @@ const CLIENT_JS = `
       $app.innerHTML = '<p class="muted">Select a scenario above to begin.</p>';
       return;
     }
-    $app.innerHTML = '<p class="muted">Loading…</p>';
+    $app.innerHTML = '<p class="muted">Loading\\u2026</p>';
     try {
       var data = await fetchJson('/api/scenarios/' + encodeURIComponent(id));
       $desc.textContent = data.description;
@@ -273,6 +357,80 @@ const CLIENT_JS = `
     }
   });
 
-  init();
+  // ── Real mode: load stage names ───────────────────────────────────────
+
+  async function initStages() {
+    try {
+      var stages = await fetchJson('/api/stages');
+      $stopAfterInput.innerHTML = '<option value="">\\u2014 run all stages \\u2014</option>'
+        + stages.map(function(s) {
+            return '<option value="' + esc(s) + '">' + esc(s) + '</option>';
+          }).join('');
+    } catch (e) {
+      // fallback: leave as-is
+    }
+  }
+
+  // ── Real mode: validate inputs ────────────────────────────────────────
+
+  $validateBtn.addEventListener('click', async function() {
+    var body = {};
+    if ($dataDirInput.value.trim()) body.dataDir = $dataDirInput.value.trim();
+    if ($hostFileInput.value.trim()) body.hostFile = $hostFileInput.value.trim();
+    if ($stopAfterInput.value) body.stopAfter = $stopAfterInput.value;
+
+    $validationResult.style.display = '';
+    $validationResult.innerHTML = 'Validating\\u2026';
+
+    try {
+      var result = await postJson('/api/workflow/validate', body);
+      var lines = [];
+      var v = result.validations || {};
+      for (var k in v) {
+        if (v[k].valid) {
+          lines.push('\\u2714 ' + k + ': valid');
+        } else {
+          lines.push('\\u2718 ' + k + ': ' + esc(v[k].error));
+        }
+      }
+      $validationResult.innerHTML = lines.length > 0 ? lines.join('<br>') : 'No fields to validate.';
+    } catch (e) {
+      $validationResult.innerHTML = 'Validation request failed: ' + esc(e.message);
+    }
+  });
+
+  // ── Real mode: run workflow ───────────────────────────────────────────
+
+  $runBtn.addEventListener('click', async function() {
+    var dataDir = $dataDirInput.value.trim();
+    var hostFile = $hostFileInput.value.trim();
+    if (!dataDir || !hostFile) {
+      $app.innerHTML = '<div class="error-box">Data Directory and Host Profile File are required.</div>';
+      return;
+    }
+
+    var body = { dataDir: dataDir, hostFile: hostFile };
+    if ($artifactInput.value.trim()) body.artifactId = $artifactInput.value.trim();
+    if ($stopAfterInput.value) body.stopAfter = $stopAfterInput.value;
+
+    $app.innerHTML = '<p class="muted">Running workflow\\u2026</p>';
+    $validationResult.style.display = 'none';
+
+    try {
+      var result = await postJson('/api/workflow/run', body);
+      if (result.ok) {
+        $app.innerHTML = renderScenario(result.viewModel);
+      } else {
+        $app.innerHTML = renderError(result.error);
+      }
+    } catch (e) {
+      $app.innerHTML = '<div class="error-box">Workflow request failed: ' + esc(e.message) + '</div>';
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────
+
+  initDemo();
+  initStages();
 })();
 `;
