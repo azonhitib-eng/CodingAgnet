@@ -664,3 +664,109 @@ npx vitest run tests/fixtures/host-profiles.test.ts
 # Run cross-platform detector validation
 npx vitest run tests/detection/cross-platform-detector.test.ts
 ```
+
+---
+
+## Frontend contract layer
+
+### What it is
+
+The frontend contract layer (`src/frontend-contracts/`) provides stable, UI-friendly
+**view-model types** and **mapping functions** on top of existing backend outputs.
+It is a thin transformation layer — not a replacement for the backend types.
+
+Import via the main package or the dedicated subpath:
+
+```typescript
+import {
+  toHostSummary,
+  toCompatibilityView,
+  toRecommendationList,
+  toPlanReviewView,
+  toWorkflowView,
+  toFinalReviewState,
+  normalizeFrontendError,
+  COMPATIBILITY_LABELS,
+  WORKFLOW_STATUS_LABELS,
+  SAFETY_STATUS_LABELS,
+} from "codingagent-backend";
+
+// Or from the dedicated subpath:
+// import { ... } from "codingagent-backend/frontend-contracts";
+```
+
+### Why it exists
+
+Backend outputs use rich, detailed types optimised for correctness and internal use.
+A future frontend needs:
+
+- **Concise summaries** (one-line host description, status labels)
+- **Severity levels** (`info`, `warning`, `error`, `critical`) for colour-coding
+- **Normalized status enums** with stable labels and messages
+- **Flat, UI-friendly shapes** that don't require deep nesting knowledge
+- **Preserved detail** — `_raw` fields expose the original backend objects
+
+The view-model layer bridges this gap without duplicating business logic.
+
+### Raw backend outputs underneath
+
+| Backend type | View-model | Mapper |
+|---|---|---|
+| `HostProfile` | `HostSummaryViewModel` | `toHostSummary()` |
+| `CompatibilityResult` | `CompatibilityViewModel` | `toCompatibilityView()` |
+| `ModelRecommendation[]` | `RecommendationItem[]` | `toRecommendationList()` |
+| `InstallPlan` + `SafetyReport` | `PlanReviewViewModel` | `toPlanReviewView()` |
+| `SafetyReport` | `SafetyStatusView` | `toSafetyStatusView()` |
+| `WorkflowResult` | `WorkflowViewModel` | `toWorkflowView()` |
+| composite | `FinalReviewState` | `toFinalReviewState()` |
+
+### Normalized statuses
+
+**Compatibility statuses** (from `CompatibilityClass`):
+
+| Status | Label | Severity |
+|---|---|---|
+| `supported` | Fully Supported | `info` |
+| `supported_with_limits` | Supported with Limits | `warning` |
+| `cpu_only_slow` | CPU Only — Slow | `warning` |
+| `unsupported` | Unsupported | `error` |
+
+**Workflow statuses** (from `WorkflowStatus`):
+
+| Status | Label | Severity |
+|---|---|---|
+| `completed` | Completed | `info` |
+| `completed_requires_approval` | Completed — Requires Approval | `warning` |
+| `blocked` | Blocked | `critical` |
+| `failed` | Failed | `error` |
+| `partial` | Partial | `info` |
+
+**Safety statuses** (derived from `SafetyReport`):
+
+| Status | Label | Severity |
+|---|---|---|
+| `approved` | Approved | `info` |
+| `requiresHumanApproval` | Requires Human Approval | `warning` |
+| `blocked` | Blocked | `critical` |
+
+### Error contract
+
+The `FrontendError` type provides a stable, machine-readable error shape:
+
+```typescript
+interface FrontendError {
+  code: "INVALID_INPUT" | "MISSING_ARTIFACT" | "MISSING_RUNTIME"
+      | "BLOCKED_BY_POLICY" | "INTERNAL_FAILURE";
+  message: string;
+  details: Record<string, unknown> | null;
+}
+```
+
+Use `normalizeFrontendError(error)` to classify backend errors into this shape.
+
+### Running frontend contract tests
+
+```bash
+# Run frontend contract mapping tests
+npx vitest run tests/frontend-contracts/mappers.test.ts
+```
