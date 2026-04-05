@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 17** — Desktop packaging decision and first packaging slice
+  - Packaging decision: enhanced local web shell + desktop launcher (Electron/Tauri deferred)
+  - `openBrowser()` utility — cross-platform browser opener with URL protocol validation (http/https only)
+  - `--open` flag on app shell server — auto-opens default browser on startup
+  - `attachGracefulShutdown()` — clean Ctrl+C handling with shutdown messaging
+  - `StartServerOptions` interface for `startServer(port, options?)` signature
+  - Desktop launcher script (`scripts/desktop-launch.ts`) — preflight + server + auto-open in one command
+  - `npm run app-shell:desktop` — single-command desktop-style launch experience
+  - `npm run app-shell:open` — start server and auto-open browser
+  - `runPreflight()` exported from desktop launcher for programmatic environment checks
+  - `docs/PACKAGING.md` — packaging decision document with rationale, alternatives, security notes, CodeQL status
+  - 53 new tests: openBrowser URL validation (security), graceful shutdown export, desktop launcher preflight, new scripts, packaging document content, no regression for demo/real mode routes, startup banner content
+  - CodeQL status: confirmed not enabled on repository; documented in PACKAGING.md
+  - Updated CHANGELOG, APP-SHELL.md, QUICKSTART.md with Phase 17 documentation
+
 - **Phase 16** — Live host detection integration in the app shell
   - `POST /api/host/detect` — detects host hardware live and returns a HostProfile + summary
   - `POST /api/host/validate` — validates a host profile JSON object

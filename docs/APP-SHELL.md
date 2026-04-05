@@ -17,6 +17,8 @@ The shell is built with **zero additional dependencies** — it uses Node.js bui
 
 **Phase 16** added live host detection integration: `POST /api/host/detect` endpoint for live hardware detection, `POST /api/host/validate` for host profile validation, "Detect Host" button in the UI, host-source semantics showing whether host data came from demo/file/live-detection, and support for running workflows with detected host profiles directly (no host file needed).
 
+**Phase 17** added desktop packaging: `--open` flag for auto-browser-open, `attachGracefulShutdown()` for clean Ctrl+C handling, `openBrowser()` utility with URL protocol validation, `scripts/desktop-launch.ts` desktop launcher with preflight checks, `npm run app-shell:desktop` for single-command desktop experience. Packaging decision: enhanced local web shell (Electron/Tauri deferred). See `docs/PACKAGING.md`.
+
 ## Architecture
 
 ```
@@ -92,8 +94,15 @@ npm run preflight
 # Start the app shell (default port 3000)
 npm run app-shell
 
+# Start and auto-open browser
+npm run app-shell:open
+
+# Desktop mode: preflight + server + auto-open (recommended for first-time users)
+npm run app-shell:desktop
+
 # Or with a custom port
 npm run app-shell -- --port 8080
+npm run app-shell:desktop -- --port 8080
 
 # Or using the PORT environment variable
 PORT=4000 npm run app-shell
@@ -284,8 +293,8 @@ Errors from workflow execution are shown with:
 - **No install execution** — plans are display-only, never executed
 - **No design system** — minimal CSS, no component library
 - **No state management** — simple fetch-and-render with localStorage for preferences
-- **No desktop packaging** — runs as a local web server only
-- **No server/daemon mode** — start/stop manually
+- **No desktop packaging** — runs as a local web server with desktop launcher (see `docs/PACKAGING.md`)
+- **No server/daemon mode** — start/stop manually (Ctrl+C with graceful shutdown)
 - **No background tasks** — workflow runs synchronously
 - **No remote/cloud features**
 - **No plugin/extension system**
@@ -300,9 +309,13 @@ src/app-shell/
   index.ts             — Public exports
   data-provider.ts     — Service layer: maps demo scenarios → view-models
   demo-scenarios.ts    — Embedded demo fixture data
-  server.ts            — HTTP server with demo + real mode endpoints
+  server.ts            — HTTP server with demo + real mode endpoints, browser opener, graceful shutdown
   views.ts             — HTML/CSS/JS template rendering (both modes, Phase 14 UX)
   workflow-bridge.ts   — Thin bridge: shell → real backend workflow
+
+scripts/
+  desktop-launch.ts    — Desktop launcher: preflight + server + auto-open
+  preflight.ts         — Environment readiness checker
 
 tests/app-shell/
   data-provider.test.ts      — Data provider / service layer tests
@@ -312,6 +325,7 @@ tests/app-shell/
   views-phase14.test.ts      — Phase 14 UX hardening tests (47 tests)
   workflow-bridge.test.ts    — Workflow bridge: validation, execution, errors
   phase16-host-detection.test.ts — Phase 16: host detection, source semantics (48 tests)
+  phase17-desktop-packaging.test.ts — Phase 17: desktop packaging, launcher, security (53 tests)
 ```
 
 ## API reference
