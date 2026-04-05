@@ -273,8 +273,7 @@ export function runWorkflow(input: WorkflowInput): WorkflowResult {
       // Record the completed stage
       const completed: CompletedStage = { stage: stageName, output };
       ctx.completedStages.push(completed);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (ctx.stageOutputs as any)[stageName] = output;
+      (ctx.stageOutputs as Record<string, unknown>)[stageName] = output;
 
       // Check for early termination after safety_evaluation
       if (stageName === "safety_evaluation") {
