@@ -20,7 +20,7 @@
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { exec } from "node:child_process";
+import { execFile } from "node:child_process";
 import { URL } from "node:url";
 
 import {
@@ -330,6 +330,7 @@ async function handleHostValidate(req: IncomingMessage, res: ServerResponse): Pr
 /**
  * Open a URL in the default system browser.
  * Only allows http: and https: protocols to prevent command injection.
+ * Uses execFile to avoid shell interpolation of URL characters.
  * Returns true if the command was spawned, false on validation failure.
  */
 export function openBrowser(url: string): boolean {
@@ -345,14 +346,18 @@ export function openBrowser(url: string): boolean {
   const safeUrl = parsed.href;
   const platform = process.platform;
   let cmd: string;
+  let args: string[];
   if (platform === "darwin") {
-    cmd = `open "${safeUrl}"`;
+    cmd = "open";
+    args = [safeUrl];
   } else if (platform === "win32") {
-    cmd = `start "" "${safeUrl}"`;
+    cmd = "cmd";
+    args = ["/c", "start", "", safeUrl];
   } else {
-    cmd = `xdg-open "${safeUrl}"`;
+    cmd = "xdg-open";
+    args = [safeUrl];
   }
-  exec(cmd, (err) => {
+  execFile(cmd, args, (err) => {
     if (err) {
       // Silently ignore — user can still open the URL manually
     }
