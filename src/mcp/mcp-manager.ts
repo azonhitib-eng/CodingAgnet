@@ -8,6 +8,12 @@
  * - Capability discovery (via capability-discovery helpers)
  * - Session event emission (via session-integration helpers)
  *
+ * Phase 26 additions:
+ * - Health refresh / recheck
+ * - Discovery refresh / recheck
+ * - Stale server marking
+ * - Enriched runtime info with healthReport and discoveryState
+ *
  * Does NOT:
  * - Implement full MCP protocol handshake
  * - Manage background schedulers or distributed control
@@ -19,11 +25,13 @@ import type {
   McpServerConfig,
   McpAttachment,
   McpRuntimeInfo,
+  McpHealthReport,
+  McpDiscoveryState,
 } from "./types.js";
 import { McpProcessManager } from "./process-manager.js";
 import type { McpProcessRecord } from "./process-manager.js";
 import type { McpDiscoveryResult } from "./capability-discovery.js";
-import { applyDiscovery } from "./capability-discovery.js";
+import { applyDiscovery, markDiscovering } from "./capability-discovery.js";
 import {
   mcpAttachRequested,
   mcpAttached,
@@ -34,6 +42,10 @@ import {
   mcpDiscoveredTools,
   mcpDiscoveredResources,
   mcpDiscoveredPrompts,
+  mcpHealthRefreshed,
+  mcpHealthDegraded,
+  mcpDiscoveryRefreshed,
+  mcpStale,
 } from "./session-integration.js";
 import type { SessionManager } from "../session/session-manager.js";
 import type { SessionId, AttachedResource } from "../session/types.js";
@@ -299,9 +311,180 @@ export class McpManager {
     }
   }
 
+  /* ---------- health refresh (Phase 26) ---------- */
+
+  /**
+   * Refresh health status for a server and emit session events.
+   *
+   * This is an explicit "recheck" — not continuous monitoring.
+   * Returns the updated health report.
+   */
+  refreshHealth(
+    serverId: McpServerId,
+    sessionId?: SessionId,
+  ): McpHealthReport {
+    const record = this.processManager.getRecord(serverId);
+    if (!record) {
+      throw new Error(`MCP server not found: ${serverId}`);
+    }
+
+    const healthReport = this.processManager.refreshHealth(serverId);
+
+    if (sessionId) {
+      this.sessionManager.appendEvent(
+        sessionId,
+        mcpHealthRefreshed(
+          serverId,
+          record.config.name,
+          healthReport.status,
+          healthReport.processAlive,
+        ),
+      );
+
+      // If degraded, also emit degraded event
+      if (healthReport.status === "degraded") {
+        this.sessionManager.appendEvent(
+          sessionId,
+          mcpHealthDegraded(
+            serverId,
+            record.config.name,
+            healthReport.lastError ?? "Partial capability loss",
+          ),
+        );
+      }
+    }
+
+    return healthReport;
+  }
+
+  /* ---------- discovery refresh (Phase 26) ---------- */
+
+  /**
+   * Refresh discovery for a server.
+   *
+   * Marks discovery as in-progress, applies the provided result,
+   * and emits session events for the outcome.
+   *
+   * In this phase, actual protocol-driven discovery is not implemented.
+   * The caller provides the discovery result (from a mock, fixture,
+   * or future protocol handler).
+   */
+  refreshDiscovery(
+    serverId: McpServerId,
+    result: McpDiscoveryResult,
+    sessionId?: SessionId,
+  ): McpDiscoveryState {
+    const record = this.processManager.getRecord(serverId);
+    if (!record) {
+      throw new Error(`MCP server not found: ${serverId}`);
+    }
+
+    // Mark discovering
+    markDiscovering(record);
+
+    // Apply
+    applyDiscovery(record, result);
+
+    // Emit session events
+    if (sessionId) {
+      this.sessionManager.appendEvent(
+        sessionId,
+        mcpDiscoveryRefreshed(
+          serverId,
+          record.config.name,
+          record.discoveryState.status,
+          record.discoveryState.toolCount,
+          record.discoveryState.resourceCount,
+          record.discoveryState.promptCount,
+        ),
+      );
+
+      // Also emit capability events if there are new discoveries
+      if (result.tools.length > 0) {
+        this.sessionManager.appendEvent(
+          sessionId,
+          mcpDiscoveredTools(serverId, result.tools.map((t) => t.name)),
+        );
+      }
+      if (result.resources.length > 0) {
+        this.sessionManager.appendEvent(
+          sessionId,
+          mcpDiscoveredResources(serverId, result.resources.map((r) => r.uri)),
+        );
+      }
+      if (result.prompts.length > 0) {
+        this.sessionManager.appendEvent(
+          sessionId,
+          mcpDiscoveredPrompts(serverId, result.prompts.map((p) => p.name)),
+        );
+      }
+    }
+
+    return record.discoveryState;
+  }
+
+  /* ---------- stale marking (Phase 26) ---------- */
+
+  /**
+   * Mark an MCP server as stale (e.g., after session restore).
+   *
+   * Sets status to "stale", marks health/discovery as stale,
+   * and emits a session event.
+   */
+  markServerStale(
+    serverId: McpServerId,
+    sessionId?: SessionId,
+  ): McpProcessRecord {
+    const record = this.processManager.markStale(serverId);
+
+    if (sessionId) {
+      this.sessionManager.appendEvent(
+        sessionId,
+        mcpStale(serverId, record.config.name),
+      );
+    }
+
+    return record;
+  }
+
+  /**
+   * Mark a server as degraded with a reason.
+   */
+  markServerDegraded(
+    serverId: McpServerId,
+    reason: string,
+    sessionId?: SessionId,
+  ): McpProcessRecord {
+    const record = this.processManager.getRecord(serverId);
+    if (!record) {
+      throw new Error(`MCP server not found: ${serverId}`);
+    }
+
+    record.status = "degraded";
+    record.health = "degraded";
+    record.lastError = reason;
+    const now = new Date().toISOString();
+    record.healthReport = {
+      ...record.healthReport,
+      status: "degraded",
+      lastError: reason,
+      lastFailureAt: now,
+      lastCheckedAt: now,
+    };
+
+    if (sessionId) {
+      this.sessionManager.appendEvent(
+        sessionId,
+        mcpHealthDegraded(serverId, record.config.name, reason),
+      );
+    }
+
+    return record;
+  }
+
   /* ---------- query ---------- */
 
-  /** Get runtime info for a server. */
+  /** Get runtime info for a server (Phase 26: enriched with healthReport + discoveryState). */
   getRuntimeInfo(serverId: McpServerId): McpRuntimeInfo | undefined {
     const record = this.processManager.getRecord(serverId);
     if (!record) return undefined;
@@ -310,6 +493,8 @@ export class McpManager {
       config: record.config,
       status: record.status,
       health: record.health,
+      healthReport: { ...record.healthReport },
+      discoveryState: { ...record.discoveryState },
       pid: record.pid,
       startedAt: record.startedAt,
       stoppedAt: record.stoppedAt,

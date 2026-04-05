@@ -59,11 +59,23 @@ export interface SessionSummary {
   readonly attachedResourceCount: number;
   /** Number of MCP servers currently attached. */
   readonly mcpServerCount: number;
-  /** MCP servers with their ready status. */
+  /** MCP servers with their ready status and health/discovery state (Phase 26). */
   readonly mcpServers: ReadonlyArray<{
     readonly id: string;
     readonly label: string;
     readonly ready: boolean;
+    /** Server runtime status if known (Phase 26). */
+    readonly status?: string;
+    /** Server health if known (Phase 26). */
+    readonly health?: string;
+    /** Whether health data is stale (Phase 26). */
+    readonly healthStale?: boolean;
+    /** Discovery status if known (Phase 26). */
+    readonly discoveryStatus?: string;
+    /** Discovery source if known (Phase 26). */
+    readonly discoverySource?: string;
+    /** Whether discovery data is current (Phase 26). */
+    readonly discoveryCurrent?: boolean;
   }>;
   /** Number of agents currently attached. */
   readonly agentCount: number;
