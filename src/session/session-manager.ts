@@ -53,6 +53,14 @@ export interface SessionSummary {
   readonly isBlocked: boolean;
   readonly lastError: string | null;
   readonly attachedResourceCount: number;
+  /** Number of MCP servers currently attached. */
+  readonly mcpServerCount: number;
+  /** MCP servers with their ready status. */
+  readonly mcpServers: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly ready: boolean;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -215,6 +223,9 @@ export class SessionManager {
       session.events.length > 0
         ? session.events[session.events.length - 1]
         : null;
+    const mcpResources = session.attachedResources.filter(
+      (r) => r.kind === "mcp_server",
+    );
     return {
       id: session.id,
       createdAt: session.createdAt,
@@ -231,6 +242,12 @@ export class SessionManager {
       isBlocked: session.runContext?.isBlocked ?? false,
       lastError: session.runContext?.lastError ?? null,
       attachedResourceCount: session.attachedResources.length,
+      mcpServerCount: mcpResources.length,
+      mcpServers: mcpResources.map((r) => ({
+        id: r.id,
+        label: r.label,
+        ready: r.ready,
+      })),
     };
   }
 

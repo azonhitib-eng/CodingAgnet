@@ -82,7 +82,17 @@ export type SessionEventKind =
   | "completed"
   | "note"
   | "info"
-  | "warning";
+  | "warning"
+  /* MCP lifecycle events (Phase 20) */
+  | "mcp_attach_requested"
+  | "mcp_attached"
+  | "mcp_starting"
+  | "mcp_started"
+  | "mcp_failed"
+  | "mcp_stopped"
+  | "mcp_discovered_tools"
+  | "mcp_discovered_resources"
+  | "mcp_discovered_prompts";
 
 /** Structured session event. */
 export interface SessionEvent {
