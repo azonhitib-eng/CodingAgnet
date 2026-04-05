@@ -6,6 +6,34 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 26** — MCP Health and Discovery Hardening
+  - Extended `McpServerStatus` with 4 new values: `discovery_pending`, `discovery_complete`, `degraded`, `stale`
+  - New `McpHealthReport` type — structured health with timestamps, failure reasons, stale flag
+  - New `McpDiscoveryState` type — explicit discovery lifecycle (never/discovering/discovered/stale/failed)
+  - New `McpDiscoverySource` type — distinguishes manual/runtime/restored/placeholder discovery
+  - New `McpDiscoveryStatus` type — explicit discovery lifecycle status
+  - Process manager gains `refreshHealth()`, `markStale()` methods
+  - Capability discovery gains `markDiscovering()`, `markDiscoveryStale()`, source tracking
+  - `McpProcessRecord` now tracks `healthReport` and `discoveryState`
+  - `McpManager` gains `refreshHealth()`, `refreshDiscovery()`, `markServerStale()`, `markServerDegraded()`
+  - `McpRuntimeInfo` enriched with `healthReport` and `discoveryState`
+  - 4 new session event kinds: `mcp_health_refreshed`, `mcp_health_degraded`, `mcp_discovery_refreshed`, `mcp_stale`
+  - `MCP_EVENT_KINDS` expanded from 9 to 13
+  - `buildMcpEventSummary()` tracks health/discovery/stale events
+  - Session summary `mcpServers` type extended with optional health/discovery metadata
+  - Console helpers classify new events (actor: `mcp`, cards: lifecycle/failure/discovery)
+  - Timeline helpers classify new events (progress/warning categories)
+  - Restore warnings updated to mention stale state explicitly
+  - 4 new API endpoints:
+    - `GET /api/session/:id/mcp/status` — MCP server statuses for a session
+    - `GET /api/mcp/:id/info` — runtime info for a specific MCP server
+    - `POST /api/mcp/:id/refresh-health` — refresh health for an MCP server
+    - `POST /api/mcp/:id/refresh-discovery` — refresh discovery for an MCP server
+  - `getMcpManager()` / `setMcpManager()` exposed from app-shell server for testing
+  - Factory functions: `createDefaultHealthReport()`, `createDefaultDiscoveryState()`, `createStaleHealthReport()`, `createStaleDiscoveryState()`
+  - 76 new tests covering health/discovery state transitions, refresh/recheck, persistence honesty, event emission
+  - New documentation: `docs/MCP-HEALTH.md`
+
 - **Phase 25** — Session Persistence and Recent Sessions
   - New `src/session/persistence.ts` module — JSON file-based session persistence adapter
     - `SessionPersistence` class: save, load, list, delete sessions with file I/O isolated in one adapter
