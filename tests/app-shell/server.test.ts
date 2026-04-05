@@ -233,3 +233,240 @@ describe("unknown routes", () => {
     expect(data.statusCode).toBe(404);
   });
 });
+
+// ---------------------------------------------------------------------------
+// API: GET /api/stages
+// ---------------------------------------------------------------------------
+
+describe("GET /api/stages", () => {
+  it("returns JSON array of stage names", () => {
+    const req = createMockReq("/api/stages");
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = getData();
+    expect(data.statusCode).toBe(200);
+    expect(data.headers["content-type"]).toContain("application/json");
+    const parsed = JSON.parse(data.body);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toContain("catalog_loading");
+    expect(parsed).toContain("rendering");
+    expect(parsed.length).toBe(8);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// API: POST /api/workflow/run
+// ---------------------------------------------------------------------------
+
+// Helper to create a POST request with a body
+function createPostReq(url: string, body: unknown): IncomingMessage {
+  const req = createMockReq(url, "POST");
+  // We need to simulate the body being readable
+  const bodyStr = JSON.stringify(body);
+  req.headers["content-type"] = "application/json";
+  // Push body data onto the readable stream
+  process.nextTick(() => {
+    req.push(bodyStr);
+    req.push(null);
+  });
+  return req;
+}
+
+function createPostReqRaw(url: string, rawBody: string): IncomingMessage {
+  const req = createMockReq(url, "POST");
+  req.headers["content-type"] = "application/json";
+  process.nextTick(() => {
+    req.push(rawBody);
+    req.push(null);
+  });
+  return req;
+}
+
+async function waitForResponse(getData: () => MockResponseData): Promise<MockResponseData> {
+  // Poll until body is populated
+  for (let i = 0; i < 50; i++) {
+    const data = getData();
+    if (data.body) return data;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return getData();
+}
+
+describe("POST /api/workflow/run", () => {
+  it("returns 400 for empty body", async () => {
+    const req = createPostReqRaw("/api/workflow/run", "");
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(400);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.error).toBeTruthy();
+  });
+
+  it("returns 400 for missing dataDir", async () => {
+    const req = createPostReq("/api/workflow/run", { hostFile: "/some/path" });
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(400);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.error).toContain("dataDir");
+  });
+
+  it("returns 400 for missing hostFile", async () => {
+    const req = createPostReq("/api/workflow/run", { dataDir: "/some/path" });
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(400);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.error).toContain("hostFile");
+  });
+
+  it("returns 400 for invalid JSON body", async () => {
+    const req = createPostReqRaw("/api/workflow/run", "not json");
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(400);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.error).toContain("Invalid JSON");
+  });
+
+  it("returns ok:false for invalid data directory", async () => {
+    const req = createPostReq("/api/workflow/run", {
+      dataDir: "/nonexistent/data",
+      hostFile: "/some/host.json",
+    });
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(200);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.ok).toBe(false);
+    expect(parsed.error).toBeDefined();
+    expect(parsed.error.code).toBeDefined();
+  });
+
+  it("returns ok:true with valid inputs and complete workflow", async () => {
+    const { join } = await import("node:path");
+    const { mkdirSync, writeFileSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { resolve } = await import("node:path");
+    const REPO_ROOT = resolve(__dirname, "../..");
+    const DATA_DIR = join(REPO_ROOT, "data");
+
+    // Create temp host file
+    const dir = join(tmpdir(), "server-test-" + Date.now());
+    mkdirSync(dir, { recursive: true });
+    const hostFile = join(dir, "host.json");
+    writeFileSync(hostFile, JSON.stringify({
+      detectedAt: "2025-01-15T10:00:00Z",
+      os: {
+        platform: { value: "linux", confidence: "certain" },
+        release: { value: "6.5.0", confidence: "certain" },
+        arch: { value: "x64", confidence: "certain" },
+      },
+      cpu: {
+        model: { value: "AMD Ryzen 7 5800X", confidence: "certain" },
+        cores: { value: 8, confidence: "certain" },
+        threads: { value: 16, confidence: "certain" },
+      },
+      memory: {
+        totalGb: { value: 32, confidence: "certain" },
+        availableGb: { value: 24, confidence: "certain" },
+      },
+      gpu: {
+        present: { value: true, confidence: "certain" },
+        model: { value: "NVIDIA GeForce RTX 3060", confidence: "certain" },
+        vramGb: { value: 12, confidence: "certain" },
+        cudaVersion: { value: null, confidence: "unknown" },
+        rocmVersion: { value: null, confidence: "unknown" },
+        driverVersion: { value: "535.0", confidence: "certain" },
+      },
+      installedRuntimes: [
+        { runtimeId: "ollama", version: { value: "0.4.1", confidence: "certain" } },
+      ],
+      missingDependencies: [],
+    }));
+
+    const req = createPostReq("/api/workflow/run", {
+      dataDir: DATA_DIR,
+      hostFile,
+    });
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(200);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.ok).toBe(true);
+    expect(parsed.viewModel).toBeDefined();
+    expect(parsed.viewModel.host).toBeDefined();
+    expect(parsed.viewModel.workflow).toBeDefined();
+    expect(parsed.completedStages).toBeDefined();
+    expect(Array.isArray(parsed.completedStages)).toBe(true);
+
+    rmSync(dir, { recursive: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// API: POST /api/workflow/validate
+// ---------------------------------------------------------------------------
+
+describe("POST /api/workflow/validate", () => {
+  it("validates a valid data directory", async () => {
+    const { resolve, join } = await import("node:path");
+    const REPO_ROOT = resolve(__dirname, "../..");
+    const DATA_DIR = join(REPO_ROOT, "data");
+
+    const req = createPostReq("/api/workflow/validate", { dataDir: DATA_DIR });
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(200);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.validations.dataDir.valid).toBe(true);
+  });
+
+  it("validates an invalid data directory", async () => {
+    const req = createPostReq("/api/workflow/validate", { dataDir: "/nonexistent" });
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(200);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.validations.dataDir.valid).toBe(false);
+    expect(parsed.validations.dataDir.error).toBeTruthy();
+  });
+
+  it("validates a valid stop-after stage", async () => {
+    const req = createPostReq("/api/workflow/validate", { stopAfter: "recommendation" });
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(200);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.validations.stopAfter.valid).toBe(true);
+  });
+
+  it("validates an invalid stop-after stage", async () => {
+    const req = createPostReq("/api/workflow/validate", { stopAfter: "bad_stage" });
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(200);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.validations.stopAfter.valid).toBe(false);
+  });
+
+  it("returns empty validations for empty body", async () => {
+    const req = createPostReq("/api/workflow/validate", {});
+    const { res, getData } = createMockRes();
+    handleRequest(req, res);
+    const data = await waitForResponse(getData);
+    expect(data.statusCode).toBe(200);
+    const parsed = JSON.parse(data.body);
+    expect(parsed.validations).toEqual({});
+  });
+});
