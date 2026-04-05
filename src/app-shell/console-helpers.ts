@@ -11,7 +11,7 @@
  */
 
 import type { ClassifiedTimelineEvent, TimelineEventCategory } from "./timeline-helpers.js";
-import { classifyEvent, categoryIcon, categoryCssClass } from "./timeline-helpers.js";
+import { classifyEvent } from "./timeline-helpers.js";
 
 /* ------------------------------------------------------------------ */
 /*  Actor / source classification                                     */
