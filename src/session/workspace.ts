@@ -24,6 +24,7 @@ export function openLocalWorkspace(
     branch: opts?.branch ?? null,
     ref: opts?.ref ?? null,
     cloneUrl: null,
+    repoMeta: null,
   };
 }
 
@@ -40,6 +41,7 @@ export function prepareCloneWorkspace(
     branch: opts?.branch ?? null,
     ref: opts?.ref ?? null,
     cloneUrl,
+    repoMeta: null,
   };
 }
 
@@ -58,6 +60,11 @@ export function markWorkspaceClosed(ws: Workspace): Workspace {
   return { ...ws, status: "closed" };
 }
 
+/** Mark a workspace as bootstrapping (e.g. clone in progress). */
+export function markWorkspaceBootstrapping(ws: Workspace): Workspace {
+  return { ...ws, status: "bootstrapping" };
+}
+
 /** Create a generic local directory workspace (not a git repo). */
 export function openGenericDirectory(
   path: string,
@@ -69,6 +76,7 @@ export function openGenericDirectory(
     branch: null,
     ref: null,
     cloneUrl: null,
+    repoMeta: null,
   };
 }
 
@@ -91,5 +99,5 @@ export function isValidSource(s: string): s is WorkspaceSource {
 
 /** Validate the status value is one of the known WorkspaceStatus types. */
 export function isValidStatus(s: string): s is WorkspaceStatus {
-  return s === "pending" || s === "ready" || s === "invalid" || s === "closed";
+  return s === "pending" || s === "ready" || s === "invalid" || s === "closed" || s === "bootstrapping";
 }

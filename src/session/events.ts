@@ -67,3 +67,31 @@ export const infoEvent = (message: string): SessionEvent =>
 
 export const warningEvent = (message: string): SessionEvent =>
   createEvent("warning", message);
+
+/* ------------------------------------------------------------------ */
+/*  Workspace / repository lifecycle events (Phase 21)                */
+/* ------------------------------------------------------------------ */
+
+export const workspaceOpenRequested = (path: string): SessionEvent =>
+  createEvent("workspace_open_requested", `Workspace open requested: ${path}`, { path });
+
+export const workspaceOpened = (path: string, isGitRepo: boolean): SessionEvent =>
+  createEvent("workspace_opened", `Workspace opened: ${path}${isGitRepo ? " (git repo)" : ""}`, { path, isGitRepo });
+
+export const workspaceInvalid = (path: string, reason: string): SessionEvent =>
+  createEvent("workspace_invalid", `Workspace invalid: ${reason}`, { path, reason });
+
+export const cloneRequested = (url: string, targetPath: string): SessionEvent =>
+  createEvent("clone_requested", `Clone requested: ${url} → ${targetPath}`, { url, targetPath });
+
+export const cloneStarted = (url: string, targetPath: string): SessionEvent =>
+  createEvent("clone_started", `Clone started: ${url}`, { url, targetPath });
+
+export const cloneCompleted = (url: string, targetPath: string): SessionEvent =>
+  createEvent("clone_completed", `Clone completed: ${url} → ${targetPath}`, { url, targetPath });
+
+export const cloneFailed = (url: string, reason: string): SessionEvent =>
+  createEvent("clone_failed", `Clone failed: ${reason}`, { url, reason });
+
+export const workspaceReady = (path: string): SessionEvent =>
+  createEvent("workspace_ready", `Workspace ready: ${path}`, { path });
