@@ -110,11 +110,11 @@ export function evaluatePlanSafety(
   const hasApprovalMismatch = warnings.some((w) =>
     w.includes("requires approval per policy"),
   );
-  const needsHumanApproval =
+  const requiresHumanApproval =
     !hasBlocked && (hasDangerous || hasApprovalRequired || hasApprovalMismatch);
 
   const blocked = hasBlocked;
-  const approved = !blocked && !needsHumanApproval;
+  const approved = !blocked && !requiresHumanApproval;
 
   return {
     planId: plan.artifactId,
@@ -122,7 +122,7 @@ export function evaluatePlanSafety(
     warnings,
     approved,
     blocked,
-    requiresHumanApproval: needsHumanApproval,
+    requiresHumanApproval,
   };
 }
 

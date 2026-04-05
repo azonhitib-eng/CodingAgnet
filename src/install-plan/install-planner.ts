@@ -212,10 +212,12 @@ function classifyStepRisk(command: string): RiskLevel {
   return "safe";
 }
 
+/** Assumed average download speed in MB/s for duration estimation. */
+const ASSUMED_DOWNLOAD_SPEED_MB_S = 50;
+
 function estimateDownloadDuration(artifact: ModelArtifact): number | undefined {
   if (artifact.fileSizeGb !== undefined && artifact.fileSizeGb > 0) {
-    // ~50 MB/s average download → seconds
-    return Math.ceil(artifact.fileSizeGb * 1024 / 50);
+    return Math.ceil(artifact.fileSizeGb * 1024 / ASSUMED_DOWNLOAD_SPEED_MB_S);
   }
   return undefined;
 }
