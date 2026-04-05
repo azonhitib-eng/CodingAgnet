@@ -19,6 +19,8 @@ The shell is built with **zero additional dependencies** — it uses Node.js bui
 
 **Phase 17** added desktop packaging: `--open` flag for auto-browser-open, `attachGracefulShutdown()` for clean Ctrl+C handling, `openBrowser()` utility with URL protocol validation, `scripts/desktop-launch.ts` desktop launcher with preflight checks, `npm run app-shell:desktop` for single-command desktop experience. Packaging decision: enhanced local web shell (Electron/Tauri deferred). See `docs/PACKAGING.md`.
 
+**Phase 18** added product-shell polish and session usability: sticky section navigation bar with IntersectionObserver, run-context summary bar with timestamps, compact summary strip, "Clear Results" vs "Reset" distinction, export result/host JSON downloads, copy summary text, import host profile file, contextual error recovery hints, and section anchoring for quick jumps between result areas.
+
 ## Architecture
 
 ```
@@ -288,11 +290,86 @@ Errors from workflow execution are shown with:
 | **Input error highlighting** | Missing required fields get a red border; clears on typing |
 | **Button disabling** | Run and Validate buttons are disabled during execution |
 
+## Session usability (Phase 18)
+
+**Phase 18** polishes the shell for repeated daily use as a local product.
+
+### Navigation
+
+A **sticky section nav bar** appears when results are displayed. It provides jump links to:
+
+| Section | Description |
+|---------|-------------|
+| **Host** | Host summary card |
+| **Recommendation** | Top recommendation card |
+| **Compatibility** | Compatibility detail card |
+| **Plan Review** | Install plan review card |
+| **Workflow** | Workflow summary card |
+
+The nav bar highlights the currently visible section using an IntersectionObserver. Click any link to scroll to that section. The nav bar is hidden when no results are displayed.
+
+### Run context
+
+Each result display includes a **run context bar** showing:
+
+- **Mode** — Demo or Real
+- **Label** — Scenario name (demo) or "Real Workflow" (real)
+- **Timestamp** — When the run was executed
+- **Artifact ID** — If a specific artifact was targeted (real mode)
+- **Stop After** — If the workflow was stopped early (real mode)
+
+This helps track what produced the current results, especially during repeated runs.
+
+### Summary strip
+
+A **compact summary strip** appears at the top of results showing the status icon, host summary, recommendation name, and compatibility label — all in one scannable line.
+
+### Clear Results vs Reset
+
+Two separate actions:
+
+| Action | Behavior |
+|--------|----------|
+| **Clear Results** | Removes the result display but keeps form inputs intact — ready for a re-run with tweaked parameters |
+| **Reset** | Clears all form inputs, detection results, and results — start completely fresh |
+
+### Repeated runs
+
+The last workflow result stays visible until replaced by a new run. There is no "pending" state between runs — the previous result remains on screen until the new one is ready.
+
+### Export and import
+
+| Feature | Description |
+|---------|-------------|
+| **Export Result JSON** | Downloads the full workflow result as a `.json` file with a timestamped filename |
+| **Export Host JSON** | Downloads just the host profile section as a `.json` file |
+| **Copy Summary Text** | Copies a plain-text summary (host, recommendation, compatibility, status) to clipboard |
+| **Copy JSON** | Copies the full JSON result to clipboard (existing feature) |
+| **Import Host JSON** | Load a host profile `.json` file from your computer in real mode (validated via backend) |
+
+The import feature validates the file through the backend before accepting it, and sets it as the active detected host profile.
+
+### Error recovery hints
+
+Common errors now include contextual recovery hints:
+
+| Error Pattern | Recovery Hint |
+|---------------|---------------|
+| Path does not exist | Check the path, use absolute paths |
+| Missing subdirectories | Data dir needs `models/`, `runtimes/`, `agent-tools/` |
+| Invalid host file | Regenerate with `npm run generate-host-profile`, or use Detect Host |
+| Host file does not exist | File may have been moved — use Detect Host or regenerate |
+| Artifact not in catalog | Remove artifact ID for auto-recommendation |
+
+These hints appear in addition to the existing error code hints (Phase 14).
+
+> **Reminder**: Install plans shown in the shell are informational only. They describe what *would* be done, but the shell never executes them.
+
 ## What it intentionally does NOT do
 
 - **No install execution** — plans are display-only, never executed
 - **No design system** — minimal CSS, no component library
-- **No state management** — simple fetch-and-render with localStorage for preferences
+- **No state management** — simple fetch-and-render with localStorage for preferences and session-level run tracking
 - **No desktop packaging** — runs as a local web server with desktop launcher (see `docs/PACKAGING.md`)
 - **No server/daemon mode** — start/stop manually (Ctrl+C with graceful shutdown)
 - **No background tasks** — workflow runs synchronously
@@ -310,7 +387,7 @@ src/app-shell/
   data-provider.ts     — Service layer: maps demo scenarios → view-models
   demo-scenarios.ts    — Embedded demo fixture data
   server.ts            — HTTP server with demo + real mode endpoints, browser opener, graceful shutdown
-  views.ts             — HTML/CSS/JS template rendering (both modes, Phase 14 UX)
+  views.ts             — HTML/CSS/JS template rendering (both modes, Phase 14 UX, Phase 18 session polish)
   workflow-bridge.ts   — Thin bridge: shell → real backend workflow
 
 scripts/
@@ -326,6 +403,7 @@ tests/app-shell/
   workflow-bridge.test.ts    — Workflow bridge: validation, execution, errors
   phase16-host-detection.test.ts — Phase 16: host detection, source semantics (48 tests)
   phase17-desktop-packaging.test.ts — Phase 17: desktop packaging, launcher, security (53 tests)
+  phase18-session-usability.test.ts — Phase 18: session usability, navigation, export/import (82 tests)
 ```
 
 ## API reference

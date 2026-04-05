@@ -65,6 +65,13 @@ ${CSS}
       <div class="form-actions" style="margin-top:0;">
         <button id="detect-host-btn" type="button" class="btn-secondary">Detect Host</button>
       </div>
+      <div class="form-row" style="margin-top:.5rem;">
+        <label>Import Host JSON</label>
+        <div class="export-bar">
+          <label for="import-host-file">Choose File\u2026<input type="file" id="import-host-file" accept=".json,application/json"></label>
+          <span id="import-host-status" class="muted"></span>
+        </div>
+      </div>
       <div id="host-source-indicator" style="display:none;"></div>
       <div id="detect-result" style="display:none;"></div>
     </fieldset>
@@ -85,10 +92,12 @@ ${CSS}
       <button id="run-workflow-btn" type="button">Run Workflow</button>
       <button id="validate-btn" type="button" class="btn-secondary">Validate Inputs</button>
       <button id="reset-form-btn" type="button" class="btn-secondary">Reset</button>
+      <button id="clear-results-btn" type="button" class="btn-secondary">Clear Results</button>
     </div>
     <div id="validation-result" style="display:none;"></div>
   </div>
 </div>
+<nav id="section-nav" class="section-nav" style="display:none;"></nav>
 <main id="app">
   <p class="muted">Select a scenario above to begin.</p>
 </main>
@@ -221,6 +230,21 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 #detect-result.dr-ok { background: #d1e7dd; color: #0f5132; }
 #detect-result.dr-err { background: #f8d7da; color: #842029; }
 #detect-result.dr-loading { background: #fff3cd; color: #664d03; }
+.section-nav { position: sticky; top: 0; z-index: 10; background: var(--card-bg); border-bottom: 1px solid var(--card-border); padding: .4rem 1.5rem; display: flex; gap: 1rem; font-size: .82rem; }
+.section-nav a { color: var(--muted); text-decoration: none; padding: .2rem .4rem; border-radius: 3px; white-space: nowrap; }
+.section-nav a:hover, .section-nav a.active { color: var(--accent); background: #e8f0fe; }
+.run-context { background: #f0f4f8; border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: .5rem 1rem; margin-bottom: 1rem; font-size: .82rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.run-context .run-label { font-weight: 600; }
+.run-context .run-meta { color: var(--muted); }
+.summary-strip { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: .6rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: .9rem; }
+.summary-strip .ss-status { font-weight: 700; }
+.summary-strip .ss-item { color: var(--muted); }
+.export-bar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: .5rem; }
+.export-bar button, .export-bar label { padding: .2rem .6rem; border: 1px solid var(--card-border); border-radius: 3px; font-size: .75rem; background: var(--card-bg); cursor: pointer; color: var(--muted); }
+.export-bar button:hover, .export-bar label:hover { background: #e9ecef; }
+.export-bar input[type="file"] { display: none; }
+.recovery-hint { background: #e8f4fd; border: 1px solid #b6d4fe; border-radius: 4px; padding: .5rem .75rem; font-size: .82rem; color: #084298; margin-top: .5rem; }
+.recovery-hint code { background: #d4e5f7; padding: .05rem .3rem; border-radius: 2px; font-size: .78rem; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -247,10 +271,15 @@ const CLIENT_JS = `
   var $detectHostBtn = document.getElementById('detect-host-btn');
   var $detectResult = document.getElementById('detect-result');
   var $hostSourceIndicator = document.getElementById('host-source-indicator');
+  var $sectionNav = document.getElementById('section-nav');
+  var $clearResultsBtn = document.getElementById('clear-results-btn');
+  var $importHostFile = document.getElementById('import-host-file');
+  var $importHostStatus = document.getElementById('import-host-status');
 
   // Current detected host profile (if any)
   var _detectedHostProfile = null;
   var _currentHostSource = null; // 'file' | 'detected' | null
+  var _lastRunMeta = null;
 
   // ── Storage helpers ─────────────────────────────────────────────────
 
@@ -337,6 +366,128 @@ const CLIENT_JS = `
 
   // ── Status helpers ──────────────────────────────────────────────────
 
+  // ── Section nav ──────────────────────────────────────────────────────
+
+  function showSectionNav() {
+    $sectionNav.innerHTML = [
+      {id:'section-host',label:'Host'},
+      {id:'section-recommendation',label:'Recommendation'},
+      {id:'section-compatibility',label:'Compatibility'},
+      {id:'section-plan',label:'Plan Review'},
+      {id:'section-workflow',label:'Workflow'},
+    ].map(function(s) {
+      return '<a href="#' + s.id + '" data-section="' + s.id + '">' + s.label + '</a>';
+    }).join('');
+    $sectionNav.style.display = '';
+    observeSections();
+  }
+
+  function hideSectionNav() {
+    $sectionNav.style.display = 'none';
+  }
+
+  function observeSections() {
+    if (!window.IntersectionObserver) return;
+    var links = $sectionNav.querySelectorAll('a');
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          links.forEach(function(a) { a.classList.remove('active'); });
+          var match = $sectionNav.querySelector('a[data-section="' + entry.target.id + '"]');
+          if (match) match.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    ['section-host','section-recommendation','section-compatibility','section-plan','section-workflow'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+  }
+
+  // ── Run context bar ─────────────────────────────────────────────────
+
+  function renderRunContext(meta) {
+    if (!meta) return '';
+    var parts = ['<span class="run-label">' + esc(meta.mode === 'demo' ? 'Demo' : 'Real') + ' Run</span>'];
+    if (meta.label) parts.push('<span class="run-meta">' + esc(meta.label) + '</span>');
+    if (meta.timestamp) parts.push('<span class="run-meta">' + meta.timestamp + '</span>');
+    if (meta.artifactId) parts.push('<span class="run-meta">Artifact: ' + esc(meta.artifactId) + '</span>');
+    if (meta.stopAfter) parts.push('<span class="run-meta">Stopped after: ' + esc(meta.stopAfter) + '</span>');
+    return '<div class="run-context">' + parts.join(' \\u00b7 ') + '</div>';
+  }
+
+  // ── Summary strip ───────────────────────────────────────────────────
+
+  function renderSummaryStrip(data) {
+    var sc = data.workflow ? getStatusConfig(data.workflow.status) : null;
+    var parts = [];
+    if (sc) parts.push('<span class="ss-status">' + sc.icon + ' ' + esc(data.workflow.statusLabel) + '</span>');
+    if (data.host) parts.push('<span class="ss-item">' + esc(data.host.summary) + '</span>');
+    if (data.recommendation) parts.push('<span class="ss-item">' + esc(data.recommendation.displayName) + '</span>');
+    if (data.compatibility) parts.push('<span class="ss-item">' + esc(data.compatibility.label) + '</span>');
+    return '<div class="summary-strip">' + parts.join(' \\u00b7 ') + '</div>';
+  }
+
+  // ── Export helpers ──────────────────────────────────────────────────
+
+  function downloadJson(data, filename) {
+    var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function renderExportBar(data) {
+    return '<div class="export-bar">'
+      + '<button type="button" onclick="window.__exportResult()">Export Result JSON</button>'
+      + '<button type="button" onclick="window.__exportHost()">Export Host JSON</button>'
+      + '<button type="button" onclick="window.__copyResultText()">Copy Summary Text</button>'
+      + '</div>';
+  }
+
+  window.__exportResult = function() {
+    if (_lastResult) downloadJson(_lastResult, 'workflow-result-' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.json');
+  };
+
+  window.__exportHost = function() {
+    if (_lastResult && _lastResult.host) downloadJson(_lastResult.host, 'host-profile-' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.json');
+  };
+
+  window.__copyResultText = function() {
+    if (!_lastResult) return;
+    var text = [];
+    if (_lastResult.host) text.push('Host: ' + _lastResult.host.summary);
+    if (_lastResult.recommendation) text.push('Recommendation: ' + _lastResult.recommendation.displayName + ' (score: ' + _lastResult.recommendation.score + ')');
+    if (_lastResult.compatibility) text.push('Compatibility: ' + _lastResult.compatibility.label + ' \\u2014 ' + _lastResult.compatibility.summaryMessage);
+    if (_lastResult.workflow) text.push('Status: ' + _lastResult.workflow.statusLabel + ' \\u2014 ' + _lastResult.workflow.statusSummary);
+    try { navigator.clipboard.writeText(text.join('\\n')); } catch(e) {}
+  };
+
+  // ── Recovery hints ─────────────────────────────────────────────────
+
+  var RECOVERY_HINTS = {
+    'does not exist': 'Ensure the path is correct and the file/directory exists. Use absolute paths for reliability.',
+    'missing required subdirectories': 'The data directory must contain models/, runtimes/, and agent-tools/ subdirectories. Example: <code>./data</code>',
+    'Invalid host file': 'The host file may be corrupted or in the wrong format. Regenerate it with: <code>npm run generate-host-profile &gt; host.json</code>, or use Detect Host instead.',
+    'Host file does not exist': 'The host file may have been moved or deleted. Use Detect Host for quick results, or regenerate with: <code>npm run generate-host-profile &gt; host.json</code>',
+    'not found in the catalog': 'Remove the artifact ID field to use auto-recommendation, or verify the artifact ID against the catalog.',
+  };
+
+  function getRecoveryHint(err) {
+    var msg = (err.message || '') + ' ' + (err.details ? JSON.stringify(err.details) : '');
+    for (var pattern in RECOVERY_HINTS) {
+      if (msg.indexOf(pattern) !== -1) return RECOVERY_HINTS[pattern];
+    }
+    return null;
+  }
+
+  // ── Status config ──────────────────────────────────────────────────
+
   var STATUS_CONFIG = {
     completed: { icon: '\\u2705', cardClass: '', nextAction: 'All stages completed successfully. The install plan is approved and ready for review.' },
     completed_requires_approval: { icon: '\\u26a0\\ufe0f', cardClass: 'card-approval', nextAction: 'Review the install plan carefully. Some steps require your explicit approval before execution.' },
@@ -353,7 +504,7 @@ const CLIENT_JS = `
 
   function renderHost(h, source) {
     var sourceBadgeHtml = source ? ' ' + hostSourceBadge(source) : '';
-    return '<div class="card"><h2>\\ud83d\\udcbb Host Summary' + sourceBadgeHtml + '</h2>'
+    return '<div class="card" id="section-host"><h2>\\ud83d\\udcbb Host Summary' + sourceBadgeHtml + '</h2>'
       + '<p><strong>' + esc(h.summary) + '</strong></p>'
       + '<dl>'
       + '<dt>OS / Arch</dt><dd>' + esc(h.os) + ' ' + esc(h.arch) + '</dd>'
@@ -368,8 +519,8 @@ const CLIENT_JS = `
   // ── Recommendations ───────────────────────────────────────────────────
 
   function renderRecommendation(r) {
-    if (!r) return '<div class="card"><h2>\\ud83c\\udfaf Recommendation</h2><p class="muted">No recommendation available for this scenario.</p></div>';
-    return '<div class="card"><h2>\\ud83c\\udfaf Recommendation</h2>'
+    if (!r) return '<div class="card" id="section-recommendation"><h2>\\ud83c\\udfaf Recommendation</h2><p class="muted">No recommendation available for this scenario.</p></div>';
+    return '<div class="card" id="section-recommendation"><h2>\\ud83c\\udfaf Recommendation</h2>'
       + '<p><strong>' + esc(r.displayName) + '</strong> ' + badge(r.compatibilitySeverity) + '</p>'
       + '<dl>'
       + '<dt>Score</dt><dd>' + r.score + '</dd>'
@@ -383,8 +534,8 @@ const CLIENT_JS = `
   // ── Compatibility ─────────────────────────────────────────────────────
 
   function renderCompatibility(c) {
-    if (!c) return '<div class="card"><h2>\\ud83d\\udd0d Compatibility</h2><p class="muted">Not evaluated in this scenario.</p></div>';
-    return '<div class="card"><h2>\\ud83d\\udd0d Compatibility Detail</h2>'
+    if (!c) return '<div class="card" id="section-compatibility"><h2>\\ud83d\\udd0d Compatibility</h2><p class="muted">Not evaluated in this scenario.</p></div>';
+    return '<div class="card" id="section-compatibility"><h2>\\ud83d\\udd0d Compatibility Detail</h2>'
       + '<p>' + badge(c.severity) + ' <strong>' + esc(c.label) + '</strong></p>'
       + '<p>' + esc(c.summaryMessage) + '</p>'
       + '<dl>'
@@ -403,11 +554,11 @@ const CLIENT_JS = `
   // ── Plan review ───────────────────────────────────────────────────────
 
   function renderPlan(p) {
-    if (!p) return '<div class="card"><h2>\\ud83d\\udccb Install Plan</h2><p class="muted">No plan generated in this scenario.</p></div>';
+    if (!p) return '<div class="card" id="section-plan"><h2>\\ud83d\\udccb Install Plan</h2><p class="muted">No plan generated in this scenario.</p></div>';
     var safetyCardClass = '';
     if (p.safety && p.safety.status === 'blocked') safetyCardClass = ' card-blocked';
     else if (p.safety && p.safety.status === 'requiresHumanApproval') safetyCardClass = ' card-approval';
-    return '<div class="card' + safetyCardClass + '"><h2>\\ud83d\\udccb Install Plan Review</h2>'
+    return '<div class="card' + safetyCardClass + '" id="section-plan"><h2>\\ud83d\\udccb Install Plan Review</h2>'
       + '<p><strong>' + esc(p.humanSummary) + '</strong></p>'
       + '<dl>'
       + '<dt>Artifact</dt><dd>' + esc(p.artifactId) + '</dd>'
@@ -449,6 +600,7 @@ const CLIENT_JS = `
         + '<div class="blocked-title">\\ud83d\\udeab BLOCKED — Unsafe Operations Detected</div>'
         + '<p>' + esc(s.summaryMessage) + '</p>'
         + '</div>';
+      out += '<div class="recovery-hint">This plan is blocked due to safety concerns. The plan should <strong>NOT</strong> be executed. Review the violations below.</div>';
     } else if (s.status === 'requiresHumanApproval') {
       out += '<div class="warning-box">'
         + '<strong>\\u26a0\\ufe0f Requires Human Approval</strong><br>'
@@ -478,7 +630,7 @@ const CLIENT_JS = `
     var totalCount = w.stages.length;
     var pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-    var out = '<div class="card ' + sc.cardClass + '"><h2>\\ud83d\\udce6 Workflow Summary</h2>';
+    var out = '<div class="card ' + sc.cardClass + '" id="section-workflow"><h2>\\ud83d\\udce6 Workflow Summary</h2>';
 
     // Status line with icon
     out += '<p>' + sc.icon + ' ' + badge(w.statusSeverity) + ' <strong>' + esc(w.statusLabel) + '</strong></p>';
@@ -498,6 +650,7 @@ const CLIENT_JS = `
     // Stopped-after hint
     if (w.stoppedAfter) {
       out += '<p class="muted" style="margin-top:.5rem;">\\u23f8 Stopped after: <strong>' + esc(w.stoppedAfter) + '</strong></p>';
+      out += '<div class="recovery-hint">The workflow was stopped early. This is expected when using \\u201cStop After\\u201d. To run all stages, clear the \\u201cStop After\\u201d field.</div>';
     }
 
     // Progress bar
@@ -534,11 +687,15 @@ const CLIENT_JS = `
 
   function renderScenario(data) {
     _lastResult = data;
-    return renderHost(data.host, data.hostSource)
+    showSectionNav();
+    return renderRunContext(_lastRunMeta)
+      + renderSummaryStrip(data)
+      + renderHost(data.host, data.hostSource)
       + renderRecommendation(data.recommendation)
       + renderCompatibility(data.compatibility)
       + renderPlan(data.planReview)
       + renderWorkflow(data.workflow)
+      + renderExportBar(data)
       + '<div style="text-align:right;margin-top:.5rem;">'
       + '<pre id="json-result" style="display:none">' + esc(JSON.stringify(data, null, 2)) + '</pre>'
       + copyBtn('json-result')
@@ -557,9 +714,11 @@ const CLIENT_JS = `
 
   function renderError(err) {
     var hint = ERROR_HINTS[err.code] || '';
+    var recovery = getRecoveryHint(err);
     var out = '<div class="error-box">';
     out += '<div class="error-title">[' + esc(err.code) + '] ' + esc(err.message) + '</div>';
     if (hint) out += '<div class="error-hint">' + esc(hint) + '</div>';
+    if (recovery) out += '<div class="recovery-hint">' + recovery + '</div>';
     if (err.details) {
       out += collapsible('Show details', '<pre style="font-size:.8rem;overflow:auto;max-height:200px;margin:.25rem 0;">' + esc(JSON.stringify(err.details, null, 2)) + '</pre>', false);
     }
@@ -686,6 +845,7 @@ const CLIENT_JS = `
       : '<p class="muted">Configure inputs and click Run Workflow.</p>';
     $validationResult.style.display = 'none';
     $detectResult.style.display = 'none';
+    hideSectionNav();
     if (mode === 'demo') {
       $hostSourceIndicator.style.display = 'none';
     }
@@ -719,6 +879,7 @@ const CLIENT_JS = `
     try {
       var data = await fetchJson('/api/scenarios/' + encodeURIComponent(id));
       $desc.textContent = data.description;
+      _lastRunMeta = { mode: 'demo', label: data.label || data.description, timestamp: new Date().toLocaleString() };
       $app.innerHTML = renderScenario(data);
     } catch (e) {
       $app.innerHTML = '<div class="error-box"><div class="error-title">Failed to load scenario</div>' + esc(e.message) + '</div>';
@@ -823,8 +984,16 @@ const CLIENT_JS = `
     try {
       var result = await postJson('/api/workflow/run', body);
       if (result.ok) {
+        _lastRunMeta = {
+          mode: 'real',
+          label: 'Real Workflow',
+          timestamp: new Date().toLocaleString(),
+          artifactId: $artifactInput.value.trim() || null,
+          stopAfter: $stopAfterInput.value || null,
+        };
         $app.innerHTML = renderScenario(result.viewModel);
       } else {
+        hideSectionNav();
         $app.innerHTML = renderError(result.error);
       }
     } catch (e) {
@@ -850,6 +1019,9 @@ const CLIENT_JS = `
     $hostSourceIndicator.style.display = 'none';
     _detectedHostProfile = null;
     _currentHostSource = null;
+    _lastResult = null;
+    _lastRunMeta = null;
+    hideSectionNav();
     $app.innerHTML = '<p class="muted">Configure inputs and click Run Workflow.</p>';
     savePrefs({ mode: 'real' });
   });
@@ -858,6 +1030,44 @@ const CLIENT_JS = `
 
   $dataDirInput.addEventListener('input', function() { $dataDirInput.classList.remove('input-error'); });
   $hostFileInput.addEventListener('input', function() { $hostFileInput.classList.remove('input-error'); });
+
+  // ── Clear results ───────────────────────────────────────────────────
+
+  $clearResultsBtn.addEventListener('click', function() {
+    $app.innerHTML = '<p class="muted">Configure inputs and click Run Workflow.</p>';
+    hideSectionNav();
+    _lastResult = null;
+    _lastRunMeta = null;
+  });
+
+  // ── Import host file ────────────────────────────────────────────────
+
+  $importHostFile.addEventListener('change', function(evt) {
+    var file = evt.target.files[0];
+    if (!file) return;
+    $importHostStatus.textContent = 'Reading\\u2026';
+    var reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        var parsed = JSON.parse(e.target.result);
+        var result = await postJson('/api/host/validate', parsed);
+        if (result.valid) {
+          _detectedHostProfile = result.hostProfile;
+          _currentHostSource = 'file';
+          updateHostSourceIndicator('file', result.summary ? result.summary.summary : '');
+          $importHostStatus.textContent = '\\u2714 ' + file.name + ' loaded successfully';
+          $importHostStatus.style.color = '#0f5132';
+        } else {
+          $importHostStatus.textContent = '\\u2718 Invalid: ' + (result.error || 'Unknown error');
+          $importHostStatus.style.color = '#842029';
+        }
+      } catch (err) {
+        $importHostStatus.textContent = '\\u2718 ' + err.message;
+        $importHostStatus.style.color = '#842029';
+      }
+    };
+    reader.readAsText(file);
+  });
 
   // ── Init ──────────────────────────────────────────────────────────────
 
