@@ -202,6 +202,110 @@ console.log(result.safetyReport.approved);  // boolean
 console.log(result.rendered);                // full text output
 ```
 
+## Workflow orchestration layer (Phase 8A)
+
+### What it is
+
+The workflow layer is a **deterministic, staged pipeline** that orchestrates existing backend modules
+in an explicit order with typed inputs/outputs and approval-aware status propagation.
+
+It provides:
+
+- **Explicit stages** with defined inputs and outputs
+- **Deterministic stage ordering** — stages always run in the same sequence
+- **Approval-aware status** — `completed`, `completed_requires_approval`, `blocked`, `failed`, or `partial`
+- **Partial execution** — stop after any stage for review or debugging
+- **Intermediate output preservation** — every completed stage's output is available in the result
+- **Explicit target selection** — selection method and reasoning are surfaced in the result
+
+### What it is NOT
+
+- Not an execution engine — install plans are never executed
+- Not a background job system — all operations are synchronous
+- Not a multi-agent framework — no task delegation or scheduling
+- Not a UI workflow builder — no visual steps or drag-and-drop
+- Not a retry/scheduling system — no concurrency, retries, or queuing
+
+### Available stages
+
+Stages execute in this order:
+
+| # | Stage | Input | Output |
+|---|-------|-------|--------|
+| 1 | `catalog_loading` | Pre-loaded `CatalogBundle` | Validated bundle reference |
+| 2 | `host_acquisition` | Pre-acquired `HostProfile` | Validated host reference |
+| 3 | `recommendation` | Bundle + host | Ranked `ModelRecommendation[]` |
+| 4 | `target_selection` | Recommendations + optional `artifactId` | Selected artifact, variant, family, runtime + selection reasoning |
+| 5 | `compatibility_evaluation` | Host + selected target | `CompatibilityResult` |
+| 6 | `install_planning` | Host + target + compatibility | `InstallPlan` |
+| 7 | `safety_evaluation` | Plan + policy | `SafetyReport` |
+| 8 | `rendering` | Plan + safety report | Rendered text output |
+
+### Approval / blocking semantics
+
+The workflow result status directly reflects the safety evaluation:
+
+| Status | Meaning |
+|--------|---------|
+| `completed` | All stages ran, safety report is **approved** |
+| `completed_requires_approval` | All stages ran, but safety requires **human approval** before execution |
+| `blocked` | Safety evaluation found **blocked** violations — workflow stops before rendering |
+| `failed` | A stage failed due to invalid input or internal error |
+| `partial` | Stopped early at a requested stage for review |
+
+**Key rules:**
+- If safety says `blocked`, the workflow surfaces `blocked` and stops before rendering
+- If safety says `requiresHumanApproval`, the workflow surfaces `completed_requires_approval`
+- These states are never hidden behind a single "success" result
+
+### Running partial vs full workflows
+
+```typescript
+import { runWorkflow } from "codingagent-backend";
+
+// Full workflow
+const result = runWorkflow({ bundle, host });
+
+// Stop after recommendation (for review)
+const partial = runWorkflow({ bundle, host, stopAfter: "recommendation" });
+// partial.status === "partial"
+// partial.stageOutputs.recommendation is available
+// partial.stageOutputs.target_selection is undefined
+
+// Stop after compatibility evaluation
+const compatOnly = runWorkflow({ bundle, host, stopAfter: "compatibility_evaluation" });
+
+// Stop after safety evaluation (skip rendering)
+const safetyOnly = runWorkflow({ bundle, host, stopAfter: "safety_evaluation" });
+
+// Explicit artifact selection
+const explicit = runWorkflow({ bundle, host, artifactId: "my-artifact-id" });
+// explicit.stageOutputs.target_selection?.selectionMethod === "explicit_artifact_id"
+```
+
+### Accessing intermediate outputs
+
+```typescript
+const result = runWorkflow({ bundle, host });
+
+// Every completed stage's output is available
+const recs = result.stageOutputs.recommendation?.recommendations;
+const target = result.stageOutputs.target_selection;
+const safety = result.stageOutputs.safety_evaluation?.safetyReport;
+const rendered = result.stageOutputs.rendering?.rendered;
+
+// Target selection reasoning is explicit
+console.log(target?.selectionMethod);  // "recommendation_default" or "explicit_artifact_id"
+console.log(target?.selectionReason);  // Human-readable explanation
+```
+
+### Important: this does NOT execute install plans
+
+The workflow layer orchestrates **planning and evaluation** only. Install plans describe what
+commands would need to run, but the workflow layer (like all other backend layers) **never
+executes** any commands. A human operator must review the plan and safety report before any
+manual execution.
+
 ## Example runner
 
 A minimal developer-facing example runner is available:
