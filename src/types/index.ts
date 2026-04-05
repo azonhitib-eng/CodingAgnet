@@ -33,6 +33,8 @@ export type {
   OperatingLimits,
   SettingsAdjustment,
   CompatibilityResult,
+  CompatibilityContext,
+  ModelRecommendation,
 } from "./compatibility.js";
 
 export type {
