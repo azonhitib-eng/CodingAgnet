@@ -34,16 +34,18 @@ export function loadHostProfile(filePath: string): HostProfile {
   let raw: string;
   try {
     raw = readFileSync(resolved, "utf-8");
-  } catch {
-    throw inputError(`Cannot read host file: ${resolved}`);
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw inputError(`Cannot read host file: ${resolved} (${detail})`);
   }
 
   // Parse JSON
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
-  } catch {
-    throw inputError(`Invalid JSON in host file: ${resolved}`);
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw inputError(`Invalid JSON in host file: ${resolved} (${detail})`);
   }
 
   // Validate against schema
