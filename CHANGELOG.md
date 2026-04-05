@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 16** — Live host detection integration in the app shell
+  - `POST /api/host/detect` — detects host hardware live and returns a HostProfile + summary
+  - `POST /api/host/validate` — validates a host profile JSON object
+  - "Detect Host" button in real mode — detects hardware without requiring a host file
+  - Host-source semantics: `HostSource` type (`"demo"` | `"file"` | `"detected"`) on `ScenarioViewModel`
+  - Host source badges in UI: 🎭 Demo Scenario, 📁 Host File, 🔍 Live Detected
+  - `POST /api/workflow/run` now accepts inline `hostProfile` as alternative to `hostFile`
+  - `RealWorkflowInput.hostProfile` field for detected/inline host profiles
+  - Detection result display with hardware summary, error handling, loading states
+  - Host source indicator updates dynamically when switching between file/detected modes
+  - Reset clears detection state, mode switch hides detection controls
+  - 48 new tests: host detection endpoint, host validation endpoint, host-source semantics, inline host profile workflow, deterministic behavior, detection failure handling, UI rendering
+  - Updated docs/APP-SHELL.md with live detection documentation, host-source indicator reference, and API reference
+
 - **Phase 15** — Packaging and distribution readiness
   - `docs/QUICKSTART.md` — comprehensive quick start guide with demo-mode and real-mode walkthroughs
   - `scripts/preflight.ts` — environment readiness checker (Node version, dependencies, data directory, docs)

@@ -56,8 +56,17 @@ ${CSS}
       <div class="form-row">
         <label for="host-file-input">Host Profile File</label>
         <input type="text" id="host-file-input" placeholder="path/to/host-profile.json" />
-        <span class="field-hint">JSON file with a valid HostProfile</span>
+        <span class="field-hint">JSON file with a valid HostProfile — or use Detect Host below</span>
       </div>
+    </fieldset>
+    <fieldset class="form-group">
+      <legend>Host Detection</legend>
+      <p class="field-hint" style="padding-left:0;margin-bottom:.4rem;">Detect your current machine's hardware instead of providing a host file.</p>
+      <div class="form-actions" style="margin-top:0;">
+        <button id="detect-host-btn" type="button" class="btn-secondary">Detect Host</button>
+      </div>
+      <div id="host-source-indicator" style="display:none;"></div>
+      <div id="detect-result" style="display:none;"></div>
     </fieldset>
     <fieldset class="form-group">
       <legend>Optional</legend>
@@ -203,6 +212,15 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 .copy-btn { display: inline-block; padding: .15rem .5rem; border: 1px solid var(--card-border); border-radius: 3px; font-size: .72rem; background: var(--card-bg); cursor: pointer; color: var(--muted); margin-left: .5rem; }
 .copy-btn:hover { background: #e9ecef; }
 .progress-label { font-size: .82rem; color: var(--muted); margin-bottom: .25rem; }
+.host-source-badge { display: inline-block; padding: .2rem .6rem; border-radius: 3px; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; margin-right: .4rem; }
+.host-source-demo { background: #cff4fc; color: #055160; }
+.host-source-file { background: #d1e7dd; color: #0f5132; }
+.host-source-detected { background: #e2d9f3; color: #432874; }
+#host-source-indicator { margin-top: .5rem; padding: .4rem .6rem; border-radius: 4px; font-size: .85rem; }
+#detect-result { margin-top: .5rem; padding: .5rem .75rem; border-radius: 4px; font-size: .85rem; }
+#detect-result.dr-ok { background: #d1e7dd; color: #0f5132; }
+#detect-result.dr-err { background: #f8d7da; color: #842029; }
+#detect-result.dr-loading { background: #fff3cd; color: #664d03; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -226,6 +244,13 @@ const CLIENT_JS = `
   var $validateBtn = document.getElementById('validate-btn');
   var $resetBtn = document.getElementById('reset-form-btn');
   var $validationResult = document.getElementById('validation-result');
+  var $detectHostBtn = document.getElementById('detect-host-btn');
+  var $detectResult = document.getElementById('detect-result');
+  var $hostSourceIndicator = document.getElementById('host-source-indicator');
+
+  // Current detected host profile (if any)
+  var _detectedHostProfile = null;
+  var _currentHostSource = null; // 'file' | 'detected' | null
 
   // ── Storage helpers ─────────────────────────────────────────────────
 
@@ -326,8 +351,9 @@ const CLIENT_JS = `
 
   // ── Host summary ──────────────────────────────────────────────────────
 
-  function renderHost(h) {
-    return '<div class="card"><h2>\\ud83d\\udcbb Host Summary</h2>'
+  function renderHost(h, source) {
+    var sourceBadgeHtml = source ? ' ' + hostSourceBadge(source) : '';
+    return '<div class="card"><h2>\\ud83d\\udcbb Host Summary' + sourceBadgeHtml + '</h2>'
       + '<p><strong>' + esc(h.summary) + '</strong></p>'
       + '<dl>'
       + '<dt>OS / Arch</dt><dd>' + esc(h.os) + ' ' + esc(h.arch) + '</dd>'
@@ -508,7 +534,7 @@ const CLIENT_JS = `
 
   function renderScenario(data) {
     _lastResult = data;
-    return renderHost(data.host)
+    return renderHost(data.host, data.hostSource)
       + renderRecommendation(data.recommendation)
       + renderCompatibility(data.compatibility)
       + renderPlan(data.planReview)
@@ -549,11 +575,105 @@ const CLIENT_JS = `
     stopAfter: 'Use one of the valid stage names shown in the dropdown.',
   };
 
+  // ── Host source tracking ────────────────────────────────────────────
+
+  var HOST_SOURCE_LABELS = {
+    demo: '\\ud83c\\udfad Demo Scenario',
+    file: '\\ud83d\\udcc1 Host File',
+    detected: '\\ud83d\\udd0d Live Detected',
+  };
+
+  var HOST_SOURCE_CLASSES = {
+    demo: 'host-source-demo',
+    file: 'host-source-file',
+    detected: 'host-source-detected',
+  };
+
+  function updateHostSourceIndicator(source, detail) {
+    if (!source) {
+      $hostSourceIndicator.style.display = 'none';
+      return;
+    }
+    var label = HOST_SOURCE_LABELS[source] || source;
+    var cls = HOST_SOURCE_CLASSES[source] || '';
+    $hostSourceIndicator.style.display = '';
+    $hostSourceIndicator.innerHTML = '<span class="host-source-badge ' + cls + '">' + esc(label) + '</span>'
+      + (detail ? '<span class="muted">' + esc(detail) + '</span>' : '');
+    _currentHostSource = source;
+  }
+
+  // ── Host source rendering in scenario ──────────────────────────────
+
+  function hostSourceBadge(source) {
+    if (!source) return '';
+    var label = HOST_SOURCE_LABELS[source] || source;
+    var cls = HOST_SOURCE_CLASSES[source] || '';
+    return '<span class="host-source-badge ' + cls + '">' + esc(label) + '</span>';
+  }
+
+  // ── Host detection ─────────────────────────────────────────────────
+
+  $detectHostBtn.addEventListener('click', async function() {
+    $detectResult.style.display = '';
+    $detectResult.className = 'dr-loading';
+    $detectResult.innerHTML = '\\u23f3 Detecting host hardware\\u2026';
+    $detectHostBtn.disabled = true;
+
+    try {
+      var result = await postJson('/api/host/detect', {});
+      if (result.ok) {
+        _detectedHostProfile = result.hostProfile;
+        _currentHostSource = 'detected';
+        updateHostSourceIndicator('detected', result.summary ? result.summary.summary : '');
+        $detectResult.className = 'dr-ok';
+        var s = result.summary;
+        $detectResult.innerHTML = '\\u2714\\ufe0f Host detected successfully.'
+          + '<dl style="margin:.25rem 0;font-size:.85rem;">'
+          + '<dt>Summary</dt><dd>' + esc(s.summary) + '</dd>'
+          + '<dt>OS / Arch</dt><dd>' + esc(s.os) + ' ' + esc(s.arch) + '</dd>'
+          + '<dt>CPU</dt><dd>' + esc(s.cpuModel) + (s.cpuCores ? ' (' + s.cpuCores + ' cores)' : '') + '</dd>'
+          + '<dt>RAM</dt><dd>' + (s.totalRamGb != null ? s.totalRamGb + ' GB' : 'Unknown') + '</dd>'
+          + '<dt>GPU</dt><dd>' + (s.gpuPresent ? esc(s.gpuModel) + (s.gpuVramGb != null ? ' (' + s.gpuVramGb + ' GB VRAM)' : '') : 'Not present / Unknown') + '</dd>'
+          + '</dl>'
+          + '<p style="font-size:.82rem;color:#6b7280;">This detected profile will be used when you click Run Workflow (host file is not required).</p>';
+        // Clear host file requirement hint
+        $hostFileInput.classList.remove('input-error');
+      } else {
+        _detectedHostProfile = null;
+        $detectResult.className = 'dr-err';
+        $detectResult.innerHTML = '\\u274c ' + esc(result.error ? result.error.message : 'Detection failed');
+        updateHostSourceIndicator(null);
+      }
+    } catch (e) {
+      _detectedHostProfile = null;
+      $detectResult.className = 'dr-err';
+      $detectResult.innerHTML = '\\u274c Host detection request failed: ' + esc(e.message)
+        + '<div style="font-size:.8rem;color:#6b7280;margin-top:.25rem;">Check that the server is running and try again.</div>';
+      updateHostSourceIndicator(null);
+    } finally {
+      $detectHostBtn.disabled = false;
+    }
+  });
+
+  // When user types in host file, switch source back to file
+  $hostFileInput.addEventListener('input', function() {
+    $hostFileInput.classList.remove('input-error');
+    if ($hostFileInput.value.trim()) {
+      _currentHostSource = 'file';
+      updateHostSourceIndicator('file', $hostFileInput.value.trim());
+    } else if (_detectedHostProfile) {
+      _currentHostSource = 'detected';
+      updateHostSourceIndicator('detected');
+    } else {
+      updateHostSourceIndicator(null);
+    }
+  });
+
   // ── Mode switching ────────────────────────────────────────────────────
 
   var MODE_HINTS = {
     demo: 'Explore pre-built scenarios \\u2014 no setup required.',
-    real: 'Run the real backend workflow with your own data directory and host profile.',
+    real: 'Run the real backend workflow with your own data directory and host profile, or detect your host live.',
   };
 
   function switchMode() {
@@ -565,6 +685,10 @@ const CLIENT_JS = `
       ? '<p class="muted">Select a scenario above to begin.</p>'
       : '<p class="muted">Configure inputs and click Run Workflow.</p>';
     $validationResult.style.display = 'none';
+    $detectResult.style.display = 'none';
+    if (mode === 'demo') {
+      $hostSourceIndicator.style.display = 'none';
+    }
     persistInputs();
   }
 
@@ -663,21 +787,30 @@ const CLIENT_JS = `
   $runBtn.addEventListener('click', async function() {
     var dataDir = $dataDirInput.value.trim();
     var hostFile = $hostFileInput.value.trim();
-    if (!dataDir || !hostFile) {
+    var hasDetected = !!_detectedHostProfile;
+
+    // Require dataDir always; require hostFile OR detected profile
+    if (!dataDir || (!hostFile && !hasDetected)) {
       $app.innerHTML = '<div class="error-box">'
         + '<div class="error-title">Missing required fields</div>'
-        + 'Both <strong>Data Directory</strong> and <strong>Host Profile File</strong> are required.'
+        + '<strong>Data Directory</strong> is required.'
+        + (!hostFile && !hasDetected ? ' Provide a <strong>Host Profile File</strong> or use <strong>Detect Host</strong>.' : '')
         + '<div class="error-hint">Fill in the required inputs above and try again.</div>'
         + '</div>';
-      // Highlight missing fields
       if (!dataDir) $dataDirInput.classList.add('input-error');
-      if (!hostFile) $hostFileInput.classList.add('input-error');
+      if (!hostFile && !hasDetected) $hostFileInput.classList.add('input-error');
       return;
     }
     $dataDirInput.classList.remove('input-error');
     $hostFileInput.classList.remove('input-error');
 
-    var body = { dataDir: dataDir, hostFile: hostFile };
+    var body = { dataDir: dataDir };
+    // Prefer hostFile if provided; otherwise use detected profile
+    if (hostFile) {
+      body.hostFile = hostFile;
+    } else if (hasDetected) {
+      body.hostProfile = _detectedHostProfile;
+    }
     if ($artifactInput.value.trim()) body.artifactId = $artifactInput.value.trim();
     if ($stopAfterInput.value) body.stopAfter = $stopAfterInput.value;
 
@@ -713,6 +846,10 @@ const CLIENT_JS = `
     $dataDirInput.classList.remove('input-error');
     $hostFileInput.classList.remove('input-error');
     $validationResult.style.display = 'none';
+    $detectResult.style.display = 'none';
+    $hostSourceIndicator.style.display = 'none';
+    _detectedHostProfile = null;
+    _currentHostSource = null;
     $app.innerHTML = '<p class="muted">Configure inputs and click Run Workflow.</p>';
     savePrefs({ mode: 'real' });
   });

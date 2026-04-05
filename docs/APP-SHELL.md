@@ -15,6 +15,8 @@ The shell is built with **zero additional dependencies** — it uses Node.js bui
 
 **Phase 15** improved packaging and distribution readiness: enhanced startup output with mode guidance, `--help` flag, `PORT` env var support, `resolvePort()` utility, preflight check script, `generate-host-profile` convenience script, and comprehensive `QUICKSTART.md`.
 
+**Phase 16** added live host detection integration: `POST /api/host/detect` endpoint for live hardware detection, `POST /api/host/validate` for host profile validation, "Detect Host" button in the UI, host-source semantics showing whether host data came from demo/file/live-detection, and support for running workflows with detected host profiles directly (no host file needed).
+
 ## Architecture
 
 ```
@@ -24,7 +26,9 @@ The shell is built with **zero additional dependencies** — it uses Node.js bui
 │   ├─ Mode-specific hint text              │
 │   ├─ Demo: Scenario selector              │
 │   ├─ Real: Grouped form + Reset/Validate  │
-│   ├─ Host summary card                    │
+│   ├─ Real: Detect Host button             │
+│   ├─ Host source indicator (badge)        │
+│   ├─ Host summary card (with source)      │
 │   ├─ Recommendation card                  │
 │   ├─ Compatibility detail card            │
 │   ├─ Plan review card (safety-styled)     │
@@ -39,6 +43,8 @@ The shell is built with **zero additional dependencies** — it uses Node.js bui
 │   GET  /api/scenarios      → scenario list│
 │   GET  /api/scenarios/:id  → view-model   │
 │   GET  /api/stages         → stage names  │
+│   POST /api/host/detect    → live detect  │
+│   POST /api/host/validate  → validate obj │
 │   POST /api/workflow/run   → run workflow  │
 │   POST /api/workflow/validate → validate  │
 └──────────┬───────────────┬────────────────┘
@@ -61,7 +67,8 @@ The shell is built with **zero additional dependencies** — it uses Node.js bui
                    ▼
 ┌───────────────────────────────────────────┐
 │  Backend Modules (workflow runner,        │
-│  catalog, compatibility, install plan)    │
+│  catalog, compatibility, install plan,    │
+│  host detection)                          │
 └───────────────────────────────────────────┘
 ```
 
@@ -138,12 +145,40 @@ Each field shows helper text explaining what is expected. Missing required field
 | Field | Description | Required |
 |-------|-------------|----------|
 | Data Directory | Path to directory containing `models/`, `runtimes/`, `agent-tools/` subdirectories | Yes |
-| Host Profile File | Path to a JSON file containing a valid `HostProfile` | Yes |
+| Host Profile File | Path to a JSON file containing a valid `HostProfile` | Yes (unless using live detection) |
 | Artifact ID | Specific artifact to target (omit for auto-recommendation) | No |
 | Stop After Stage | Stop workflow after this stage (for partial runs) | No |
 
+### Host profile: file vs live detection (Phase 16)
+
+There are two ways to provide host information in real mode:
+
+| Method | How | Best for |
+|--------|-----|----------|
+| **Host File** | Enter a path to a pre-generated JSON file | Deterministic/repeatable runs, CI, sharing profiles between machines |
+| **Live Detection** | Click "Detect Host" in the UI | Quick local evaluation, first-run convenience |
+
+**Host file mode** loads a saved `HostProfile` JSON file. This is deterministic — the same file always produces the same results. Generate a host file with `npm run generate-host-profile > my-host.json`.
+
+**Live detection mode** calls the backend `detectHost()` function to probe the current machine's hardware (OS, CPU, memory, GPU, installed runtimes). The detected profile is used directly without writing to disk.
+
+If both a host file and a detected profile are available, the host file takes priority when entered. Use "Reset" to clear both.
+
+### Host source indicator
+
+The UI shows a badge in the Host Summary section indicating how the profile was obtained:
+
+| Badge | Meaning |
+|-------|---------|
+| 🎭 **Demo Scenario** | Embedded fixture data (demo mode) |
+| 📁 **Host File** | Loaded from a user-supplied JSON file |
+| 🔍 **Live Detected** | Obtained via live host detection |
+
+This helps you track where the host information came from at a glance.
+
 ### How to run real mode locally
 
+**Option A — with a host file (deterministic):**
 1. Start the shell: `npm run app-shell`
 2. Open http://localhost:3000
 3. Switch to "Real" mode
@@ -152,7 +187,17 @@ Each field shows helper text explaining what is expected. Missing required field
 6. Optionally set an artifact ID or stop-after stage
 7. Click "Validate Inputs" to check inputs before running
 8. Click "Run Workflow" to execute
-9. Use "Reset" to clear all inputs and start over
+
+**Option B — with live detection (quick start):**
+1. Start the shell: `npm run app-shell`
+2. Open http://localhost:3000
+3. Switch to "Real" mode
+4. Enter the path to your data directory
+5. Click "Detect Host" — the shell detects your hardware
+6. Click "Run Workflow" — no host file needed
+7. The detected profile is shown in the result with a "Live Detected" badge
+
+Use "Reset" to clear all inputs, detection results, and start over.
 
 ### Valid stop-after stages
 
@@ -237,7 +282,6 @@ Errors from workflow execution are shown with:
 ## What it intentionally does NOT do
 
 - **No install execution** — plans are display-only, never executed
-- **No live host detection** — provide a host profile file manually
 - **No design system** — minimal CSS, no component library
 - **No state management** — simple fetch-and-render with localStorage for preferences
 - **No desktop packaging** — runs as a local web server only
@@ -267,6 +311,7 @@ tests/app-shell/
   views.test.ts              — HTML render smoke tests (both modes)
   views-phase14.test.ts      — Phase 14 UX hardening tests (47 tests)
   workflow-bridge.test.ts    — Workflow bridge: validation, execution, errors
+  phase16-host-detection.test.ts — Phase 16: host detection, source semantics (48 tests)
 ```
 
 ## API reference
@@ -313,7 +358,7 @@ Returns the ordered list of valid workflow stage names:
 
 ### `POST /api/workflow/run`
 
-Run a real workflow. Request body:
+Run a real workflow. Request body — provide either `hostFile` **or** `hostProfile`:
 
 ```json
 {
@@ -324,12 +369,22 @@ Run a real workflow. Request body:
 }
 ```
 
-Success response:
+Or with a detected host profile (no file needed):
+
+```json
+{
+  "dataDir": "/path/to/data",
+  "hostProfile": { "detectedAt": "...", "os": {...}, "cpu": {...}, ... },
+  "artifactId": "optional-artifact-id"
+}
+```
+
+Success response (includes `hostSource` indicating data provenance):
 
 ```json
 {
   "ok": true,
-  "viewModel": { "id": "_real_workflow", "host": {...}, "workflow": {...}, ... },
+  "viewModel": { "id": "_real_workflow", "hostSource": "file", "host": {...}, "workflow": {...}, ... },
   "status": "completed_requires_approval",
   "completedStages": ["catalog_loading", "host_acquisition", ...]
 }
@@ -366,3 +421,53 @@ Response:
     "stopAfter": { "valid": true }
   }
 }
+```
+
+### `POST /api/host/detect` (Phase 16)
+
+Detect host hardware live. No request body required.
+
+Success response:
+
+```json
+{
+  "ok": true,
+  "hostProfile": { "detectedAt": "2025-06-01T12:00:00Z", "os": {...}, "cpu": {...}, ... },
+  "summary": { "summary": "linux x64 · 32 GB RAM · RTX 3060 12 GB", "os": "linux", ... },
+  "source": "detected"
+}
+```
+
+Error response (e.g. if detection fails in a restricted environment):
+
+```json
+{
+  "ok": false,
+  "error": { "code": "HOST_DETECTION_FAILED", "message": "Host detection failed: ..." }
+}
+```
+
+### `POST /api/host/validate` (Phase 16)
+
+Validate a host profile object (without running a workflow). Request body: a HostProfile JSON object.
+
+Success response:
+
+```json
+{
+  "valid": true,
+  "hostProfile": { "detectedAt": "...", ... },
+  "summary": { "summary": "linux x64 · 32 GB RAM", ... }
+}
+```
+
+Error response:
+
+```json
+{
+  "valid": false,
+  "error": "Validation failed: ..."
+}
+```
+
+> **Reminder**: Install plans shown in the shell are informational only. They describe what *would* be done, but the shell never executes them.

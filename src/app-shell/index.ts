@@ -17,6 +17,7 @@ export {
 export type {
   ScenarioViewModel,
   ScenarioListItem,
+  HostSource,
 } from "./data-provider.js";
 
 // Demo scenarios
