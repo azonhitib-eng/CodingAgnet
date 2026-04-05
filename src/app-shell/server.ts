@@ -60,6 +60,7 @@ import {
   validateCloneUrl,
   SessionPersistence,
   RecentSessions,
+  DEFAULT_PERSISTENCE_DIR,
 } from "../session/index.js";
 import type { GitExecutor } from "../session/index.js";
 import { classifyEvent } from "./timeline-helpers.js";
@@ -492,7 +493,7 @@ let _recentSessions: RecentSessions | null = null;
 
 /** Resolve the persistence base directory. */
 function defaultPersistenceDir(): string {
-  return pathJoin(homedir(), ".codingagent", "sessions");
+  return pathJoin(homedir(), DEFAULT_PERSISTENCE_DIR);
 }
 
 /** Get or lazily create the session persistence adapter. */
