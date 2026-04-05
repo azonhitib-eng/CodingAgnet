@@ -33,6 +33,7 @@ export {
   OperatingLimitsSchema,
   SettingsAdjustmentSchema,
   CompatibilityResultSchema,
+  ModelRecommendationSchema,
 } from "./compatibility.schema.js";
 
 export {

@@ -43,3 +43,13 @@ export const CompatibilityResultSchema = z.object({
   reasons: z.array(z.string()),
   warnings: z.array(z.string()),
 });
+
+export const ModelRecommendationSchema = z.object({
+  artifactId: z.string().min(1),
+  variantId: z.string().min(1),
+  familyId: z.string().min(1),
+  displayName: z.string().min(1),
+  compatibility: CompatibilityResultSchema,
+  score: z.number().nonnegative(),
+  explanations: z.array(z.string()),
+});
