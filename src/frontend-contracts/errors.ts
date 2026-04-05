@@ -48,7 +48,7 @@ export function normalizeFrontendError(
   if (
     lower.includes("no compatible artifact") ||
     lower.includes("no recommendations") ||
-    lower.includes("artifact") && lower.includes("not found")
+    (lower.includes("artifact") && lower.includes("not found"))
   ) {
     return createFrontendError("MISSING_ARTIFACT", msg, {
       originalMessage: msg,
@@ -56,7 +56,7 @@ export function normalizeFrontendError(
   }
 
   if (
-    lower.includes("runtime") && lower.includes("not") ||
+    (lower.includes("runtime") && lower.includes("not")) ||
     lower.includes("missing runtime") ||
     lower.includes("runtime_missing")
   ) {
@@ -67,7 +67,7 @@ export function normalizeFrontendError(
 
   if (
     lower.includes("blocked") ||
-    lower.includes("policy") && lower.includes("violation")
+    (lower.includes("policy") && lower.includes("violation"))
   ) {
     return createFrontendError("BLOCKED_BY_POLICY", msg, {
       originalMessage: msg,
