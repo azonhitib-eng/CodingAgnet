@@ -11,3 +11,4 @@ export * from "./schemas/index.js";
 export * from "./catalog/index.js";
 export * from "./detection/index.js";
 export * from "./compatibility/index.js";
+export * from "./install-plan/index.js";

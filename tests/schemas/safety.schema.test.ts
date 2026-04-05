@@ -45,6 +45,8 @@ const validSafetyReport = {
   ],
   warnings: ["Plan requires network access"],
   approved: false,
+  blocked: false,
+  requiresHumanApproval: true,
 };
 
 // ---------------------------------------------------------------------------
@@ -153,6 +155,8 @@ describe("SafetyReportSchema", () => {
         violations: [],
         warnings: [],
         approved: true,
+        blocked: false,
+        requiresHumanApproval: false,
       }).success,
     ).toBe(true);
   });

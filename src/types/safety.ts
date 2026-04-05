@@ -64,5 +64,14 @@ export interface SafetyReport {
   planId: string;
   violations: SafetyViolation[];
   warnings: string[];
+  /**
+   * True only when no blocked issues and no human-approval-required issues
+   * exist.  A plan that requires human approval is NOT approved.
+   */
   approved: boolean;
+  /** True when at least one blocked-severity violation exists. */
+  blocked: boolean;
+  /** True when dangerous commands, explicit approval requirements, or
+   *  approval-policy mismatches are present (and no blocked violations). */
+  requiresHumanApproval: boolean;
 }
