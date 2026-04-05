@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "runtime": {
+    "id": "llamacpp",
+    "displayName": "llama.cpp",
+    "type": "cli_tool",
+    "detectionCommand": "llama-server --version",
+    "versionCommand": "llama-server --version",
+    "supportedPlatforms": ["linux", "darwin"],
+    "requiredDrivers": [],
+    "capabilities": ["gpu_offload", "gguf_native"],
+    "installInstructions": {
+      "linux": ["git clone https://github.com/ggerganov/llama.cpp && cd llama.cpp && make -j"],
+      "darwin": ["brew install llama.cpp"]
+    },
+    "postInstallVerification": {
+      "linux": ["llama-server --version"],
+      "darwin": ["llama-server --version"]
+    },
+    "status": "supported"
+  }
+}

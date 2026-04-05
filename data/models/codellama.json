@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "family": {
+    "id": "codellama",
+    "displayName": "Code Llama",
+    "provider": "Meta",
+    "url": "https://huggingface.co/codellama",
+    "description": "Meta Code Llama family for code generation and infilling",
+    "capabilities": {
+      "coding": true,
+      "agenticToolUse": false,
+      "autocomplete": true,
+      "longContext": false
+    },
+    "status": "supported"
+  },
+  "variants": [
+    {
+      "id": "codellama-7b",
+      "familyId": "codellama",
+      "displayName": "Code Llama 7B",
+      "parameterLabel": "7B",
+      "sizeClass": "small",
+      "contextWindow": 16384,
+      "status": "supported"
+    },
+    {
+      "id": "codellama-13b",
+      "familyId": "codellama",
+      "displayName": "Code Llama 13B",
+      "parameterLabel": "13B",
+      "sizeClass": "medium",
+      "contextWindow": 16384,
+      "status": "supported"
+    },
+    {
+      "id": "codellama-34b",
+      "familyId": "codellama",
+      "displayName": "Code Llama 34B",
+      "parameterLabel": "34B",
+      "sizeClass": "large",
+      "contextWindow": 16384,
+      "status": "supported"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "codellama-7b-q4_k_m-ollama",
+      "variantId": "codellama-7b",
+      "runtimeId": "ollama",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 3.8,
+      "minimumRamGb": 6,
+      "recommendedRamGb": 8,
+      "minimumVramGb": 4,
+      "recommendedVramGb": 6,
+      "pullCommand": "ollama pull codellama:7b-instruct-q4_K_M",
+      "status": "supported"
+    },
+    {
+      "id": "codellama-13b-q4_k_m-ollama",
+      "variantId": "codellama-13b",
+      "runtimeId": "ollama",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 7.4,
+      "minimumRamGb": 10,
+      "recommendedRamGb": 16,
+      "minimumVramGb": 8,
+      "recommendedVramGb": 10,
+      "pullCommand": "ollama pull codellama:13b-instruct-q4_K_M",
+      "status": "supported"
+    },
+    {
+      "id": "codellama-34b-q4_k_m-ollama",
+      "variantId": "codellama-34b",
+      "runtimeId": "ollama",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 19,
+      "minimumRamGb": 24,
+      "recommendedRamGb": 32,
+      "minimumVramGb": 20,
+      "recommendedVramGb": 24,
+      "pullCommand": "ollama pull codellama:34b-instruct-q4_K_M",
+      "status": "supported"
+    }
+  ]
+}
