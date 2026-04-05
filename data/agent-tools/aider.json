@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "tool": {
+    "id": "aider",
+    "displayName": "Aider",
+    "purpose": "AI pair programming in the terminal — edits code in your git repo",
+    "requiredRuntimes": ["ollama"],
+    "hostAssumptions": ["Python 3.10+", "git installed"],
+    "suitableUseCases": [
+      "Repository-level code editing",
+      "Refactoring with LLM assistance",
+      "Multi-file code changes"
+    ],
+    "warnings": [
+      "May modify files in-place — always review diffs",
+      "Requires a model with strong coding capabilities"
+    ],
+    "installInstructions": {
+      "linux": ["pip install aider-chat"],
+      "darwin": ["pip install aider-chat"]
+    },
+    "supportedPlatforms": ["linux", "darwin"],
+    "status": "supported"
+  }
+}

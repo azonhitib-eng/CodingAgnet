@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "family": {
+    "id": "starcoder2",
+    "displayName": "StarCoder2",
+    "provider": "bigcode",
+    "url": "https://huggingface.co/bigcode/starcoder2-7b",
+    "description": "Open-source code LLM trained on The Stack v2",
+    "capabilities": {
+      "coding": true,
+      "agenticToolUse": false,
+      "autocomplete": true,
+      "longContext": false
+    },
+    "status": "experimental"
+  },
+  "variants": [
+    {
+      "id": "starcoder2-7b",
+      "familyId": "starcoder2",
+      "displayName": "StarCoder2 7B",
+      "parameterLabel": "7B",
+      "sizeClass": "small",
+      "contextWindow": 16384,
+      "status": "experimental"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "starcoder2-7b-q4_k_m-ollama",
+      "variantId": "starcoder2-7b",
+      "runtimeId": "ollama",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 4.3,
+      "minimumRamGb": 6,
+      "recommendedRamGb": 8,
+      "minimumVramGb": 4,
+      "recommendedVramGb": 6,
+      "pullCommand": "ollama pull starcoder2:7b-q4_K_M",
+      "status": "experimental"
+    }
+  ]
+}

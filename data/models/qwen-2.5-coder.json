@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "family": {
+    "id": "qwen-2.5-coder",
+    "displayName": "Qwen 2.5 Coder",
+    "provider": "Qwen",
+    "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+    "description": "Alibaba Qwen coding-focused model family",
+    "capabilities": {
+      "coding": true,
+      "agenticToolUse": false,
+      "autocomplete": true,
+      "longContext": false
+    },
+    "status": "supported"
+  },
+  "variants": [
+    {
+      "id": "qwen-2.5-coder-7b",
+      "familyId": "qwen-2.5-coder",
+      "displayName": "Qwen 2.5 Coder 7B",
+      "parameterLabel": "7B",
+      "sizeClass": "small",
+      "contextWindow": 32768,
+      "status": "supported"
+    },
+    {
+      "id": "qwen-2.5-coder-14b",
+      "familyId": "qwen-2.5-coder",
+      "displayName": "Qwen 2.5 Coder 14B",
+      "parameterLabel": "14B",
+      "sizeClass": "medium",
+      "contextWindow": 32768,
+      "status": "supported"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "qwen-2.5-coder-7b-q4_k_m-ollama",
+      "variantId": "qwen-2.5-coder-7b",
+      "runtimeId": "ollama",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 4.7,
+      "minimumRamGb": 6,
+      "recommendedRamGb": 8,
+      "minimumVramGb": 4,
+      "recommendedVramGb": 6,
+      "pullCommand": "ollama pull qwen2.5-coder:7b-instruct-q4_K_M",
+      "status": "supported"
+    },
+    {
+      "id": "qwen-2.5-coder-14b-q4_k_m-ollama",
+      "variantId": "qwen-2.5-coder-14b",
+      "runtimeId": "ollama",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 8.9,
+      "minimumRamGb": 12,
+      "recommendedRamGb": 16,
+      "minimumVramGb": 8,
+      "recommendedVramGb": 12,
+      "pullCommand": "ollama pull qwen2.5-coder:14b-instruct-q4_K_M",
+      "status": "supported"
+    },
+    {
+      "id": "qwen-2.5-coder-7b-q4_k_m-llamacpp",
+      "variantId": "qwen-2.5-coder-7b",
+      "runtimeId": "llamacpp",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 4.7,
+      "minimumRamGb": 6,
+      "recommendedRamGb": 8,
+      "minimumVramGb": 0,
+      "recommendedVramGb": 6,
+      "downloadUrl": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+      "osNotes": "Requires manual GGUF download",
+      "status": "supported"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "tool": {
+    "id": "continue-dev",
+    "displayName": "Continue",
+    "purpose": "Open-source AI code assistant as a VS Code / JetBrains extension",
+    "requiredRuntimes": ["ollama"],
+    "hostAssumptions": ["VS Code or JetBrains IDE installed"],
+    "suitableUseCases": [
+      "Inline code completion",
+      "Chat-based code assistance",
+      "IDE-integrated coding help"
+    ],
+    "warnings": [
+      "Requires IDE extension installation",
+      "Configuration needed for local model backends"
+    ],
+    "installInstructions": {
+      "linux": ["Install Continue extension from VS Code marketplace"],
+      "darwin": ["Install Continue extension from VS Code marketplace"],
+      "win32": ["Install Continue extension from VS Code marketplace"]
+    },
+    "supportedPlatforms": ["linux", "darwin", "win32"],
+    "status": "supported"
+  }
+}

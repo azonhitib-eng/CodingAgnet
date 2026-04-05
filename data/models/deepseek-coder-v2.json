@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "family": {
+    "id": "deepseek-coder-v2",
+    "displayName": "DeepSeek Coder V2",
+    "provider": "deepseek-ai",
+    "url": "https://huggingface.co/deepseek-ai/DeepSeek-Coder-V2-Instruct",
+    "description": "Strong open-source coding model with MoE architecture",
+    "capabilities": {
+      "coding": true,
+      "agenticToolUse": true,
+      "autocomplete": true,
+      "longContext": true
+    },
+    "status": "supported"
+  },
+  "variants": [
+    {
+      "id": "deepseek-coder-v2-16b",
+      "familyId": "deepseek-coder-v2",
+      "displayName": "DeepSeek Coder V2 16B",
+      "parameterLabel": "16B",
+      "sizeClass": "medium",
+      "contextWindow": 128000,
+      "status": "supported"
+    },
+    {
+      "id": "deepseek-coder-v2-236b",
+      "familyId": "deepseek-coder-v2",
+      "displayName": "DeepSeek Coder V2 236B",
+      "parameterLabel": "236B",
+      "sizeClass": "xlarge",
+      "contextWindow": 128000,
+      "status": "experimental"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "deepseek-coder-v2-16b-q4_k_m-ollama",
+      "variantId": "deepseek-coder-v2-16b",
+      "runtimeId": "ollama",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 9.1,
+      "minimumRamGb": 12,
+      "recommendedRamGb": 16,
+      "minimumVramGb": 8,
+      "recommendedVramGb": 12,
+      "pullCommand": "ollama pull deepseek-coder-v2:16b-instruct-q4_K_M",
+      "status": "supported"
+    },
+    {
+      "id": "deepseek-coder-v2-16b-q8_0-ollama",
+      "variantId": "deepseek-coder-v2-16b",
+      "runtimeId": "ollama",
+      "quantization": "q8_0",
+      "fileSizeGb": 17.2,
+      "minimumRamGb": 20,
+      "recommendedRamGb": 24,
+      "minimumVramGb": 16,
+      "recommendedVramGb": 20,
+      "pullCommand": "ollama pull deepseek-coder-v2:16b-instruct-q8_0",
+      "status": "supported"
+    },
+    {
+      "id": "deepseek-coder-v2-236b-q4_k_m-ollama",
+      "variantId": "deepseek-coder-v2-236b",
+      "runtimeId": "ollama",
+      "quantization": "q4_k_m",
+      "fileSizeGb": 130,
+      "minimumRamGb": 140,
+      "recommendedRamGb": 160,
+      "minimumVramGb": 80,
+      "recommendedVramGb": 130,
+      "pullCommand": "ollama pull deepseek-coder-v2:236b-instruct-q4_K_M",
+      "status": "experimental"
+    }
+  ]
+}

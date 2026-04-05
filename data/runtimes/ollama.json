@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "manifestVersion": "1",
+  "runtime": {
+    "id": "ollama",
+    "displayName": "Ollama",
+    "type": "local_server",
+    "detectionCommand": "ollama --version",
+    "versionCommand": "ollama --version",
+    "supportedPlatforms": ["linux", "darwin", "win32"],
+    "requiredDrivers": [],
+    "capabilities": ["gpu_offload", "model_management", "openai_compatible_api"],
+    "installInstructions": {
+      "linux": ["curl -fsSL https://ollama.ai/install.sh | sh"],
+      "darwin": ["brew install ollama"],
+      "win32": ["Download installer from https://ollama.ai/download/windows"]
+    },
+    "postInstallVerification": {
+      "linux": ["ollama --version", "ollama list"],
+      "darwin": ["ollama --version", "ollama list"],
+      "win32": ["ollama --version"]
+    },
+    "status": "supported"
+  }
+}
