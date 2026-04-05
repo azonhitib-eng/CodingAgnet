@@ -91,8 +91,8 @@ export function parseNvidiaSmiCsv(stdout: string): GpuInfo {
  */
 export function parseSystemProfiler(stdout: string): GpuInfo {
   const chipsetMatch = stdout.match(/Chipset Model:\s*(.+)/i);
-  const vramMatch = stdout.match(/VRAM.*?:\s*([\d.]+)\s*(?:GB|MB)/i);
-  const vramUnit = stdout.match(/VRAM.*?:\s*[\d.]+\s*(GB|MB)/i);
+  const vramMatch = stdout.match(/VRAM[^:]*:\s*([\d.]+)\s*(?:GB|MB)/i);
+  const vramUnit = stdout.match(/VRAM[^:]*:\s*[\d.]+\s*(GB|MB)/i);
 
   const model = chipsetMatch?.[1]?.trim() ?? null;
   let vramGb: number | null = null;

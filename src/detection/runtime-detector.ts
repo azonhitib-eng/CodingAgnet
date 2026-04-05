@@ -45,8 +45,8 @@ function unknown<T>(source: string): Detected<T> {
  * Returns null if nothing matched.
  */
 export function extractVersion(output: string): string | null {
-  // Try semver first: X.Y.Z or vX.Y.Z
-  const semver = output.match(/v?(\d+\.\d+\.\d+(?:[-+][\w.]+)?)/);
+  // Try semver first: X.Y.Z or vX.Y.Z with optional pre-release/build tag
+  const semver = output.match(/v?(\d+\.\d+\.\d+(?:[-+][\w]+(?:\.[\w]+)*)?)/);
   if (semver) return semver[1];
 
   // Try build-tag style: b1234 or B1234
