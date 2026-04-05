@@ -20,7 +20,7 @@
 
 import { resolve } from "node:path";
 import { loadCatalogBundleSync, type CatalogPaths } from "../catalog/bundle.js";
-import { CliError, usageError, EXIT_OK, EXIT_USAGE } from "./errors.js";
+import { CliError, usageError, EXIT_OK, EXIT_RUNTIME } from "./errors.js";
 import { printError } from "./format.js";
 import { runDetectHost } from "./commands/detect-host.js";
 import { runListModels } from "./commands/list-models.js";
@@ -209,9 +209,10 @@ export async function main(
       printError(error.message, errWriter);
       return error.exitCode;
     }
+    // Unexpected/runtime errors get EXIT_RUNTIME, not EXIT_USAGE
     const msg = error instanceof Error ? error.message : String(error);
-    printError(msg, errWriter);
-    return EXIT_USAGE;
+    printError(`Unexpected error: ${msg}`, errWriter);
+    return EXIT_RUNTIME;
   }
 }
 

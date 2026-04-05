@@ -20,4 +20,4 @@ export * from "./compatibility/index.js";
 export * from "./install-plan/index.js";
 export { renderPlanWithSafety, runFullFlow, type FullFlowInput, type FullFlowResult } from "./api.js";
 export { main as cliMain } from "./cli/index.js";
-export { loadHostProfile, validateHostProfile } from "./cli/host-loader.js";
+export { validateHostProfile } from "./cli/host-loader.js";

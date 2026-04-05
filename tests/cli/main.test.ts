@@ -225,7 +225,7 @@ describe("CLI main — invalid inputs", () => {
     );
 
     expect(code).toBeGreaterThan(0);
-    expect(errLines.join("\n")).toContain("missing required fields");
+    expect(errLines.join("\n")).toContain("validation failed");
   });
 
   it("list-models with invalid status returns error", async () => {
@@ -530,6 +530,224 @@ describe("CLI main — --host-file deterministic host input", () => {
     const lines: string[] = [];
     await main(["--help"], (msg) => lines.push(msg));
     expect(lines.join("\n")).toContain("--host-file");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Render-plan schema validation
+// ---------------------------------------------------------------------------
+
+describe("CLI main — render-plan schema validation", () => {
+  it("rejects plan with missing runtimeId", async () => {
+    const badPlan = join(TMP_DIR, "missing-runtime.json");
+    writeFileSync(badPlan, JSON.stringify({
+      artifactId: "test",
+      steps: [{ order: 0, command: "echo hi", description: "test", riskLevel: "safe", requiresApproval: false, reversible: true }],
+      // missing runtimeId, targetPlatform, prerequisites, postInstallVerification, resourceEstimate, risks, humanSummary
+    }));
+
+    const errLines: string[] = [];
+    const code = await main(
+      ["render-plan", "--plan-file", badPlan],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    expect(code).toBe(2); // EXIT_INPUT
+    expect(errLines.join("\n")).toContain("validation failed");
+  });
+
+  it("rejects plan with invalid step riskLevel", async () => {
+    const badPlan = join(TMP_DIR, "bad-risk-level.json");
+    writeFileSync(badPlan, JSON.stringify({
+      artifactId: "test",
+      runtimeId: "ollama",
+      targetPlatform: "linux",
+      prerequisites: [],
+      steps: [{ order: 0, command: "echo hi", description: "test", riskLevel: "extreme", requiresApproval: false, reversible: true }],
+      postInstallVerification: [],
+      resourceEstimate: { diskSpaceGb: 1, requiresNetwork: false },
+      risks: [],
+      humanSummary: "test",
+    }));
+
+    const errLines: string[] = [];
+    const code = await main(
+      ["render-plan", "--plan-file", badPlan],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    expect(code).toBe(2); // EXIT_INPUT
+    expect(errLines.join("\n")).toContain("validation failed");
+  });
+
+  it("rejects plan with invalid targetPlatform", async () => {
+    const badPlan = join(TMP_DIR, "bad-platform.json");
+    writeFileSync(badPlan, JSON.stringify({
+      artifactId: "test",
+      runtimeId: "ollama",
+      targetPlatform: "bsd",
+      prerequisites: [],
+      steps: [],
+      postInstallVerification: [],
+      resourceEstimate: { diskSpaceGb: 1, requiresNetwork: false },
+      risks: [],
+      humanSummary: "test",
+    }));
+
+    const errLines: string[] = [];
+    const code = await main(
+      ["render-plan", "--plan-file", badPlan],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    expect(code).toBe(2); // EXIT_INPUT
+    expect(errLines.join("\n")).toContain("validation failed");
+  });
+
+  it("rejects plan with empty string artifactId", async () => {
+    const badPlan = join(TMP_DIR, "empty-artifact.json");
+    writeFileSync(badPlan, JSON.stringify({
+      artifactId: "",
+      runtimeId: "ollama",
+      targetPlatform: "linux",
+      prerequisites: [],
+      steps: [],
+      postInstallVerification: [],
+      resourceEstimate: { diskSpaceGb: 1, requiresNetwork: false },
+      risks: [],
+      humanSummary: "test",
+    }));
+
+    const errLines: string[] = [];
+    const code = await main(
+      ["render-plan", "--plan-file", badPlan],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    expect(code).toBe(2); // EXIT_INPUT
+    expect(errLines.join("\n")).toContain("validation failed");
+  });
+
+  it("validation error message includes field path", async () => {
+    const badPlan = join(TMP_DIR, "path-in-error.json");
+    writeFileSync(badPlan, JSON.stringify({
+      artifactId: "test",
+      runtimeId: "ollama",
+      targetPlatform: "linux",
+      prerequisites: [],
+      steps: [{ order: -1, command: "", description: "", riskLevel: "safe", requiresApproval: false, reversible: true }],
+      postInstallVerification: [],
+      resourceEstimate: { diskSpaceGb: 1, requiresNetwork: false },
+      risks: [],
+      humanSummary: "test",
+    }));
+
+    const errLines: string[] = [];
+    await main(
+      ["render-plan", "--plan-file", badPlan],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    const errOutput = errLines.join("\n");
+    expect(errOutput).toContain("steps");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Error code consistency
+// ---------------------------------------------------------------------------
+
+describe("CLI main — error code consistency", () => {
+  it("unknown command returns EXIT_USAGE (1)", async () => {
+    const code = await main(
+      ["nonexistent-cmd"],
+      () => {},
+      () => {},
+    );
+    expect(code).toBe(1);
+  });
+
+  it("missing required flag returns EXIT_USAGE (1)", async () => {
+    const code = await main(
+      ["check-compatibility", "--data-dir", DATA_DIR],
+      () => {},
+      () => {},
+    );
+    expect(code).toBe(1);
+  });
+
+  it("invalid artifact ID returns EXIT_INPUT (2)", async () => {
+    const hostFile = join(TMP_DIR, "host-err.json");
+    writeFileSync(hostFile, JSON.stringify(makeHost(), null, 2));
+
+    const code = await main(
+      ["check-compatibility", "--data-dir", DATA_DIR, "--host-file", hostFile, "--artifact", "no-such-id"],
+      () => {},
+      () => {},
+    );
+    expect(code).toBe(2);
+  });
+
+  it("missing plan file returns EXIT_INPUT (2)", async () => {
+    const code = await main(
+      ["render-plan", "--plan-file", "/nonexistent/plan.json"],
+      () => {},
+      () => {},
+    );
+    expect(code).toBe(2);
+  });
+
+  it("invalid list-models filter returns EXIT_USAGE (1)", async () => {
+    const code = await main(
+      ["list-models", "--data-dir", DATA_DIR, "--status", "bogus"],
+      () => {},
+      () => {},
+    );
+    expect(code).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Output normalization — list-models ordering
+// ---------------------------------------------------------------------------
+
+describe("CLI main — output normalization", () => {
+  it("list-models JSON output is sorted by family/variant/artifactId", async () => {
+    const lines: string[] = [];
+    await main(
+      ["list-models", "--data-dir", DATA_DIR, "--json"],
+      (msg) => lines.push(msg),
+    );
+
+    const parsed = JSON.parse(lines.join("\n")) as Array<{ family: string; variant: string; artifactId: string }>;
+    for (let i = 1; i < parsed.length; i++) {
+      const prev = parsed[i - 1];
+      const curr = parsed[i];
+      const cmp =
+        prev.family.localeCompare(curr.family) ||
+        prev.variant.localeCompare(curr.variant) ||
+        prev.artifactId.localeCompare(curr.artifactId);
+      expect(cmp).toBeLessThanOrEqual(0);
+    }
+  });
+
+  it("list-models pretty output is deterministic across calls", async () => {
+    const lines1: string[] = [];
+    await main(
+      ["list-models", "--data-dir", DATA_DIR],
+      (msg) => lines1.push(msg),
+    );
+    const lines2: string[] = [];
+    await main(
+      ["list-models", "--data-dir", DATA_DIR],
+      (msg) => lines2.push(msg),
+    );
+    expect(lines1.join("\n")).toBe(lines2.join("\n"));
   });
 });
 

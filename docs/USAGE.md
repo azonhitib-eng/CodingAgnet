@@ -74,7 +74,7 @@ const host = await detectHost({
 
 The host profile contains `Detected<T>` wrappers with confidence levels (`certain`, `estimated`, `unknown`). The detector never throws — failures degrade to unknown values.
 
-For testing, you can construct a mock `HostProfile` directly:
+For testing or deterministic workflows, you can construct a mock `HostProfile` directly:
 
 ```typescript
 import type { HostProfile } from "codingagent-backend";
@@ -85,6 +85,19 @@ const mockHost: HostProfile = {
   // ...
 };
 ```
+
+You can also validate a previously saved host profile:
+
+```typescript
+import { validateHostProfile } from "codingagent-backend";
+
+// Throws if data doesn't match HostProfileSchema
+const host = validateHostProfile(parsedJsonObject);
+```
+
+> **Note:** `loadHostProfile(filePath)` is available from the CLI module
+> (`import { loadHostProfile } from "codingagent-backend/cli"`) for file-based
+> loading. The root API only exports the pure validation helper.
 
 ### 3. Get recommendations
 
@@ -218,7 +231,26 @@ npx tsx src/cli/main.ts <command> [options]
 |------|-------------|
 | `--json` | Output as JSON instead of human-readable text |
 | `--data-dir <path>` | Path to catalog data directory (default: `./data`) |
+| `--host-file <path>` | Use a saved host profile JSON instead of live detection |
 | `--help` | Show help message |
+
+### Host detection behavior
+
+Commands that need a host profile (`recommend-models`, `check-compatibility`, `plan-install`) use **live detection** by default — they probe the current machine's OS, CPU, memory, GPU, and installed runtimes.
+
+To get **deterministic, reproducible results**, provide a saved host profile with `--host-file <path>`:
+
+```bash
+# Save a host profile once
+npx tsx src/cli/main.ts detect-host --json > host.json
+
+# Use the saved profile for deterministic results
+npx tsx src/cli/main.ts recommend-models --data-dir ./data --host-file host.json
+npx tsx src/cli/main.ts check-compatibility --data-dir ./data --host-file host.json --artifact <id>
+npx tsx src/cli/main.ts plan-install --data-dir ./data --host-file host.json --artifact <id>
+```
+
+The host file must be valid JSON conforming to the `HostProfileSchema`. Invalid files produce clear error messages with field-level details.
 
 ### Commands
 
@@ -294,6 +326,9 @@ npx tsx src/cli/main.ts render-plan --plan-file ./my-plan.json
 npx tsx src/cli/main.ts render-plan --plan-file ./my-plan.json --json
 ```
 
+**Input expectations:**
+The plan file must be valid JSON conforming to the `InstallPlanSchema`. Required fields include `artifactId`, `runtimeId`, `targetPlatform`, `prerequisites`, `steps`, `postInstallVerification`, `resourceEstimate`, `risks`, and `humanSummary`. Each step must have valid `riskLevel` values (`safe`, `caution`, `dangerous`, `blocked`) and a valid `targetPlatform` (`linux`, `darwin`, `win32`). Invalid plans produce clear schema validation errors with field paths.
+
 ### JSON output
 
 All commands support `--json` to output structured JSON instead of human-readable text.
@@ -303,6 +338,12 @@ This is useful for piping to other tools or programmatic consumption:
 npx tsx src/cli/main.ts list-models --data-dir ./data --json | jq '.[].artifactId'
 npx tsx src/cli/main.ts check-compatibility --data-dir ./data --artifact <id> --json | jq '.classification'
 ```
+
+**JSON field ordering** follows object construction order for predictability. Arrays are sorted where meaningful (e.g. `list-models` sorts by family → variant → artifactId).
+
+**Empty results** produce consistent messaging:
+- `list-models` with no matches: `"No models found matching the given filters."` (pretty) or `[]` (JSON)
+- `recommend-models` with no matches: `"No compatible models found for this host."` (pretty) or `[]` (JSON)
 
 ### Safety status interpretation
 
@@ -321,12 +362,18 @@ When using `plan-install` or `render-plan`, the safety report uses a 3-state mod
 
 ### Exit codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | Success |
-| `1` | Usage error (wrong flags, missing arguments) |
-| `2` | Input error (file not found, invalid ID) |
-| `3` | Runtime error |
+| Code | Constant | Meaning | Examples |
+|------|----------|---------|----------|
+| `0` | `EXIT_OK` | Success | Command completed normally |
+| `1` | `EXIT_USAGE` | Usage error | Wrong flags, missing arguments, unknown command, invalid filter values |
+| `2` | `EXIT_INPUT` | Input error | File not found, invalid JSON, schema validation failure, unknown artifact ID |
+| `3` | `EXIT_RUNTIME` | Runtime error | Unexpected errors, catalog load failures, internal errors |
+
+**Error behavior:**
+- All errors print to stderr via `Error: <message>` format
+- Schema validation failures include field-level details (e.g. `steps.0.command: String must contain at least 1 character(s)`)
+- File read errors include the underlying OS error detail
+- Missing artifact IDs include the ID in the error message
 
 ### Command → backend module mapping
 
@@ -346,3 +393,13 @@ npm test              # Run all tests
 npm run typecheck     # Type-check without emitting
 npm run lint          # Lint source and tests
 ```
+
+## Important: Plans are informational only
+
+All install plans generated by this system are **informational only**. The CLI and
+library **never execute** any commands. Plans describe what steps would be needed to
+install a model on a given host, along with risk assessments and safety evaluations.
+
+A human operator must review the plan, assess the safety report, and decide whether
+to proceed with manual execution. The `blocked` safety status means the plan contains
+dangerous operations that should never be executed without careful review.
