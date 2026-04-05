@@ -66,4 +66,6 @@ export const SafetyReportSchema = z.object({
   violations: z.array(SafetyViolationSchema),
   warnings: z.array(z.string()),
   approved: z.boolean(),
+  blocked: z.boolean(),
+  requiresHumanApproval: z.boolean(),
 });

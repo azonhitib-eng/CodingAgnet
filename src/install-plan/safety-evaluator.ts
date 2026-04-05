@@ -103,15 +103,26 @@ export function evaluatePlanSafety(
     }
   }
 
-  // Approval: no blocked violations → approved (dangerous still need review)
+  // --- Determine 3-state approval ---
   const hasBlocked = violations.some((v) => v.severity === "blocked");
-  const approved = !hasBlocked;
+  const hasDangerous = violations.some((v) => v.severity === "dangerous");
+  const hasApprovalRequired = plan.steps.some((s) => s.requiresApproval);
+  const hasApprovalMismatch = warnings.some((w) =>
+    w.includes("requires approval per policy"),
+  );
+  const needsHumanApproval =
+    !hasBlocked && (hasDangerous || hasApprovalRequired || hasApprovalMismatch);
+
+  const blocked = hasBlocked;
+  const approved = !blocked && !needsHumanApproval;
 
   return {
     planId: plan.artifactId,
     violations,
     warnings,
     approved,
+    blocked,
+    requiresHumanApproval: needsHumanApproval,
   };
 }
 

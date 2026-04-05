@@ -96,7 +96,9 @@ function makeSafetyReport(overrides?: Partial<SafetyReport>): SafetyReport {
     warnings: [
       "Step 0: curl detected — network download",
     ],
-    approved: true,
+    approved: false,
+    blocked: false,
+    requiresHumanApproval: true,
     ...overrides,
   };
 }
@@ -203,7 +205,9 @@ describe("renderPlan", () => {
     it("should include SAFETY REPORT section when report is provided", () => {
       const output = renderPlan(makePlan(), makeSafetyReport());
       expect(output).toContain("SAFETY REPORT");
-      expect(output).toContain("Approved: YES");
+      expect(output).toContain("Approved: NO");
+      expect(output).toContain("Blocked: NO");
+      expect(output).toContain("Requires Human Approval: YES");
     });
 
     it("should render violations", () => {
@@ -219,9 +223,25 @@ describe("renderPlan", () => {
     });
 
     it("should show NO for unapproved plans", () => {
-      const report = makeSafetyReport({ approved: false });
+      const report = makeSafetyReport({ approved: false, blocked: true, requiresHumanApproval: false });
       const output = renderPlan(makePlan(), report);
       expect(output).toContain("Approved: NO");
+      expect(output).toContain("Blocked: YES");
+      expect(output).toContain("Requires Human Approval: NO");
+    });
+
+    it("should show Blocked: NO and Requires Human Approval: NO for fully approved", () => {
+      const report = makeSafetyReport({
+        violations: [],
+        warnings: [],
+        approved: true,
+        blocked: false,
+        requiresHumanApproval: false,
+      });
+      const output = renderPlan(makePlan(), report);
+      expect(output).toContain("Approved: YES");
+      expect(output).toContain("Blocked: NO");
+      expect(output).toContain("Requires Human Approval: NO");
     });
 
     it("should not include safety section when explicitly disabled", () => {

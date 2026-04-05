@@ -243,6 +243,8 @@ describe("evaluatePlanSafety", () => {
       const report = evaluatePlanSafety(plan, policy);
 
       expect(report.approved).toBe(true);
+      expect(report.blocked).toBe(false);
+      expect(report.requiresHumanApproval).toBe(false);
       expect(report.violations).toEqual([]);
     });
   });
@@ -257,13 +259,15 @@ describe("evaluatePlanSafety", () => {
       const report = evaluatePlanSafety(plan, policy);
 
       expect(report.approved).toBe(false);
+      expect(report.blocked).toBe(true);
+      expect(report.requiresHumanApproval).toBe(false);
       expect(report.violations.length).toBeGreaterThan(0);
       expect(report.violations[0].severity).toBe("blocked");
     });
   });
 
   describe("plan with dangerous commands", () => {
-    it("should approve but report violations for dangerous commands", () => {
+    it("should not approve and require human approval for dangerous commands", () => {
       const plan = makePlan({
         steps: [
           makeStep({ command: "rm -rf /home/user/old-models" }),
@@ -271,8 +275,9 @@ describe("evaluatePlanSafety", () => {
       });
       const report = evaluatePlanSafety(plan, policy);
 
-      // Dangerous != blocked, so plan is still "approved" (not blocked)
-      expect(report.approved).toBe(true);
+      expect(report.approved).toBe(false);
+      expect(report.blocked).toBe(false);
+      expect(report.requiresHumanApproval).toBe(true);
       expect(report.violations.length).toBeGreaterThan(0);
       expect(report.violations[0].severity).toBe("dangerous");
     });
@@ -288,20 +293,24 @@ describe("evaluatePlanSafety", () => {
       const report = evaluatePlanSafety(plan, policy);
 
       expect(report.approved).toBe(false);
+      expect(report.blocked).toBe(true);
+      expect(report.requiresHumanApproval).toBe(false);
       expect(report.violations.some((v) => v.type === "path")).toBe(true);
     });
   });
 
   describe("plan with sensitive paths", () => {
-    it("should warn about sensitive paths but still approve", () => {
+    it("should warn about sensitive paths but still approve if no approval required", () => {
       const plan = makePlan({
         steps: [
-          makeStep({ command: "cat /etc/hostname" }),
+          makeStep({ command: "cat /etc/hostname", requiresApproval: false }),
         ],
       });
       const report = evaluatePlanSafety(plan, policy);
 
       expect(report.approved).toBe(true);
+      expect(report.blocked).toBe(false);
+      expect(report.requiresHumanApproval).toBe(false);
       expect(report.warnings.some((w) => w.includes("sensitive"))).toBe(true);
     });
   });
@@ -345,6 +354,110 @@ describe("evaluatePlanSafety", () => {
       const report = evaluatePlanSafety(plan, policy);
 
       expect(report.warnings.some((w) => w.includes("blocked path"))).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 3-state approval semantics (Phase 5.1)
+  // -------------------------------------------------------------------------
+
+  describe("3-state approval semantics", () => {
+    it("fully safe plan: approved=true, blocked=false, requiresHumanApproval=false", () => {
+      const plan = makePlan({
+        steps: [
+          makeStep({ command: "ollama pull model:7b", requiresApproval: false }),
+        ],
+      });
+      const report = evaluatePlanSafety(plan, policy);
+
+      expect(report.approved).toBe(true);
+      expect(report.blocked).toBe(false);
+      expect(report.requiresHumanApproval).toBe(false);
+    });
+
+    it("blocked plan: approved=false, blocked=true, requiresHumanApproval=false", () => {
+      const plan = makePlan({
+        steps: [
+          makeStep({ command: "rm -rf /" }),
+        ],
+      });
+      const report = evaluatePlanSafety(plan, policy);
+
+      expect(report.approved).toBe(false);
+      expect(report.blocked).toBe(true);
+      expect(report.requiresHumanApproval).toBe(false);
+    });
+
+    it("dangerous command: approved=false, blocked=false, requiresHumanApproval=true", () => {
+      const plan = makePlan({
+        steps: [
+          makeStep({ command: "rm -rf /home/user/old" }),
+        ],
+      });
+      const report = evaluatePlanSafety(plan, policy);
+
+      expect(report.approved).toBe(false);
+      expect(report.blocked).toBe(false);
+      expect(report.requiresHumanApproval).toBe(true);
+    });
+
+    it("step with requiresApproval=true: approved=false, requiresHumanApproval=true", () => {
+      const plan = makePlan({
+        steps: [
+          makeStep({ command: "echo safe", requiresApproval: true }),
+        ],
+      });
+      const report = evaluatePlanSafety(plan, policy);
+
+      expect(report.approved).toBe(false);
+      expect(report.blocked).toBe(false);
+      expect(report.requiresHumanApproval).toBe(true);
+    });
+
+    it("approval mismatch: approved=false, requiresHumanApproval=true", () => {
+      const plan = makePlan({
+        steps: [
+          makeStep({
+            command: "sudo apt install cuda",
+            riskLevel: "caution",
+            requiresApproval: false,
+          }),
+        ],
+      });
+      const report = evaluatePlanSafety(plan, policy);
+
+      expect(report.approved).toBe(false);
+      expect(report.blocked).toBe(false);
+      expect(report.requiresHumanApproval).toBe(true);
+    });
+
+    it("blocked + dangerous: blocked takes precedence, requiresHumanApproval=false", () => {
+      const plan = makePlan({
+        steps: [
+          makeStep({ command: "rm -rf /" }),
+          makeStep({ command: "rm -rf /home/user/data" }),
+        ],
+      });
+      const report = evaluatePlanSafety(plan, policy);
+
+      expect(report.approved).toBe(false);
+      expect(report.blocked).toBe(true);
+      expect(report.requiresHumanApproval).toBe(false);
+    });
+
+    it("multiple safe steps with no approval: fully approved", () => {
+      const plan = makePlan({
+        steps: [
+          makeStep({ command: "echo a", requiresApproval: false }),
+          makeStep({ command: "echo b", requiresApproval: false }),
+          makeStep({ command: "ollama serve", requiresApproval: false }),
+        ],
+      });
+      const report = evaluatePlanSafety(plan, policy);
+
+      expect(report.approved).toBe(true);
+      expect(report.blocked).toBe(false);
+      expect(report.requiresHumanApproval).toBe(false);
     });
   });
 });

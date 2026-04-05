@@ -135,6 +135,8 @@ export function renderPlan(
     lines.push(separator("=", width));
     lines.push(`  Plan ID: ${safetyReport.planId}`);
     lines.push(`  Approved: ${safetyReport.approved ? "YES" : "NO"}`);
+    lines.push(`  Blocked: ${safetyReport.blocked ? "YES" : "NO"}`);
+    lines.push(`  Requires Human Approval: ${safetyReport.requiresHumanApproval ? "YES" : "NO"}`);
     lines.push(`  Violations: ${safetyReport.violations.length}`);
     lines.push(`  Warnings: ${safetyReport.warnings.length}`);
     lines.push("");
