@@ -144,6 +144,13 @@ export function runListModels(args: ListModelsArgs): ArtifactRow[] {
     });
   }
 
+  // Stable sort: family → variant → artifactId for deterministic output
+  rows.sort((a, b) =>
+    a.family.localeCompare(b.family) ||
+    a.variant.localeCompare(b.variant) ||
+    a.artifactId.localeCompare(b.artifactId),
+  );
+
   if (args.json) {
     printOutput(rows, true, args.writer);
   } else {

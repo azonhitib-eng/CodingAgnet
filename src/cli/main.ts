@@ -20,7 +20,7 @@
 
 import { resolve } from "node:path";
 import { loadCatalogBundleSync, type CatalogPaths } from "../catalog/bundle.js";
-import { CliError, usageError, EXIT_OK, EXIT_USAGE } from "./errors.js";
+import { CliError, usageError, EXIT_OK, EXIT_RUNTIME } from "./errors.js";
 import { printError } from "./format.js";
 import { runDetectHost } from "./commands/detect-host.js";
 import { runListModels } from "./commands/list-models.js";
@@ -29,6 +29,7 @@ import { runCheckCompatibility } from "./commands/check-compatibility.js";
 import { runPlanInstall } from "./commands/plan-install.js";
 import { runRenderPlan } from "./commands/render-plan.js";
 import { detectHost } from "../detection/host-detector.js";
+import { loadHostProfile } from "./host-loader.js";
 
 // ---------------------------------------------------------------------------
 // Arg parsing helpers
@@ -64,6 +65,7 @@ Commands:
 Global options:
   --json               Output as JSON
   --data-dir <path>    Path to catalog data directory (default: ./data)
+  --host-file <path>   Use a saved host profile JSON instead of live detection
   --help               Show this help message
 
 Command-specific options:
@@ -85,6 +87,7 @@ Command-specific options:
     --plan-file <path>      Path to a saved plan JSON file (required)
 
 Note: Install plans are INFORMATIONAL ONLY and are NOT executed.
+      Use --host-file for deterministic, reproducible results.
 `.trim();
 
 // ---------------------------------------------------------------------------
@@ -146,7 +149,10 @@ export async function main(
       }
 
       case "recommend-models": {
-        const host = await detectHost({ catalogRuntimes: bundle.runtimes.listAll() });
+        const hostFilePath = getFlagValue(argv, "--host-file");
+        const host = hostFilePath
+          ? loadHostProfile(hostFilePath)
+          : await detectHost({ catalogRuntimes: bundle.runtimes.listAll() });
         runRecommendModels({
           bundle,
           host,
@@ -162,7 +168,10 @@ export async function main(
         if (!artifactId) {
           throw usageError("check-compatibility requires --artifact <id>");
         }
-        const host = await detectHost({ catalogRuntimes: bundle.runtimes.listAll() });
+        const hostFilePath = getFlagValue(argv, "--host-file");
+        const host = hostFilePath
+          ? loadHostProfile(hostFilePath)
+          : await detectHost({ catalogRuntimes: bundle.runtimes.listAll() });
         runCheckCompatibility({
           bundle,
           host,
@@ -178,7 +187,10 @@ export async function main(
         if (!artifactId) {
           throw usageError("plan-install requires --artifact <id>");
         }
-        const host = await detectHost({ catalogRuntimes: bundle.runtimes.listAll() });
+        const hostFilePath = getFlagValue(argv, "--host-file");
+        const host = hostFilePath
+          ? loadHostProfile(hostFilePath)
+          : await detectHost({ catalogRuntimes: bundle.runtimes.listAll() });
         runPlanInstall({
           bundle,
           host,
@@ -197,9 +209,10 @@ export async function main(
       printError(error.message, errWriter);
       return error.exitCode;
     }
+    // Unexpected/runtime errors get EXIT_RUNTIME, not EXIT_USAGE
     const msg = error instanceof Error ? error.message : String(error);
-    printError(msg, errWriter);
-    return EXIT_USAGE;
+    printError(`Unexpected error: ${msg}`, errWriter);
+    return EXIT_RUNTIME;
   }
 }
 

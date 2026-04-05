@@ -63,6 +63,9 @@ describe("public API surface — core functions", () => {
     // Phase 6 facade
     "renderPlanWithSafety",
     "runFullFlow",
+
+    // Phase 7B — host profile validation
+    "validateHostProfile",
   ];
 
   for (const name of expectedFunctions) {
@@ -182,5 +185,19 @@ describe("runFullFlow contract", () => {
 describe("public API surface — no default export", () => {
   it("does not have a default export", () => {
     expect((api as Record<string, unknown>).default).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// API boundary — CLI-only helpers not on root surface
+// ---------------------------------------------------------------------------
+
+describe("public API surface — CLI boundary", () => {
+  it("does not export loadHostProfile (file I/O belongs in CLI module)", () => {
+    expect((api as Record<string, unknown>).loadHostProfile).toBeUndefined();
+  });
+
+  it("exports validateHostProfile (pure validation is library-appropriate)", () => {
+    expect(isFn((api as Record<string, unknown>).validateHostProfile)).toBe(true);
   });
 });
