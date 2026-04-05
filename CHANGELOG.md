@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 10** — Cross-platform validation and deterministic host/profile fixture infrastructure
+  - Deterministic host profile fixtures: 6 representative hardware classes (low-end CPU, mid-range GPU, high-end GPU, missing-runtime, partially-unknown, unsupported/weak)
+  - Fixture infrastructure in `tests/fixtures/` with `host-profiles.ts`, `detector-outputs.ts`, and `support-semantics.ts`
+  - Cross-platform detector parsing validation with realistic mocked command outputs for Linux, macOS, and Windows
+  - Support-matrix regression suite combining fixture profiles × catalog × compatibility × recommendation × workflow
+  - Recommendation ordering drift detection tests
+  - Support-class semantics documentation (`supported`, `supported_with_limits`, `cpu_only_slow`, `unsupported`)
+  - Profile expectation map for regression testing across fixture hosts
+  - Documentation section on deterministic testing intent, fixture strategy, and practical support expectations
+
 - **Phase 9C** — Final release polish and installed-package sanity
   - Version is now read from `package.json` at runtime via `getVersion()` — eliminates manual `PKG_VERSION` constant drift
   - `--strict` flag for CI-oriented exit semantics: `completed_requires_approval` returns exit code `5` instead of `0`
