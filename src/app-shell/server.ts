@@ -20,6 +20,7 @@
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { execFile } from "node:child_process";
 import { URL } from "node:url";
 
 import {
@@ -323,19 +324,94 @@ async function handleHostValidate(req: IncomingMessage, res: ServerResponse): Pr
 }
 
 // ---------------------------------------------------------------------------
+// Browser opener
+// ---------------------------------------------------------------------------
+
+/**
+ * Open a URL in the default system browser.
+ * Only allows http: and https: protocols to prevent command injection.
+ * Uses execFile to avoid shell interpolation of URL characters.
+ * Returns true if the command was spawned, false on validation failure.
+ */
+export function openBrowser(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return false;
+  }
+  const safeUrl = parsed.href;
+  const platform = process.platform;
+  let cmd: string;
+  let args: string[];
+  if (platform === "darwin") {
+    cmd = "open";
+    args = [safeUrl];
+  } else if (platform === "win32") {
+    cmd = "cmd";
+    args = ["/c", "start", "", safeUrl];
+  } else {
+    cmd = "xdg-open";
+    args = [safeUrl];
+  }
+  execFile(cmd, args, (err) => {
+    if (err) {
+      // Silently ignore — user can still open the URL manually
+    }
+  });
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown
+// ---------------------------------------------------------------------------
+
+/**
+ * Attach graceful shutdown handlers to the given server.
+ * On SIGINT/SIGTERM, prints a message and closes the server cleanly.
+ */
+export function attachGracefulShutdown(server: ReturnType<typeof createServer>): void {
+  const shutdown = (signal: string) => {
+    console.log();
+    console.log(`  Received ${signal}. Shutting down CodingAgent App Shell…`);
+    server.close(() => {
+      console.log("  Server stopped. Goodbye!");
+      process.exit(0);
+    });
+    // Force exit after 3 seconds if connections linger
+    setTimeout(() => process.exit(0), 3000).unref();
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
+
+// ---------------------------------------------------------------------------
 // Server entrypoint
 // ---------------------------------------------------------------------------
 
-export function startServer(port: number): ReturnType<typeof createServer> {
+export interface StartServerOptions {
+  /** Automatically open the browser after the server starts. Default: false. */
+  open?: boolean;
+}
+
+export function startServer(
+  port: number,
+  options?: StartServerOptions,
+): ReturnType<typeof createServer> {
   const server = createServer(handleRequest);
   server.listen(port, () => {
+    const localUrl = `http://localhost:${port}`;
     const line = "─".repeat(56);
     console.log();
     console.log(line);
     console.log("  CodingAgent App Shell");
     console.log(line);
     console.log();
-    console.log(`  ➜  Local:   http://localhost:${port}`);
+    console.log(`  ➜  Local:   ${localUrl}`);
     console.log();
     console.log("  Modes:");
     console.log("    • Demo  — pre-built scenarios, no setup required");
@@ -351,6 +427,15 @@ export function startServer(port: number): ReturnType<typeof createServer> {
     console.log("  Press Ctrl+C to stop the server");
     console.log(line);
     console.log();
+
+    if (options?.open) {
+      console.log("  Opening browser…");
+      const opened = openBrowser(localUrl);
+      if (!opened) {
+        console.log("  ⚠  Could not open browser automatically. Please open the URL above manually.");
+      }
+      console.log();
+    }
   });
   return server;
 }
@@ -390,6 +475,7 @@ Usage: npx tsx src/app-shell/server.ts [options]
 
 Options:
   --port <number>   Port to listen on (default: 3000, or PORT env var)
+  --open            Automatically open the default browser on startup
   --help, -h        Show this help message
 
 Environment variables:
@@ -398,6 +484,8 @@ Environment variables:
 Examples:
   npm run app-shell                           # Start on port 3000
   npm run app-shell -- --port 8080            # Start on port 8080
+  npm run app-shell -- --open                 # Start and open browser
+  npm run app-shell:desktop                   # Desktop mode (preflight + open)
   PORT=4000 npm run app-shell                 # Start on port 4000
 
 See docs/QUICKSTART.md for full setup instructions.
@@ -406,7 +494,9 @@ See docs/QUICKSTART.md for full setup instructions.
   }
 
   const port = resolvePort(args);
-  startServer(port);
+  const shouldOpen = args.includes("--open");
+  const server = startServer(port, { open: shouldOpen });
+  attachGracefulShutdown(server);
 }
 
 // Run if this is the entry module

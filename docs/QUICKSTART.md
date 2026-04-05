@@ -31,10 +31,25 @@ npm run app-shell
 
 Open **http://localhost:3000** in your browser.
 
+### Desktop mode (recommended for first-time users)
+
+For a one-command desktop-like experience that runs preflight checks, starts the server, and opens your browser automatically:
+
+```bash
+npm run app-shell:desktop
+```
+
+Or to just auto-open the browser without preflight:
+
+```bash
+npm run app-shell:open
+```
+
 ### Custom port
 
 ```bash
 npm run app-shell -- --port 8080
+npm run app-shell:desktop -- --port 8080
 # or
 PORT=4000 npm run app-shell
 ```
@@ -236,6 +251,8 @@ The repository includes a ready-to-use `data/` directory at the project root.
 |--------|-------------|
 | `npm run app-shell` | Start the app shell (default port 3000) |
 | `npm run app-shell:demo` | Same as above (demo mode is default) |
+| `npm run app-shell:open` | Start the app shell and auto-open the browser |
+| `npm run app-shell:desktop` | Desktop mode: preflight + server + auto-open |
 | `npm run app-shell:help` | Show app shell CLI help |
 | `npm run generate-host-profile` | Detect host and output JSON to stdout |
 | `npm run preflight` | Verify environment is ready |
