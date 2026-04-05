@@ -960,7 +960,7 @@ describe("agent event factory functions", () => {
       "testing",
     ]);
     expect(e.kind).toBe("agent_capabilities_updated");
-    expect(e.message).toContain("2 capability/ies");
+    expect(e.message).toContain("2 capabilities");
     expect(e.detail?.capabilities).toEqual(["editing", "testing"]);
   });
 

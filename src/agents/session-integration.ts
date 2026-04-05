@@ -100,7 +100,7 @@ export const agentCapabilitiesUpdated = (
 ): SessionEvent =>
   createEvent(
     "agent_capabilities_updated" as SessionEvent["kind"],
-    `Agent capabilities updated: ${name} (${capabilities.length} capability/ies)`,
+    `Agent capabilities updated: ${name} (${capabilities.length} capabilities)`,
     { agentId, name, capabilities: [...capabilities] },
   );
 
