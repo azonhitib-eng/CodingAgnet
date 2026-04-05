@@ -568,3 +568,99 @@ install a model on a given host, along with risk assessments and safety evaluati
 A human operator must review the plan, assess the safety report, and decide whether
 to proceed with manual execution. The `blocked` safety status means the plan contains
 dangerous operations that should never be executed without careful review.
+
+## Deterministic Testing & Host-Profile Fixtures
+
+### Overview
+
+Phase 10 introduces a **deterministic host-profile fixture infrastructure** for
+cross-platform validation and regression prevention. This enables reproducible
+testing of compatibility, recommendation, planning, and workflow behavior across
+representative hardware classes — without requiring real hardware access in CI.
+
+### Fixture Strategy
+
+Host-profile fixtures live in `tests/fixtures/host-profiles.ts` and represent
+six realistic hardware classes:
+
+| Fixture Name       | Description                                          |
+|--------------------|------------------------------------------------------|
+| `lowEndCpuOnly`    | Budget laptop: 8 GB RAM, no GPU, 4 threads           |
+| `midRangeGpu`      | Developer workstation: 32 GB RAM, RTX 3060 12 GB     |
+| `highEndGpu`       | ML workstation: 64 GB RAM, RTX 4090 24 GB            |
+| `missingRuntime`   | Good hardware (M2 Pro) but no runtimes installed      |
+| `partiallyUnknown` | Mixed confidence levels, some detection failures      |
+| `unsupportedWeak`  | Extremely low resources: 2 GB RAM, no GPU             |
+
+All fixtures conform to the `HostProfile` type and pass `HostProfileSchema`
+validation. Confidence levels (`certain`, `estimated`, `unknown`) are set
+realistically for each field.
+
+### What Is Directly Tested vs Inferred
+
+| Behavior                              | Testing Method                        |
+|---------------------------------------|---------------------------------------|
+| GPU parser output (nvidia-smi, macOS) | Direct mock outputs, unit tests       |
+| Compatibility classification          | Fixtures × catalog, deterministic     |
+| Recommendation ordering               | Fixtures × catalog, drift detection   |
+| Install plan generation               | Fixtures × top recommendation         |
+| Safety evaluation                     | Fixtures × default policy             |
+| Workflow terminal status              | Fixtures × full pipeline              |
+| Real OS / CPU / memory detection      | Inferred (uses Node.js builtins)      |
+| Real GPU detection (nvidia-smi, etc.) | Inferred (tested via mocked runners)  |
+| Runtime version extraction            | Existing unit tests with mock outputs |
+
+### Support-Class Semantics
+
+The compatibility engine produces four classifications:
+
+- **`supported`** — Host meets all recommended requirements. Full context window,
+  GPU offload, no disk swap. Example: RTX 4090 + 64 GB RAM running 7B model.
+
+- **`supported_with_limits`** — Host meets minimum but not recommended requirements.
+  Context window may be reduced, partial GPU offload, settings adjustments needed.
+  Example: 32 GB RAM machine running 13B model near boundary.
+
+- **`cpu_only_slow`** — No viable GPU offload. Model runs on CPU only, ~5–20×
+  slower than GPU. May still be acceptable for batch use. Example: CPU-only
+  laptop running small 7B model.
+
+- **`unsupported`** — Host fails critical requirements. Model cannot run reliably.
+  Causes: insufficient RAM, missing runtime, incompatible OS. Example: 2 GB RAM
+  machine or no runtimes installed.
+
+### Practical Support Expectations / Limitations
+
+- **Workflow status**: Install plans typically contain `curl | sh` style runtime
+  installation commands that the safety evaluator classifies as `caution`. This
+  means most workflows produce `completed_requires_approval` rather than
+  `completed`, even on high-end hardware. This is by design — the system is
+  conservative about approval.
+
+- **GPU detection**: Only NVIDIA (via `nvidia-smi`) and macOS (via
+  `system_profiler`) are directly tested. Other GPU vendors fall back to
+  `unknown`. Detection confidence is always preserved in the host profile.
+
+- **Uncertainty handling**: When host values are `estimated` or `unknown`, the
+  compatibility engine adds warnings but does not block. GPU offload is
+  optimistically assumed when a GPU is detected but VRAM is unknown.
+
+- **Recommendation stability**: Recommendations are scored deterministically
+  (`CLASS_SCORE + QUANT_QUALITY`). For identical inputs, ordering is guaranteed
+  stable. Ties are broken alphabetically by display name.
+
+### Running Regression Tests
+
+```bash
+# Run all tests including Phase 10 regression suite
+npx vitest run
+
+# Run only the support-matrix regression suite
+npx vitest run tests/integration/support-matrix-regression.test.ts
+
+# Run only fixture validation tests
+npx vitest run tests/fixtures/host-profiles.test.ts
+
+# Run cross-platform detector validation
+npx vitest run tests/detection/cross-platform-detector.test.ts
+```
