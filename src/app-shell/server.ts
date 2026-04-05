@@ -14,6 +14,9 @@
  *   POST /api/host/validate         — validate a host profile object
  *   POST /api/workflow/run          — run real workflow (JSON body)
  *   POST /api/workflow/validate     — validate inputs without running
+ *   GET  /api/session/current       — latest session summary + events
+ *   GET  /api/session/:id/summary   — session summary for a given session
+ *   GET  /api/session/:id/timeline  — session events with classification
  *
  * Usage:
  *   npx tsx src/app-shell/server.ts [--port 3000]
@@ -52,6 +55,7 @@ import {
   validateCloneUrl,
 } from "../session/index.js";
 import type { GitExecutor } from "../session/index.js";
+import { classifyEvent } from "./timeline-helpers.js";
 
 // ---------------------------------------------------------------------------
 // Routing
@@ -208,6 +212,47 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
   if (wsStateMatch && method === "GET") {
     handleWorkspaceState(wsStateMatch[1], res);
     return;
+  }
+
+  // API: current session summary + events (GET)
+  if (path === "/api/session/current" && method === "GET") {
+    const sessions = _workspaceSessionManager.listSessions();
+    if (sessions.length === 0) {
+      return json(res, { sessionId: null, summary: null, events: [] });
+    }
+    const latest = sessions[sessions.length - 1];
+    const summary = _workspaceSessionManager.getSessionSummary(latest.id);
+    const events = latest.events.map((e) => ({
+      ...e,
+      category: classifyEvent(e.kind),
+    }));
+    return json(res, { sessionId: latest.id, summary, events });
+  }
+
+  // API: session summary by id (GET)
+  const summaryMatch = path.match(/^\/api\/session\/([^/]+)\/summary$/);
+  if (summaryMatch && method === "GET") {
+    const sessionId = decodeURIComponent(summaryMatch[1]);
+    const session = _workspaceSessionManager.getSession(sessionId);
+    if (!session) {
+      return notFound(res, `Session not found: ${sessionId}`);
+    }
+    return json(res, _workspaceSessionManager.getSessionSummary(sessionId));
+  }
+
+  // API: session timeline by id (GET)
+  const timelineMatch = path.match(/^\/api\/session\/([^/]+)\/timeline$/);
+  if (timelineMatch && method === "GET") {
+    const sessionId = decodeURIComponent(timelineMatch[1]);
+    const session = _workspaceSessionManager.getSession(sessionId);
+    if (!session) {
+      return notFound(res, `Session not found: ${sessionId}`);
+    }
+    const events = session.events.map((e) => ({
+      ...e,
+      category: classifyEvent(e.kind),
+    }));
+    return json(res, { sessionId, events });
   }
 
   // API: single scenario (or sub-view)

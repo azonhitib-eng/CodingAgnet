@@ -98,6 +98,10 @@ ${CSS}
   </div>
 </div>
 <nav id="section-nav" class="section-nav" style="display:none;"></nav>
+<div id="session-panel" style="max-width:960px;margin:0 auto;padding:0 1.5rem;">
+  <div id="session-summary-container"></div>
+  <div id="session-timeline-container"></div>
+</div>
 <main id="app">
   <p class="muted">Select a scenario above to begin.</p>
 </main>
@@ -245,6 +249,31 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 .export-bar input[type="file"] { display: none; }
 .recovery-hint { background: #e8f4fd; border: 1px solid #b6d4fe; border-radius: 4px; padding: .5rem .75rem; font-size: .82rem; color: #084298; margin-top: .5rem; }
 .recovery-hint code { background: #d4e5f7; padding: .05rem .3rem; border-radius: 2px; font-size: .78rem; }
+.timeline-panel { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.timeline-panel h2 { margin: 0 0 .75rem; font-size: 1.1rem; }
+.timeline-list { list-style: none; padding: 0; margin: 0; position: relative; }
+.timeline-list::before { content: ''; position: absolute; left: 10px; top: 8px; bottom: 8px; width: 2px; background: var(--card-border); }
+.timeline-item { position: relative; padding: 0.4rem 0 0.4rem 2rem; font-size: .85rem; }
+.timeline-dot { position: absolute; left: 5px; top: 0.55rem; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--card-border); background: var(--card-bg); z-index: 1; }
+.timeline-item.tl-info .timeline-dot { border-color: var(--info); background: #e0f7fa; }
+.timeline-item.tl-progress .timeline-dot { border-color: var(--success); background: #d1e7dd; }
+.timeline-item.tl-warning .timeline-dot { border-color: var(--warning); background: #fff3cd; }
+.timeline-item.tl-blocked .timeline-dot { border-color: var(--critical); background: #e2d9f3; }
+.timeline-item.tl-failure .timeline-dot { border-color: var(--danger); background: #f8d7da; }
+.timeline-time { color: var(--muted); font-size: .75rem; margin-right: .5rem; }
+.timeline-kind { font-weight: 600; font-size: .78rem; margin-right: .35rem; }
+.timeline-msg { color: var(--fg); }
+.session-summary { background: #f0f4f8; border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: 0.75rem 1rem; margin-bottom: 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .5rem .75rem; font-size: .85rem; }
+.session-summary .ss-label { font-weight: 600; color: var(--muted); font-size: .78rem; text-transform: uppercase; }
+.session-summary .ss-value { margin-top: .1rem; }
+.session-summary .ss-status-active { color: var(--accent); font-weight: 700; }
+.session-summary .ss-status-completed { color: var(--success); font-weight: 700; }
+.session-summary .ss-status-completed_requires_approval { color: var(--warning); font-weight: 700; }
+.session-summary .ss-status-failed { color: var(--danger); font-weight: 700; }
+.session-summary .ss-status-blocked { color: var(--critical); font-weight: 700; }
+.session-summary .ss-status-idle { color: var(--muted); font-weight: 700; }
+.timeline-toggle { cursor: pointer; background: none; border: 1px solid var(--card-border); border-radius: 4px; padding: .25rem .75rem; font-size: .82rem; color: var(--muted); margin-left: .5rem; }
+.timeline-toggle:hover { background: #e9ecef; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -375,6 +404,7 @@ const CLIENT_JS = `
       {id:'section-compatibility',label:'Compatibility'},
       {id:'section-plan',label:'Plan Review'},
       {id:'section-workflow',label:'Workflow'},
+      {id:'section-timeline',label:'Timeline'},
     ].map(function(s) {
       return '<a href="#' + s.id + '" data-section="' + s.id + '">' + s.label + '</a>';
     }).join('');
@@ -846,6 +876,7 @@ const CLIENT_JS = `
     $validationResult.style.display = 'none';
     $detectResult.style.display = 'none';
     hideSectionNav();
+    clearTimeline();
     if (mode === 'demo') {
       $hostSourceIndicator.style.display = 'none';
     }
@@ -881,6 +912,7 @@ const CLIENT_JS = `
       $desc.textContent = data.description;
       _lastRunMeta = { mode: 'demo', label: data.label || data.description, timestamp: new Date().toLocaleString() };
       $app.innerHTML = renderScenario(data);
+      showDemoTimeline(data);
     } catch (e) {
       $app.innerHTML = '<div class="error-box"><div class="error-title">Failed to load scenario</div>' + esc(e.message) + '</div>';
     }
@@ -992,6 +1024,7 @@ const CLIENT_JS = `
           stopAfter: $stopAfterInput.value || null,
         };
         $app.innerHTML = renderScenario(result.viewModel);
+        loadSessionTimeline(null);
       } else {
         hideSectionNav();
         $app.innerHTML = renderError(result.error);
@@ -1022,6 +1055,7 @@ const CLIENT_JS = `
     _lastResult = null;
     _lastRunMeta = null;
     hideSectionNav();
+    clearTimeline();
     $app.innerHTML = '<p class="muted">Configure inputs and click Run Workflow.</p>';
     savePrefs({ mode: 'real' });
   });
@@ -1036,6 +1070,7 @@ const CLIENT_JS = `
   $clearResultsBtn.addEventListener('click', function() {
     $app.innerHTML = '<p class="muted">Configure inputs and click Run Workflow.</p>';
     hideSectionNav();
+    clearTimeline();
     _lastResult = null;
     _lastRunMeta = null;
   });
@@ -1068,6 +1103,209 @@ const CLIENT_JS = `
     };
     reader.readAsText(file);
   });
+
+  // ── Session Timeline ─────────────────────────────────────────────────
+
+  var $sessionSummary = document.getElementById('session-summary-container');
+  var $sessionTimeline = document.getElementById('session-timeline-container');
+  var _currentSessionId = null;
+
+  var EVENT_CATEGORIES = {
+    session_created: 'info', note: 'info', info: 'info', catalogs_loaded: 'info',
+    workspace_open_requested: 'info', clone_requested: 'info',
+    workspace_bound: 'progress', host_detected: 'progress', workflow_started: 'progress',
+    stage_completed: 'progress', completed: 'progress',
+    workspace_opened: 'progress', workspace_ready: 'progress',
+    clone_started: 'progress', clone_completed: 'progress',
+    mcp_attached: 'progress', mcp_started: 'progress',
+    mcp_discovered_tools: 'progress', mcp_discovered_resources: 'progress', mcp_discovered_prompts: 'progress',
+    warning: 'warning', requires_approval: 'warning',
+    mcp_attach_requested: 'warning', mcp_starting: 'warning',
+    blocked: 'blocked',
+    failed: 'failure', workspace_invalid: 'failure', clone_failed: 'failure',
+    mcp_failed: 'failure', mcp_stopped: 'failure',
+  };
+
+  var CATEGORY_ICONS = {
+    info: '\\u2139\\ufe0f', progress: '\\u2705', warning: '\\u26a0\\ufe0f', blocked: '\\ud83d\\udeab', failure: '\\u274c'
+  };
+
+  function classifyEventKind(kind) {
+    return EVENT_CATEGORIES[kind] || 'info';
+  }
+
+  function renderSessionSummary(summary) {
+    if (!summary) { $sessionSummary.innerHTML = ''; return; }
+    var statusClass = 'ss-status-' + (summary.status || 'idle');
+    var html = '<div class="session-summary">';
+    html += '<div><div class="ss-label">Session ID</div><div class="ss-value" style="font-family:monospace;font-size:.78rem;">' + esc(summary.id || '\\u2014') + '</div></div>';
+    html += '<div><div class="ss-label">Status</div><div class="ss-value ' + statusClass + '">' + esc(summary.status || 'idle') + '</div></div>';
+    html += '<div><div class="ss-label">Stage</div><div class="ss-value">' + esc(summary.stage || '\\u2014') + '</div></div>';
+    html += '<div><div class="ss-label">Workspace</div><div class="ss-value">' + esc(summary.workspaceStatus || 'none') + '</div></div>';
+    if (summary.workspacePath) {
+      html += '<div><div class="ss-label">Path</div><div class="ss-value" style="font-family:monospace;font-size:.78rem;word-break:break-all;">' + esc(summary.workspacePath) + '</div></div>';
+    }
+    if (summary.workspaceSource) {
+      html += '<div><div class="ss-label">Source</div><div class="ss-value">' + esc(summary.workspaceSource) + '</div></div>';
+    }
+    if (summary.workspaceIsGitRepo != null) {
+      html += '<div><div class="ss-label">Git Repo</div><div class="ss-value">' + (summary.workspaceIsGitRepo ? 'Yes' : 'No') + '</div></div>';
+    }
+    if (summary.workspaceRemoteUrl) {
+      html += '<div><div class="ss-label">Remote</div><div class="ss-value" style="font-family:monospace;font-size:.78rem;word-break:break-all;">' + esc(summary.workspaceRemoteUrl) + '</div></div>';
+    }
+    if (summary.workspaceBranch) {
+      html += '<div><div class="ss-label">Branch</div><div class="ss-value">' + esc(summary.workspaceBranch) + '</div></div>';
+    }
+    html += '<div><div class="ss-label">MCP Servers</div><div class="ss-value">' + (summary.mcpServerCount || 0) + ' attached</div></div>';
+    html += '<div><div class="ss-label">Events</div><div class="ss-value">' + (summary.eventCount || 0) + ' total</div></div>';
+    if (summary.approvalRequired) {
+      html += '<div><div class="ss-label">Approval</div><div class="ss-value" style="color:var(--warning);font-weight:700;">Required</div></div>';
+    }
+    if (summary.isBlocked) {
+      html += '<div><div class="ss-label">Blocked</div><div class="ss-value" style="color:var(--danger);font-weight:700;">Yes</div></div>';
+    }
+    if (summary.lastError) {
+      html += '<div style="grid-column:1/-1;"><div class="ss-label">Last Error</div><div class="ss-value" style="color:var(--danger);">' + esc(summary.lastError) + '</div></div>';
+    }
+    html += '</div>';
+    $sessionSummary.innerHTML = html;
+  }
+
+  function renderTimeline(events, collapsed) {
+    if (!events || events.length === 0) {
+      $sessionTimeline.innerHTML = '';
+      return;
+    }
+    var html = '<div class="timeline-panel" id="section-timeline">';
+    html += '<h2>\\ud83d\\udccb Session Timeline <button class="timeline-toggle" id="timeline-toggle-btn" type="button">' + (collapsed ? 'Show' : 'Hide') + '</button></h2>';
+    html += '<ul class="timeline-list" id="timeline-list" style="' + (collapsed ? 'display:none;' : '') + '">';
+    for (var i = 0; i < events.length; i++) {
+      var ev = events[i];
+      var cat = ev.category || classifyEventKind(ev.kind);
+      var icon = CATEGORY_ICONS[cat] || '\\u2139\\ufe0f';
+      var time = ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString() : '';
+      html += '<li class="timeline-item tl-' + cat + '">';
+      html += '<span class="timeline-dot"></span>';
+      html += '<span class="timeline-time">' + esc(time) + '</span>';
+      html += '<span class="timeline-kind">' + icon + ' ' + esc(ev.kind) + '</span>';
+      html += '<span class="timeline-msg">' + esc(ev.message) + '</span>';
+      html += '</li>';
+    }
+    html += '</ul></div>';
+    $sessionTimeline.innerHTML = html;
+
+    var toggleBtn = document.getElementById('timeline-toggle-btn');
+    var timelineList = document.getElementById('timeline-list');
+    if (toggleBtn && timelineList) {
+      toggleBtn.onclick = function() {
+        if (timelineList.style.display === 'none') {
+          timelineList.style.display = '';
+          toggleBtn.textContent = 'Hide';
+        } else {
+          timelineList.style.display = 'none';
+          toggleBtn.textContent = 'Show';
+        }
+      };
+    }
+  }
+
+  function buildDemoTimeline(label, workflowStatus) {
+    var now = new Date();
+    var events = [];
+    function addEvent(kind, message, offsetMs) {
+      events.push({
+        kind: kind,
+        timestamp: new Date(now.getTime() + offsetMs).toISOString(),
+        message: message,
+        category: classifyEventKind(kind)
+      });
+    }
+    addEvent('session_created', 'Session created (demo)', 0);
+    addEvent('workspace_bound', 'Workspace bound: demo/' + label, 100);
+    addEvent('catalogs_loaded', 'Catalog entries loaded', 200);
+    addEvent('host_detected', 'Host profile loaded from demo scenario', 300);
+    addEvent('workflow_started', 'Workflow execution started', 500);
+    var stages = ['catalog_loading', 'host_acquisition', 'recommendation', 'target_selection', 'compatibility_evaluation', 'install_planning', 'safety_evaluation', 'rendering'];
+    for (var si = 0; si < stages.length; si++) {
+      addEvent('stage_completed', 'Stage completed: ' + stages[si], 600 + si * 200);
+    }
+    if (workflowStatus === 'completed') {
+      addEvent('completed', 'Session completed successfully', 2500);
+    } else if (workflowStatus === 'completed_requires_approval') {
+      addEvent('requires_approval', 'Workflow completed but requires human approval before execution', 2500);
+    } else if (workflowStatus === 'blocked') {
+      addEvent('blocked', 'Workflow blocked by safety evaluation', 2500);
+    } else if (workflowStatus === 'failed') {
+      addEvent('failed', 'Workflow failed', 2500);
+    } else {
+      addEvent('completed', 'Session completed', 2500);
+    }
+    return events;
+  }
+
+  function buildDemoSummary(data) {
+    return {
+      id: 'demo-' + (data.id || 'session'),
+      stage: 'done',
+      status: data.workflow ? data.workflow.status : 'completed',
+      workspacePath: null,
+      workspaceSource: 'demo',
+      workspaceStatus: null,
+      workspaceIsGitRepo: null,
+      workspaceRemoteUrl: null,
+      workspaceBranch: null,
+      mcpServerCount: 0,
+      eventCount: 0,
+      approvalRequired: data.workflow ? data.workflow.status === 'completed_requires_approval' : false,
+      isBlocked: data.workflow ? data.workflow.status === 'blocked' : false,
+      lastError: data.workflow ? data.workflow.error || null : null,
+    };
+  }
+
+  async function loadSessionTimeline(sessionId) {
+    if (!sessionId) {
+      try {
+        var result = await fetchJson('/api/session/current');
+        if (result.sessionId) {
+          _currentSessionId = result.sessionId;
+          renderSessionSummary(result.summary);
+          renderTimeline(result.events, false);
+        } else {
+          renderSessionSummary(null);
+          renderTimeline([], false);
+        }
+      } catch(e) {
+        renderSessionSummary(null);
+        renderTimeline([], false);
+      }
+      return;
+    }
+    try {
+      var summary = await fetchJson('/api/session/' + encodeURIComponent(sessionId) + '/summary');
+      var timeline = await fetchJson('/api/session/' + encodeURIComponent(sessionId) + '/timeline');
+      _currentSessionId = sessionId;
+      renderSessionSummary(summary);
+      renderTimeline(timeline.events || [], false);
+    } catch (e) {
+      renderSessionSummary(null);
+      renderTimeline([], false);
+    }
+  }
+
+  function showDemoTimeline(data) {
+    var summary = buildDemoSummary(data);
+    summary.eventCount = 14;
+    renderSessionSummary(summary);
+    var events = buildDemoTimeline(data.label || data.id, data.workflow ? data.workflow.status : 'completed');
+    renderTimeline(events, true);
+  }
+
+  function clearTimeline() {
+    $sessionSummary.innerHTML = '';
+    $sessionTimeline.innerHTML = '';
+    _currentSessionId = null;
+  }
 
   // ── Init ──────────────────────────────────────────────────────────────
 

@@ -47,3 +47,16 @@ export type { StartServerOptions } from "./server.js";
 
 // View renderer
 export { renderShellHtml } from "./views.js";
+
+// Timeline helpers (Phase 22)
+export {
+  classifyEvent,
+  categoryIcon,
+  categoryCssClass,
+  buildDemoTimelineEvents,
+} from "./timeline-helpers.js";
+
+export type {
+  TimelineEventCategory,
+  ClassifiedTimelineEvent,
+} from "./timeline-helpers.js";
