@@ -63,6 +63,10 @@ describe("public API surface — core functions", () => {
     // Phase 6 facade
     "renderPlanWithSafety",
     "runFullFlow",
+
+    // Phase 7B — host profile loader
+    "loadHostProfile",
+    "validateHostProfile",
   ];
 
   for (const name of expectedFunctions) {

@@ -361,6 +361,179 @@ describe("CLI main — integration with list-models", () => {
 });
 
 // ---------------------------------------------------------------------------
+// --host-file deterministic input
+// ---------------------------------------------------------------------------
+
+describe("CLI main — --host-file deterministic host input", () => {
+  let hostFilePath: string;
+  let validArtifactId: string;
+
+  beforeAll(() => {
+    // Write a host profile to a temp file
+    hostFilePath = join(TMP_DIR, "host-profile.json");
+    writeFileSync(hostFilePath, JSON.stringify(makeHost(), null, 2));
+
+    // Get a valid artifact ID
+    const artifacts = bundle.models.listArtifacts();
+    validArtifactId = artifacts[0].id;
+  });
+
+  it("recommend-models with --host-file succeeds", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["recommend-models", "--data-dir", DATA_DIR, "--host-file", hostFilePath],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const output = lines.join("\n");
+    expect(output).toContain("recommendation(s)");
+  });
+
+  it("recommend-models with --host-file --json succeeds", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["recommend-models", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--json"],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(lines.join("\n"));
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed.length).toBeGreaterThan(0);
+  });
+
+  it("check-compatibility with --host-file succeeds", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["check-compatibility", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--artifact", validArtifactId],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const output = lines.join("\n");
+    expect(output).toContain("Classification:");
+  });
+
+  it("check-compatibility with --host-file --json succeeds", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["check-compatibility", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--artifact", validArtifactId, "--json"],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(lines.join("\n"));
+    expect(parsed).toHaveProperty("classification");
+  });
+
+  it("plan-install with --host-file succeeds", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["plan-install", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--artifact", validArtifactId],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const output = lines.join("\n");
+    expect(output).toContain("INFORMATIONAL ONLY");
+  });
+
+  it("plan-install with --host-file --json succeeds", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["plan-install", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--artifact", validArtifactId, "--json"],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(lines.join("\n"));
+    expect(parsed).toHaveProperty("plan");
+    expect(parsed).toHaveProperty("safetyReport");
+  });
+
+  it("--host-file with invalid file returns error", async () => {
+    const errLines: string[] = [];
+    const code = await main(
+      ["recommend-models", "--data-dir", DATA_DIR, "--host-file", "/nonexistent/host.json"],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    expect(code).toBeGreaterThan(0);
+    expect(errLines.join("\n")).toContain("Cannot read host file");
+  });
+
+  it("--host-file with invalid JSON returns error", async () => {
+    const badFile = join(TMP_DIR, "bad-host.json");
+    writeFileSync(badFile, "not json {{{");
+
+    const errLines: string[] = [];
+    const code = await main(
+      ["recommend-models", "--data-dir", DATA_DIR, "--host-file", badFile],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    expect(code).toBeGreaterThan(0);
+    expect(errLines.join("\n")).toContain("Invalid JSON");
+  });
+
+  it("--host-file with invalid host schema returns error", async () => {
+    const invalidHostFile = join(TMP_DIR, "invalid-host-schema.json");
+    writeFileSync(invalidHostFile, JSON.stringify({ foo: "bar" }));
+
+    const errLines: string[] = [];
+    const code = await main(
+      ["recommend-models", "--data-dir", DATA_DIR, "--host-file", invalidHostFile],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    expect(code).toBeGreaterThan(0);
+    expect(errLines.join("\n")).toContain("validation failed");
+  });
+
+  it("deterministic: same host-file produces identical recommendations", async () => {
+    const lines1: string[] = [];
+    await main(
+      ["recommend-models", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--json"],
+      (msg) => lines1.push(msg),
+    );
+
+    const lines2: string[] = [];
+    await main(
+      ["recommend-models", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--json"],
+      (msg) => lines2.push(msg),
+    );
+
+    expect(lines1.join("\n")).toBe(lines2.join("\n"));
+  });
+
+  it("deterministic: same host-file produces identical plans", async () => {
+    const lines1: string[] = [];
+    await main(
+      ["plan-install", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--artifact", validArtifactId, "--json"],
+      (msg) => lines1.push(msg),
+    );
+
+    const lines2: string[] = [];
+    await main(
+      ["plan-install", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--artifact", validArtifactId, "--json"],
+      (msg) => lines2.push(msg),
+    );
+
+    expect(lines1.join("\n")).toBe(lines2.join("\n"));
+  });
+
+  it("help text mentions --host-file", async () => {
+    const lines: string[] = [];
+    await main(["--help"], (msg) => lines.push(msg));
+    expect(lines.join("\n")).toContain("--host-file");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Cleanup
 // ---------------------------------------------------------------------------
 
