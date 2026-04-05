@@ -471,7 +471,11 @@ export function buildDemoConsoleFeed(
 
   const summary = {
     stage: "done" as const,
-    status: workflowStatus === "blocked" ? "blocked" : workflowStatus === "failed" ? "failed" : "completed",
+    status: workflowStatus === "blocked"
+      ? "blocked"
+      : workflowStatus === "failed"
+        ? "failed"
+        : "completed",
     workspaceStatus: "ready",
     workspacePath: `demo/${scenarioLabel}`,
     mcpServers: [{ id: "code-assistant", label: "code-assistant", ready: true }],
