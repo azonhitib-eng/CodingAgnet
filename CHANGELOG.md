@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 19** — Session and Workspace Domain
+  - New `src/session/` module with 5 files: `types.ts`, `events.ts`, `workspace.ts`, `workflow-integration.ts`, `session-manager.ts`, `index.ts`
+  - First-class Session entity with id, stage, status, workspace, events timeline, run context, attached resources
+  - SessionStatus: `idle`, `active`, `completed`, `completed_requires_approval`, `blocked`, `failed`
+  - SessionStage: `initializing`, `workspace_binding`, `host_detection`, `workflow_running`, `review`, `done`
+  - Workspace model supporting `local_existing`, `cloned` (placeholder), and `generic_directory` sources
+  - Workspace lifecycle: `pending` → `ready` / `invalid` / `closed`
+  - 13 typed event kinds: `session_created`, `workspace_bound`, `host_detected`, `catalogs_loaded`, `workflow_started`, `stage_completed`, `requires_approval`, `blocked`, `failed`, `completed`, `note`, `info`, `warning`
+  - Event factory functions for all event kinds
+  - In-memory `SessionManager` with create, bind, append, update, record, summary operations
+  - Workflow → session integration bridge: status/stage mapping, run context derivation, event derivation
+  - `SessionSummary` lightweight snapshot for frontend consumption
+  - `AttachedResource` references for future MCP server, agent, and environment attachment
+  - Subpath export: `./session` in package.json
+  - 86 new tests covering session lifecycle, workspace binding, events, status transitions, workflow integration, approval/blocking propagation, summary derivation, and edge cases
+  - New documentation: `docs/SESSION-WORKSPACE.md`
+
 - **Phase 18** — Product-shell polish and session usability
   - Sticky section navigation bar — jump links to Host, Recommendation, Compatibility, Plan Review, Workflow sections
   - IntersectionObserver-based active section highlighting in the nav bar
