@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 9C** — Final release polish and installed-package sanity
+  - Version is now read from `package.json` at runtime via `getVersion()` — eliminates manual `PKG_VERSION` constant drift
+  - `--strict` flag for CI-oriented exit semantics: `completed_requires_approval` returns exit code `5` instead of `0`
+  - Exit code `5` (`EXIT_APPROVAL`) for strict mode approval-required workflows
+  - `getVersion()` exported from `codingagent-backend/cli` subpath
+  - Installed-package sanity tests: version sync, subpath import resolution, package metadata validation
+  - Documented API example sanity tests: verify README/USAGE snippets match current exports
+  - Release checklist in README
+  - `--strict` mode documented in README, USAGE.md, and CLI help
+  - Exit code table updated to include code `5`
+
+### Changed
+
 - **Phase 9B** — Package, release surface, and consumer experience hardening
   - Explicit `exports` field in package.json with subpath exports (`.`, `./cli`, `./workflow`, `./schemas`)
   - `files` field to control npm publish surface

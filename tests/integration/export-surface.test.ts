@@ -101,6 +101,7 @@ describe("CLI subpath export surface", () => {
     expect(cliApi.EXIT_INPUT).toBe(2);
     expect(cliApi.EXIT_RUNTIME).toBe(3);
     expect(cliApi.EXIT_BLOCKED).toBe(4);
+    expect(cliApi.EXIT_APPROVAL).toBe(5);
   });
 
   it("exports usageError and inputError helpers", () => {

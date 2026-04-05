@@ -132,6 +132,19 @@ import { ... } from "codingagent-backend/schemas";   // Schemas: all Zod schemas
 | `2` | Input error (bad file, invalid JSON, unknown artifact) |
 | `3` | Runtime error (unexpected internal error) |
 | `4` | Blocked (workflow safety found blocked violations) |
+| `5` | Requires approval (`--strict` mode only: workflow needs human review) |
+
+## Strict/CI mode
+
+Use `--strict` to get a non-zero exit code when a workflow completes but requires human approval. This is useful in CI/CD pipelines where approval-required is not an acceptable outcome:
+
+```bash
+# In CI: fail the build if the workflow requires approval
+npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json --strict
+```
+
+Without `--strict`, both `completed` and `completed_requires_approval` return exit code `0`.
+With `--strict`, `completed_requires_approval` returns exit code `5`.
 
 ## Deterministic host files
 
@@ -166,6 +179,17 @@ npm run lint        # Lint source and tests
 ```
 
 Requires Node.js >= 18.0.0.
+
+## Release checklist
+
+1. Update version in `package.json` (the CLI reads it at runtime)
+2. Update `CHANGELOG.md` with release notes
+3. Run `npm test` — all tests must pass
+4. Run `npm run typecheck` — no type errors
+5. Run `npm run lint` — no lint errors
+6. Run `npm run build` — clean compile
+7. Verify `npm pack --dry-run` includes expected files
+8. Publish: `npm publish`
 
 ## License
 

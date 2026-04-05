@@ -336,6 +336,7 @@ npx tsx src/cli/main.ts <command> [options]
 | `--json` | Output as JSON instead of human-readable text |
 | `--data-dir <path>` | Path to catalog data directory (default: `./data`) |
 | `--host-file <path>` | Use a saved host profile JSON instead of live detection |
+| `--strict` | Strict/CI mode: non-zero exit for approval-required workflows |
 | `--help` | Show help message |
 | `--version` | Show package version |
 
@@ -466,6 +467,7 @@ Valid `--stop-after` stages: `catalog_loading`, `host_acquisition`, `recommendat
 - `partial` → exit code `0` (user requested early stop)
 - `blocked` → exit code `4` (`EXIT_BLOCKED`)
 - `failed` → exit code `3` (`EXIT_RUNTIME`)
+- With `--strict`: `completed_requires_approval` → exit code `5` (`EXIT_APPROVAL`)
 
 ### JSON output
 
@@ -507,12 +509,35 @@ When using `plan-install` or `render-plan`, the safety report uses a 3-state mod
 | `2` | `EXIT_INPUT` | Input error | File not found, invalid JSON, schema validation failure, unknown artifact ID |
 | `3` | `EXIT_RUNTIME` | Runtime error | Unexpected errors, catalog load failures, internal errors |
 | `4` | `EXIT_BLOCKED` | Blocked | Workflow safety evaluation found blocked violations |
+| `5` | `EXIT_APPROVAL` | Requires approval | `--strict` mode only: workflow completed but requires human approval |
 
 **Error behavior:**
 - All errors print to stderr via `Error: <message>` format
 - Schema validation failures include field-level details (e.g. `steps.0.command: String must contain at least 1 character(s)`)
 - File read errors include the underlying OS error detail
 - Missing artifact IDs include the ID in the error message
+
+### Strict/CI mode
+
+The `--strict` flag is intended for CI/CD pipelines where `completed_requires_approval` should not silently succeed:
+
+```bash
+# Normal: approval-required returns exit 0
+npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json
+
+# Strict: approval-required returns exit 5
+npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json --strict
+```
+
+| Workflow status | Default exit | `--strict` exit |
+|---|---|---|
+| `completed` | `0` | `0` |
+| `completed_requires_approval` | `0` | `5` |
+| `partial` | `0` | `0` |
+| `blocked` | `4` | `4` |
+| `failed` | `3` | `3` |
+
+The `--strict` flag only affects the `run-workflow` command. Other commands are unaffected.
 
 ### Command → backend module mapping
 

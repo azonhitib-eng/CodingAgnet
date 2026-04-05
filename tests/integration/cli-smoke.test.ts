@@ -132,6 +132,7 @@ describe("CLI — --help content completeness", () => {
     expect(helpText).toContain("2  Input error");
     expect(helpText).toContain("3  Runtime error");
     expect(helpText).toContain("4  Blocked");
+    expect(helpText).toContain("5  Requires approval");
   });
 
   it("includes informational-only reminder", () => {
