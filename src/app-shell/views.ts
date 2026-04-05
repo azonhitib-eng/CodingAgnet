@@ -1053,8 +1053,8 @@ const CLIENT_JS = `
         var result = await postJson('/api/host/validate', parsed);
         if (result.valid) {
           _detectedHostProfile = result.hostProfile;
-          _currentHostSource = 'detected';
-          updateHostSourceIndicator('detected', result.summary ? result.summary.summary : '');
+          _currentHostSource = 'file';
+          updateHostSourceIndicator('file', result.summary ? result.summary.summary : '');
           $importHostStatus.textContent = '\\u2714 ' + file.name + ' loaded successfully';
           $importHostStatus.style.color = '#0f5132';
         } else {
