@@ -13,6 +13,7 @@ export const EXIT_OK = 0;
 export const EXIT_USAGE = 1;
 export const EXIT_INPUT = 2;
 export const EXIT_RUNTIME = 3;
+export const EXIT_BLOCKED = 4;
 
 // ---------------------------------------------------------------------------
 // CLI error class

@@ -1,13 +1,37 @@
 {
   "name": "codingagent-backend",
   "version": "0.1.0",
-  "description": "Portable, local-first coding-agent platform backend",
+  "description": "Portable, local-first coding-agent platform backend — catalog management, host detection, compatibility evaluation, install planning, safety analysis, and workflow orchestration. Plans are informational only and are never executed.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./cli": {
+      "import": "./dist/cli/index.js",
+      "types": "./dist/cli/index.d.ts"
+    },
+    "./workflow": {
+      "import": "./dist/workflow/index.js",
+      "types": "./dist/workflow/index.d.ts"
+    },
+    "./schemas": {
+      "import": "./dist/schemas/index.js",
+      "types": "./dist/schemas/index.d.ts"
+    }
+  },
   "bin": {
     "codingagent-cli": "dist/cli/main.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "docs"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -19,6 +43,16 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "keywords": [
+    "coding-agent",
+    "model-catalog",
+    "host-detection",
+    "compatibility",
+    "install-planning",
+    "safety-evaluation",
+    "workflow",
+    "local-first"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.11.0",
