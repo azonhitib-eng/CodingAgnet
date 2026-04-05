@@ -29,6 +29,10 @@
     "./app-shell": {
       "import": "./dist/app-shell/index.js",
       "types": "./dist/app-shell/index.d.ts"
+    },
+    "./session": {
+      "import": "./dist/session/index.js",
+      "types": "./dist/session/index.d.ts"
     }
   },
   "bin": {
