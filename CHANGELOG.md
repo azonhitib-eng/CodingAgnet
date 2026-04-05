@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 20** — MCP Manager and Server Attachment Lifecycle
+  - New `src/mcp/` module with 6 files: `types.ts`, `process-manager.ts`, `capability-discovery.ts`, `session-integration.ts`, `config.ts`, `mcp-manager.ts`, `index.ts`
+  - 11 MCP domain types: `McpServerId`, `McpServerConfig`, `McpTransport`, `McpServerStatus`, `McpServerHealth`, `McpAttachment`, `McpAttachmentStatus`, `McpDiscoveredTool`, `McpDiscoveredResource`, `McpDiscoveredPrompt`, `McpRuntimeInfo`
+  - `McpProcessManager`: register, start (stdio spawn), stop (SIGTERM), health tracking, failure marking
+  - `McpManager`: orchestration layer coordinating process lifecycle, session attachment, capability discovery, and event emission
+  - 9 MCP session event kinds: `mcp_attach_requested`, `mcp_attached`, `mcp_starting`, `mcp_started`, `mcp_failed`, `mcp_stopped`, `mcp_discovered_tools`, `mcp_discovered_resources`, `mcp_discovered_prompts`
+  - `SessionEventKind` union extended with 9 MCP event kinds
+  - `SessionSummary` extended with `mcpServerCount` and `mcpServers` fields
+  - Capability discovery modeling: `applyDiscovery`, manual tool/resource/prompt registration, validation helpers
+  - Config factories: `createMcpServerConfig` with validation, fixture configs for testing
+  - Subpath export: `./mcp` in package.json
+  - 117 new tests covering config validation, process lifecycle, attach/detach, start/stop, status transitions, failure handling, session event emission, summary exposure, discovery, edge cases, and type coverage
+  - New documentation: `docs/MCP-SERVERS.md`
+
 - **Phase 19** — Session and Workspace Domain
   - New `src/session/` module with 5 files: `types.ts`, `events.ts`, `workspace.ts`, `workflow-integration.ts`, `session-manager.ts`, `index.ts`
   - First-class Session entity with id, stage, status, workspace, events timeline, run context, attached resources
