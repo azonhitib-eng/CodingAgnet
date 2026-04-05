@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 11** — Frontend contract / view-model layer
+  - New module: `src/frontend-contracts/` (4 files: `types.ts`, `status-labels.ts`, `errors.ts`, `mappers.ts`, `index.ts`)
+  - View-model types: `HostSummaryViewModel`, `ArtifactListItem`, `RecommendationItem`, `CompatibilityViewModel`, `PlanReviewViewModel`, `SafetyStatusView`, `WorkflowViewModel`, `FinalReviewState`
+  - Normalized status types: `CompatibilityStatus`, `WorkflowViewStatus`, `SafetyStatus`, `Severity`
+  - Status label constants: `COMPATIBILITY_LABELS`, `WORKFLOW_STATUS_LABELS`, `SAFETY_STATUS_LABELS`, `RISK_SEVERITY`, `STAGE_LABELS`
+  - Mapping functions: `toHostSummary()`, `toArtifactListItem()`, `toCompatibilityView()`, `toRecommendationItem()`, `toRecommendationList()`, `toSafetyStatusView()`, `toPlanReviewView()`, `toWorkflowView()`, `toFinalReviewState()`
+  - Normalized frontend error contract: `FrontendError`, `FrontendErrorCode`, `createFrontendError()`, `normalizeFrontendError()`
+  - Fixture examples for 7 scenarios: low-end CPU-only, mid-range GPU, high-end GPU, unsupported machine, blocked workflow, requires-approval workflow, partial workflow
+  - `./frontend-contracts` subpath export in `package.json`
+  - 91 new tests covering all mappers, status semantics, deterministic ordering, error normalization
+  - Documentation section on frontend contract layer in USAGE.md
+
 - **Phase 10** — Cross-platform validation and deterministic host/profile fixture infrastructure
   - Deterministic host profile fixtures: 6 representative hardware classes (low-end CPU, mid-range GPU, high-end GPU, missing-runtime, partially-unknown, unsupported/weak)
   - Fixture infrastructure in `tests/fixtures/` with `host-profiles.ts`, `detector-outputs.ts`, and `support-semantics.ts`

@@ -22,3 +22,4 @@ export { renderPlanWithSafety, runFullFlow, type FullFlowInput, type FullFlowRes
 export * from "./workflow/index.js";
 export { main as cliMain } from "./cli/index.js";
 export { validateHostProfile } from "./cli/host-loader.js";
+export * from "./frontend-contracts/index.js";
