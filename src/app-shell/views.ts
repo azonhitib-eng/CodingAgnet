@@ -99,6 +99,10 @@ ${CSS}
 </div>
 <nav id="section-nav" class="section-nav" style="display:none;"></nav>
 <div id="session-panel" style="max-width:960px;margin:0 auto;padding:0 1.5rem;">
+  <div id="console-status-header" class="console-status-header" style="display:none;"></div>
+  <div id="console-presence-bar" class="console-presence-bar" style="display:none;"></div>
+  <div id="console-filter-bar" class="console-filter-bar" style="display:none;"></div>
+  <div id="session-console-container"></div>
   <div id="session-summary-container"></div>
   <div id="session-timeline-container"></div>
 </div>
@@ -274,6 +278,66 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 .session-summary .ss-status-idle { color: var(--muted); font-weight: 700; }
 .timeline-toggle { cursor: pointer; background: none; border: 1px solid var(--card-border); border-radius: 4px; padding: .25rem .75rem; font-size: .82rem; color: var(--muted); margin-left: .5rem; }
 .timeline-toggle:hover { background: #e9ecef; }
+/* Phase 24: Console styles */
+.console-status-header { position: sticky; top: 0; z-index: 9; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: .5rem 1rem; margin-bottom: .75rem; display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; font-size: .85rem; }
+.console-status-header .csh-stage { font-weight: 700; }
+.console-status-header .csh-status { font-weight: 700; padding: .15rem .5rem; border-radius: 3px; font-size: .78rem; text-transform: uppercase; }
+.console-status-header .csh-status-active { background: #cff4fc; color: #055160; }
+.console-status-header .csh-status-completed { background: #d1e7dd; color: #0f5132; }
+.console-status-header .csh-status-completed_requires_approval { background: #fff3cd; color: #664d03; }
+.console-status-header .csh-status-blocked { background: #e2d9f3; color: #432874; }
+.console-status-header .csh-status-failed { background: #f8d7da; color: #842029; }
+.console-status-header .csh-status-idle { background: #e9ecef; color: var(--muted); }
+.console-status-header .csh-action { color: var(--muted); font-size: .78rem; margin-left: auto; }
+.console-presence-bar { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: .5rem 1rem; margin-bottom: .75rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; font-size: .82rem; }
+.console-presence-bar .cpb-group { display: flex; align-items: center; gap: .35rem; }
+.console-presence-bar .cpb-label { font-weight: 600; color: var(--muted); font-size: .75rem; text-transform: uppercase; }
+.console-presence-bar .cpb-item { padding: .15rem .5rem; border-radius: 3px; font-size: .78rem; }
+.cpb-ready { background: #d1e7dd; color: #0f5132; }
+.cpb-pending { background: #fff3cd; color: #664d03; }
+.console-filter-bar { padding: .4rem 0; margin-bottom: .5rem; display: flex; gap: .35rem; flex-wrap: wrap; }
+.console-filter-bar button { padding: .25rem .7rem; border-radius: 4px; border: 1px solid var(--card-border); background: var(--card-bg); cursor: pointer; font-size: .78rem; color: var(--muted); transition: background .15s, color .15s; }
+.console-filter-bar button:hover { background: #e9ecef; }
+.console-filter-bar button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.console-feed { list-style: none; padding: 0; margin: 0; }
+.console-group { margin-bottom: .75rem; }
+.console-group-header { display: flex; align-items: center; gap: .5rem; padding: .35rem .5rem; font-size: .78rem; color: var(--muted); border-bottom: 1px solid #eee; margin-bottom: .35rem; }
+.console-group-header .cg-actor-icon { font-size: .9rem; }
+.console-group-header .cg-actor-label { font-weight: 600; }
+.console-group-header .cg-time { margin-left: auto; font-size: .72rem; }
+.console-msg { padding: .35rem .75rem .35rem 2rem; font-size: .85rem; position: relative; }
+.console-msg .cm-dot { position: absolute; left: .65rem; top: .55rem; width: 8px; height: 8px; border-radius: 50%; }
+.console-msg .cm-kind { font-weight: 600; font-size: .78rem; margin-right: .35rem; }
+.console-msg .cm-text { color: var(--fg); }
+.console-msg .cm-detail-toggle { cursor: pointer; color: var(--accent); font-size: .75rem; margin-left: .5rem; text-decoration: underline; }
+.console-msg .cm-detail { display: none; margin-top: .25rem; padding: .35rem .5rem; background: #f8f9fa; border-radius: 3px; font-size: .78rem; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow: auto; }
+.console-msg .cm-detail.open { display: block; }
+.console-card-approval { background: var(--approval-bg); border: 1px solid var(--approval-border); border-radius: var(--card-radius); padding: .75rem 1rem; margin: .5rem 0; }
+.console-card-approval .cc-title { font-weight: 700; color: var(--approval-fg); margin-bottom: .25rem; }
+.console-card-approval .cc-body { font-size: .85rem; color: var(--approval-fg); }
+.console-card-blocked { background: var(--blocked-bg); border: 1px solid var(--blocked-border); border-radius: var(--card-radius); padding: .75rem 1rem; margin: .5rem 0; }
+.console-card-blocked .cc-title { font-weight: 700; color: var(--blocked-fg); margin-bottom: .25rem; }
+.console-card-blocked .cc-body { font-size: .85rem; color: var(--blocked-fg); }
+.console-card-failure { background: #fef2f2; border: 1px solid #fca5a5; border-radius: var(--card-radius); padding: .75rem 1rem; margin: .5rem 0; }
+.console-card-failure .cc-title { font-weight: 700; color: #842029; margin-bottom: .25rem; }
+.console-card-failure .cc-body { font-size: .85rem; color: #842029; }
+.console-card-success { background: #d1e7dd; border: 1px solid #a3cfbb; border-radius: var(--card-radius); padding: .75rem 1rem; margin: .5rem 0; }
+.console-card-success .cc-title { font-weight: 700; color: #0f5132; margin-bottom: .25rem; }
+.console-card-success .cc-body { font-size: .85rem; color: #0f5132; }
+.console-card-lifecycle { background: #e8f4fd; border: 1px solid #b6d4fe; border-radius: var(--card-radius); padding: .5rem .75rem; margin: .35rem 0; font-size: .85rem; }
+.console-card-lifecycle .cc-title { font-weight: 600; color: #084298; }
+.console-card-discovery { background: #f0f4f8; border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: .5rem .75rem; margin: .35rem 0; font-size: .85rem; }
+.console-card-discovery .cc-title { font-weight: 600; color: var(--muted); }
+.actor-system .cm-dot { background: var(--muted); }
+.actor-workspace .cm-dot { background: var(--accent); }
+.actor-mcp .cm-dot { background: var(--critical); }
+.actor-agent .cm-dot { background: var(--success); }
+.actor-workflow .cm-dot { background: var(--info); }
+.console-panel { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.console-panel h2 { margin: 0 0 .75rem; font-size: 1.1rem; display: flex; align-items: center; gap: .5rem; }
+.console-panel .console-toggle { cursor: pointer; background: none; border: 1px solid var(--card-border); border-radius: 4px; padding: .25rem .75rem; font-size: .82rem; color: var(--muted); margin-left: auto; }
+.console-panel .console-toggle:hover { background: #e9ecef; }
+.console-nav-link { color: var(--accent); font-size: .78rem; cursor: pointer; text-decoration: underline; margin-left: .5rem; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -399,6 +463,7 @@ const CLIENT_JS = `
 
   function showSectionNav() {
     $sectionNav.innerHTML = [
+      {id:'section-console',label:'Console'},
       {id:'section-host',label:'Host'},
       {id:'section-recommendation',label:'Recommendation'},
       {id:'section-compatibility',label:'Compatibility'},
@@ -1104,11 +1169,16 @@ const CLIENT_JS = `
     reader.readAsText(file);
   });
 
-  // ── Session Timeline ─────────────────────────────────────────────────
+  // ── Session Timeline & Console ─────────────────────────────────────
 
   var $sessionSummary = document.getElementById('session-summary-container');
   var $sessionTimeline = document.getElementById('session-timeline-container');
+  var $sessionConsole = document.getElementById('session-console-container');
+  var $consoleStatusHeader = document.getElementById('console-status-header');
+  var $consolePresenceBar = document.getElementById('console-presence-bar');
+  var $consoleFilterBar = document.getElementById('console-filter-bar');
   var _currentSessionId = null;
+  var _currentConsoleFilter = 'all';
 
   var EVENT_CATEGORIES = {
     session_created: 'info', note: 'info', info: 'info', catalogs_loaded: 'info',
@@ -1119,11 +1189,14 @@ const CLIENT_JS = `
     clone_started: 'progress', clone_completed: 'progress',
     mcp_attached: 'progress', mcp_started: 'progress',
     mcp_discovered_tools: 'progress', mcp_discovered_resources: 'progress', mcp_discovered_prompts: 'progress',
+    agent_attached: 'progress', agent_enabled: 'progress', agent_capabilities_updated: 'progress',
     warning: 'warning', requires_approval: 'warning',
     mcp_attach_requested: 'warning', mcp_starting: 'warning',
+    agent_attach_requested: 'warning',
     blocked: 'blocked',
     failed: 'failure', workspace_invalid: 'failure', clone_failed: 'failure',
     mcp_failed: 'failure', mcp_stopped: 'failure',
+    agent_failed: 'failure', agent_disabled: 'failure', agent_detached: 'failure',
   };
 
   var CATEGORY_ICONS = {
@@ -1132,6 +1205,295 @@ const CLIENT_JS = `
 
   function classifyEventKind(kind) {
     return EVENT_CATEGORIES[kind] || 'info';
+  }
+
+  // ── Console actor/card classification (Phase 24) ──────────────────
+
+  var KIND_TO_ACTOR = {
+    session_created: 'system', note: 'system', info: 'system', warning: 'system',
+    workspace_bound: 'workspace', workspace_open_requested: 'workspace', workspace_opened: 'workspace',
+    workspace_invalid: 'workspace', workspace_ready: 'workspace',
+    clone_requested: 'workspace', clone_started: 'workspace', clone_completed: 'workspace', clone_failed: 'workspace',
+    mcp_attach_requested: 'mcp', mcp_attached: 'mcp', mcp_starting: 'mcp', mcp_started: 'mcp',
+    mcp_failed: 'mcp', mcp_stopped: 'mcp',
+    mcp_discovered_tools: 'mcp', mcp_discovered_resources: 'mcp', mcp_discovered_prompts: 'mcp',
+    agent_attach_requested: 'agent', agent_attached: 'agent', agent_detached: 'agent',
+    agent_enabled: 'agent', agent_disabled: 'agent', agent_failed: 'agent', agent_capabilities_updated: 'agent',
+    catalogs_loaded: 'workflow', host_detected: 'workflow', workflow_started: 'workflow',
+    stage_completed: 'workflow', requires_approval: 'workflow', blocked: 'workflow',
+    failed: 'workflow', completed: 'workflow',
+  };
+
+  var ACTOR_ICONS = {
+    system: '\\u2699\\ufe0f', workspace: '\\ud83d\\udcc2', mcp: '\\ud83d\\udd0c',
+    agent: '\\ud83e\\udd16', workflow: '\\ud83d\\udce6',
+  };
+
+  var ACTOR_LABELS = {
+    system: 'System', workspace: 'Workspace', mcp: 'MCP Server',
+    agent: 'Agent', workflow: 'Workflow',
+  };
+
+  var ACTOR_CSS = {
+    system: 'actor-system', workspace: 'actor-workspace', mcp: 'actor-mcp',
+    agent: 'actor-agent', workflow: 'actor-workflow',
+  };
+
+  var KIND_TO_CARD = {
+    requires_approval: 'approval_card', blocked: 'blocked_card',
+    failed: 'failure_card', workspace_invalid: 'failure_card', clone_failed: 'failure_card',
+    mcp_failed: 'failure_card', agent_failed: 'failure_card',
+    completed: 'success_card', clone_completed: 'success_card', workspace_ready: 'success_card',
+    workspace_opened: 'lifecycle_card', mcp_attached: 'lifecycle_card', mcp_started: 'lifecycle_card',
+    mcp_stopped: 'lifecycle_card', agent_attached: 'lifecycle_card', agent_enabled: 'lifecycle_card',
+    agent_detached: 'lifecycle_card', agent_disabled: 'lifecycle_card',
+    mcp_discovered_tools: 'discovery_card', mcp_discovered_resources: 'discovery_card',
+    mcp_discovered_prompts: 'discovery_card', agent_capabilities_updated: 'discovery_card',
+  };
+
+  var CARD_CSS = {
+    message: 'console-msg', approval_card: 'console-card-approval', blocked_card: 'console-card-blocked',
+    failure_card: 'console-card-failure', success_card: 'console-card-success',
+    lifecycle_card: 'console-card-lifecycle', discovery_card: 'console-card-discovery',
+  };
+
+  var CARD_TITLES = {
+    approval_card: '\\u26a0\\ufe0f Approval Required',
+    blocked_card: '\\ud83d\\udeab Blocked',
+    failure_card: '\\u274c Failure',
+    success_card: '\\u2705 Success',
+    lifecycle_card: '\\ud83d\\udd04 Lifecycle',
+    discovery_card: '\\ud83d\\udd0d Discovery',
+  };
+
+  function classifyActor(kind) { return KIND_TO_ACTOR[kind] || 'system'; }
+  function classifyCard(kind) { return KIND_TO_CARD[kind] || 'message'; }
+
+  // ── Console rendering (Phase 24) ──────────────────────────────────
+
+  function renderConsoleStatusHeader(presence) {
+    if (!presence) { $consoleStatusHeader.style.display = 'none'; return; }
+    var statusCls = 'csh-status csh-status-' + (presence.sessionStatus || 'idle');
+    var html = '<span class="csh-stage">' + esc(presence.sessionStage || 'initializing') + '</span>';
+    html += '<span class="' + statusCls + '">' + esc(presence.sessionStatus || 'idle') + '</span>';
+    if (presence.approvalRequired) html += '<span style="color:var(--warning);font-weight:700;">\\u26a0 Approval Required</span>';
+    if (presence.isBlocked) html += '<span style="color:var(--danger);font-weight:700;">\\ud83d\\udeab Blocked</span>';
+    if (presence.lastSignificantAction) html += '<span class="csh-action">' + esc(presence.lastSignificantAction) + '</span>';
+    $consoleStatusHeader.innerHTML = html;
+    $consoleStatusHeader.style.display = '';
+  }
+
+  function renderConsolePresenceBar(presence) {
+    if (!presence) { $consolePresenceBar.style.display = 'none'; return; }
+    var html = '';
+    // Workspace
+    html += '<div class="cpb-group"><span class="cpb-label">\\ud83d\\udcc2 Workspace:</span>';
+    html += '<span class="cpb-item ' + (presence.workspaceStatus === 'ready' ? 'cpb-ready' : 'cpb-pending') + '">';
+    html += esc(presence.workspaceStatus || 'none');
+    if (presence.workspacePath) html += ' \\u2014 ' + esc(presence.workspacePath);
+    html += '</span></div>';
+    // MCP
+    if (presence.mcpServers && presence.mcpServers.length > 0) {
+      html += '<div class="cpb-group"><span class="cpb-label">\\ud83d\\udd0c MCP:</span>';
+      for (var i = 0; i < presence.mcpServers.length; i++) {
+        var s = presence.mcpServers[i];
+        html += '<span class="cpb-item ' + (s.ready ? 'cpb-ready' : 'cpb-pending') + '">' + esc(s.label) + '</span>';
+      }
+      html += '</div>';
+    }
+    // Agents
+    if (presence.agents && presence.agents.length > 0) {
+      html += '<div class="cpb-group"><span class="cpb-label">\\ud83e\\udd16 Agents:</span>';
+      for (var j = 0; j < presence.agents.length; j++) {
+        var a = presence.agents[j];
+        html += '<span class="cpb-item ' + (a.ready ? 'cpb-ready' : 'cpb-pending') + '">' + esc(a.label) + '</span>';
+      }
+      html += '</div>';
+    }
+    $consolePresenceBar.innerHTML = html;
+    $consolePresenceBar.style.display = '';
+  }
+
+  function renderConsoleFilterBar() {
+    var filters = [
+      { id: 'all', label: 'All', icon: '\\ud83d\\udcac' },
+      { id: 'system', label: 'System', icon: '\\u2699\\ufe0f' },
+      { id: 'workspace', label: 'Workspace', icon: '\\ud83d\\udcc2' },
+      { id: 'mcp', label: 'MCP', icon: '\\ud83d\\udd0c' },
+      { id: 'agent', label: 'Agent', icon: '\\ud83e\\udd16' },
+      { id: 'workflow', label: 'Workflow', icon: '\\ud83d\\udce6' },
+    ];
+    var html = '';
+    for (var i = 0; i < filters.length; i++) {
+      var f = filters[i];
+      var active = f.id === _currentConsoleFilter ? ' active' : '';
+      html += '<button type="button" data-filter="' + f.id + '" class="' + active + '">' + f.icon + ' ' + esc(f.label) + '</button>';
+    }
+    $consoleFilterBar.innerHTML = html;
+    $consoleFilterBar.style.display = '';
+    // Attach click handlers
+    var btns = $consoleFilterBar.querySelectorAll('button');
+    btns.forEach(function(btn) {
+      btn.onclick = function() {
+        _currentConsoleFilter = btn.getAttribute('data-filter');
+        btns.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        rerenderConsoleMessages();
+      };
+    });
+  }
+
+  var _consoleMessages = [];
+  var _consoleGroups = [];
+
+  function rerenderConsoleMessages() {
+    var filtered = _currentConsoleFilter === 'all' ? _consoleMessages : _consoleMessages.filter(function(m) { return m.actor === _currentConsoleFilter; });
+    var groups = groupConsoleMessages(filtered);
+    renderConsoleGroups(groups);
+  }
+
+  function groupConsoleMessages(messages) {
+    if (messages.length === 0) return [];
+    var groups = [];
+    var current = { actor: messages[0].actor, startTime: messages[0].timestamp, messages: [messages[0]] };
+    for (var i = 1; i < messages.length; i++) {
+      var m = messages[i];
+      var gap = new Date(m.timestamp).getTime() - new Date(current.startTime).getTime();
+      if (m.actor === current.actor && gap <= 30000) {
+        current.messages.push(m);
+      } else {
+        groups.push(current);
+        current = { actor: m.actor, startTime: m.timestamp, messages: [m] };
+      }
+    }
+    groups.push(current);
+    return groups;
+  }
+
+  function renderConsoleGroups(groups) {
+    if (groups.length === 0) {
+      $sessionConsole.innerHTML = '';
+      return;
+    }
+    var html = '<div class="console-panel" id="section-console">';
+    html += '<h2>\\ud83d\\udcac Session Console <button class="console-toggle" id="console-toggle-btn" type="button">Hide</button></h2>';
+    html += '<div id="console-feed-content"><ul class="console-feed">';
+    for (var gi = 0; gi < groups.length; gi++) {
+      var g = groups[gi];
+      var actorIcon = ACTOR_ICONS[g.actor] || '\\u2699\\ufe0f';
+      var actorLabel = ACTOR_LABELS[g.actor] || 'System';
+      var actorCss = ACTOR_CSS[g.actor] || 'actor-system';
+      var startTime = g.startTime ? new Date(g.startTime).toLocaleTimeString() : '';
+      html += '<li class="console-group">';
+      html += '<div class="console-group-header"><span class="cg-actor-icon">' + actorIcon + '</span>';
+      html += '<span class="cg-actor-label">' + esc(actorLabel) + '</span>';
+      html += '<span class="cg-time">' + esc(startTime) + '</span></div>';
+      for (var mi = 0; mi < g.messages.length; mi++) {
+        html += renderConsoleMessage(g.messages[mi], actorCss);
+      }
+      html += '</li>';
+    }
+    html += '</ul></div></div>';
+    $sessionConsole.innerHTML = html;
+    // Toggle handler
+    var toggleBtn = document.getElementById('console-toggle-btn');
+    var feedContent = document.getElementById('console-feed-content');
+    if (toggleBtn && feedContent) {
+      toggleBtn.onclick = function() {
+        if (feedContent.style.display === 'none') {
+          feedContent.style.display = '';
+          toggleBtn.textContent = 'Hide';
+        } else {
+          feedContent.style.display = 'none';
+          toggleBtn.textContent = 'Show';
+        }
+      };
+    }
+    // Detail toggle handlers
+    var detailToggles = $sessionConsole.querySelectorAll('.cm-detail-toggle');
+    detailToggles.forEach(function(toggle) {
+      toggle.onclick = function() {
+        var detail = toggle.parentElement.querySelector('.cm-detail');
+        if (detail) {
+          detail.classList.toggle('open');
+          toggle.textContent = detail.classList.contains('open') ? 'hide detail' : 'show detail';
+        }
+      };
+    });
+  }
+
+  function renderConsoleMessage(msg, actorCss) {
+    var cardType = classifyCard(msg.kind);
+    var cat = msg.category || classifyEventKind(msg.kind);
+    var catIcon = CATEGORY_ICONS[cat] || '\\u2139\\ufe0f';
+    var time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+
+    // Action-oriented cards for high-value states
+    if (cardType !== 'message') {
+      var cardCss = CARD_CSS[cardType] || 'console-msg';
+      var cardTitle = CARD_TITLES[cardType] || '';
+      var html = '<div class="' + cardCss + '">';
+      if (cardTitle) html += '<div class="cc-title">' + cardTitle + '</div>';
+      html += '<div class="cc-body">' + catIcon + ' <strong>' + esc(msg.kind) + '</strong> \\u2014 ' + esc(msg.message);
+      // Navigation link for workflow cards
+      if (msg.kind === 'completed' || msg.kind === 'requires_approval' || msg.kind === 'blocked' || msg.kind === 'failed') {
+        html += '<a class="console-nav-link" href="#section-workflow" onclick="document.getElementById(\\'section-workflow\\')&&document.getElementById(\\'section-workflow\\').scrollIntoView({behavior:\\'smooth\\'})">View Workflow \\u2192</a>';
+      }
+      if (msg.kind === 'workspace_opened' || msg.kind === 'workspace_ready' || msg.kind === 'workspace_invalid' || msg.kind === 'clone_completed' || msg.kind === 'clone_failed') {
+        html += '<a class="console-nav-link" href="#section-host" onclick="document.getElementById(\\'section-host\\')&&document.getElementById(\\'section-host\\').scrollIntoView({behavior:\\'smooth\\'})">View Host \\u2192</a>';
+      }
+      html += '</div>';
+      if (msg.detail) {
+        html += '<span class="cm-detail-toggle">show detail</span>';
+        html += '<div class="cm-detail">' + esc(JSON.stringify(msg.detail, null, 2)) + '</div>';
+      }
+      html += '</div>';
+      return html;
+    }
+
+    // Normal message
+    var html = '<div class="console-msg ' + actorCss + '">';
+    html += '<span class="cm-dot"></span>';
+    html += '<span class="cm-kind">' + catIcon + ' ' + esc(msg.kind) + '</span>';
+    html += '<span class="cm-text">' + esc(msg.message) + '</span>';
+    if (msg.detail) {
+      html += '<span class="cm-detail-toggle">show detail</span>';
+      html += '<div class="cm-detail">' + esc(JSON.stringify(msg.detail, null, 2)) + '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function enrichMessages(events) {
+    return events.map(function(ev) {
+      return {
+        kind: ev.kind,
+        timestamp: ev.timestamp,
+        message: ev.message,
+        category: ev.category || classifyEventKind(ev.kind),
+        actor: classifyActor(ev.kind),
+        cardType: classifyCard(ev.kind),
+        detail: ev.detail || null,
+      };
+    });
+  }
+
+  function renderConsoleFull(messages, presence) {
+    _consoleMessages = messages;
+    renderConsoleStatusHeader(presence);
+    renderConsolePresenceBar(presence);
+    renderConsoleFilterBar();
+    rerenderConsoleMessages();
+  }
+
+  function clearConsole() {
+    $sessionConsole.innerHTML = '';
+    $consoleStatusHeader.style.display = 'none';
+    $consolePresenceBar.style.display = 'none';
+    $consoleFilterBar.style.display = 'none';
+    _consoleMessages = [];
+    _consoleGroups = [];
+    _currentConsoleFilter = 'all';
   }
 
   function renderSessionSummary(summary) {
@@ -1213,53 +1575,85 @@ const CLIENT_JS = `
   function buildDemoTimeline(label, workflowStatus) {
     var now = new Date();
     var events = [];
-    function addEvent(kind, message, offsetMs) {
-      events.push({
+    function addEvent(kind, message, offsetMs, detail) {
+      var ev = {
         kind: kind,
         timestamp: new Date(now.getTime() + offsetMs).toISOString(),
         message: message,
         category: classifyEventKind(kind)
-      });
+      };
+      if (detail) ev.detail = detail;
+      events.push(ev);
     }
     addEvent('session_created', 'Session created (demo)', 0);
     addEvent('workspace_bound', 'Workspace bound: demo/' + label, 100);
-    addEvent('catalogs_loaded', 'Catalog entries loaded', 200);
-    addEvent('host_detected', 'Host profile loaded from demo scenario', 300);
-    addEvent('workflow_started', 'Workflow execution started', 500);
+    addEvent('workspace_opened', 'Workspace opened: demo/' + label + ' (git repo)', 150, { path: 'demo/' + label, isGitRepo: true });
+    addEvent('mcp_attach_requested', 'MCP server attach requested: code-assistant', 200, { serverId: 'code-assistant' });
+    addEvent('mcp_attached', 'MCP server attached: code-assistant', 250, { serverId: 'code-assistant' });
+    addEvent('mcp_started', 'MCP server started: code-assistant (pid: 1234)', 300, { serverId: 'code-assistant', pid: 1234 });
+    addEvent('mcp_discovered_tools', 'MCP server code-assistant: discovered 3 tools', 350, { serverId: 'code-assistant', tools: ['search', 'edit', 'run'] });
+    addEvent('agent_attach_requested', 'Agent attach requested: copilot-agent', 400, { agentId: 'copilot-agent' });
+    addEvent('agent_attached', 'Agent attached: copilot-agent', 450, { agentId: 'copilot-agent' });
+    addEvent('agent_enabled', 'Agent enabled: copilot-agent', 500, { agentId: 'copilot-agent' });
+    addEvent('catalogs_loaded', 'Catalog entries loaded', 600);
+    addEvent('host_detected', 'Host profile loaded from demo scenario', 700);
+    addEvent('workflow_started', 'Workflow execution started', 800);
     var stages = ['catalog_loading', 'host_acquisition', 'recommendation', 'target_selection', 'compatibility_evaluation', 'install_planning', 'safety_evaluation', 'rendering'];
     for (var si = 0; si < stages.length; si++) {
-      addEvent('stage_completed', 'Stage completed: ' + stages[si], 600 + si * 200);
+      addEvent('stage_completed', 'Stage completed: ' + stages[si], 900 + si * 200, { stage: stages[si] });
     }
     if (workflowStatus === 'completed') {
-      addEvent('completed', 'Session completed successfully', 2500);
+      addEvent('completed', 'Session completed successfully', 2800);
     } else if (workflowStatus === 'completed_requires_approval') {
-      addEvent('requires_approval', 'Workflow completed but requires human approval before execution', 2500);
+      addEvent('requires_approval', 'Workflow completed but requires human approval before execution', 2800);
     } else if (workflowStatus === 'blocked') {
-      addEvent('blocked', 'Workflow blocked by safety evaluation', 2500);
+      addEvent('blocked', 'Workflow blocked by safety evaluation', 2800);
     } else if (workflowStatus === 'failed') {
-      addEvent('failed', 'Workflow failed', 2500);
+      addEvent('failed', 'Workflow failed', 2800);
     } else {
-      addEvent('completed', 'Session completed', 2500);
+      addEvent('completed', 'Session completed', 2800);
     }
     return events;
   }
 
   function buildDemoSummary(data) {
+    var ws = data.workflow ? data.workflow.status : 'completed';
     return {
       id: 'demo-' + (data.id || 'session'),
       stage: 'done',
-      status: data.workflow ? data.workflow.status : 'completed',
-      workspacePath: null,
+      status: ws,
+      workspacePath: 'demo/' + (data.label || data.id),
       workspaceSource: 'demo',
-      workspaceStatus: null,
-      workspaceIsGitRepo: null,
+      workspaceStatus: 'ready',
+      workspaceIsGitRepo: true,
       workspaceRemoteUrl: null,
-      workspaceBranch: null,
-      mcpServerCount: 0,
+      workspaceBranch: 'main',
+      mcpServerCount: 1,
+      mcpServers: [{ id: 'code-assistant', label: 'code-assistant', ready: true }],
+      agentCount: 1,
+      agents: [{ id: 'copilot-agent', label: 'copilot-agent', ready: true }],
       eventCount: 0,
-      approvalRequired: data.workflow ? data.workflow.status === 'completed_requires_approval' : false,
-      isBlocked: data.workflow ? data.workflow.status === 'blocked' : false,
+      approvalRequired: ws === 'completed_requires_approval',
+      isBlocked: ws === 'blocked',
       lastError: data.workflow ? data.workflow.error || null : null,
+      lastEventMessage: null,
+    };
+  }
+
+  function buildDemoPresence(data) {
+    var summary = buildDemoSummary(data);
+    var events = buildDemoTimeline(data.label || data.id, data.workflow ? data.workflow.status : 'completed');
+    var lastMsg = events.length > 0 ? events[events.length - 1].message : null;
+    return {
+      sessionStage: summary.stage,
+      sessionStatus: summary.status,
+      workspaceStatus: summary.workspaceStatus,
+      workspacePath: summary.workspacePath,
+      mcpServers: summary.mcpServers || [],
+      agents: summary.agents || [],
+      approvalRequired: summary.approvalRequired,
+      isBlocked: summary.isBlocked,
+      lastSignificantAction: lastMsg,
     };
   }
 
@@ -1271,13 +1665,29 @@ const CLIENT_JS = `
           _currentSessionId = result.sessionId;
           renderSessionSummary(result.summary);
           renderTimeline(result.events, false);
+          // Console rendering
+          var messages = enrichMessages(result.events);
+          var presence = {
+            sessionStage: result.summary ? result.summary.stage : 'initializing',
+            sessionStatus: result.summary ? result.summary.status : 'idle',
+            workspaceStatus: result.summary ? result.summary.workspaceStatus : null,
+            workspacePath: result.summary ? result.summary.workspacePath : null,
+            mcpServers: result.summary ? result.summary.mcpServers || [] : [],
+            agents: result.summary ? result.summary.agents || [] : [],
+            approvalRequired: result.summary ? result.summary.approvalRequired : false,
+            isBlocked: result.summary ? result.summary.isBlocked : false,
+            lastSignificantAction: result.summary ? result.summary.lastEventMessage : null,
+          };
+          renderConsoleFull(messages, presence);
         } else {
           renderSessionSummary(null);
           renderTimeline([], false);
+          clearConsole();
         }
       } catch(e) {
         renderSessionSummary(null);
         renderTimeline([], false);
+        clearConsole();
       }
       return;
     }
@@ -1287,23 +1697,43 @@ const CLIENT_JS = `
       _currentSessionId = sessionId;
       renderSessionSummary(summary);
       renderTimeline(timeline.events || [], false);
+      // Console rendering
+      var messages = enrichMessages(timeline.events || []);
+      var presence = {
+        sessionStage: summary.stage || 'initializing',
+        sessionStatus: summary.status || 'idle',
+        workspaceStatus: summary.workspaceStatus || null,
+        workspacePath: summary.workspacePath || null,
+        mcpServers: summary.mcpServers || [],
+        agents: summary.agents || [],
+        approvalRequired: summary.approvalRequired || false,
+        isBlocked: summary.isBlocked || false,
+        lastSignificantAction: summary.lastEventMessage || null,
+      };
+      renderConsoleFull(messages, presence);
     } catch (e) {
       renderSessionSummary(null);
       renderTimeline([], false);
+      clearConsole();
     }
   }
 
   function showDemoTimeline(data) {
     var summary = buildDemoSummary(data);
-    summary.eventCount = 14;
-    renderSessionSummary(summary);
     var events = buildDemoTimeline(data.label || data.id, data.workflow ? data.workflow.status : 'completed');
+    summary.eventCount = events.length;
+    renderSessionSummary(summary);
     renderTimeline(events, true);
+    // Console rendering
+    var messages = enrichMessages(events);
+    var presence = buildDemoPresence(data);
+    renderConsoleFull(messages, presence);
   }
 
   function clearTimeline() {
     $sessionSummary.innerHTML = '';
     $sessionTimeline.innerHTML = '';
+    clearConsole();
     _currentSessionId = null;
   }
 

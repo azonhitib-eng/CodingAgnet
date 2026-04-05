@@ -17,6 +17,7 @@
  *   GET  /api/session/current       — latest session summary + events
  *   GET  /api/session/:id/summary   — session summary for a given session
  *   GET  /api/session/:id/timeline  — session events with classification
+ *   GET  /api/session/:id/console  — console feed with grouping/presence
  *
  * Usage:
  *   npx tsx src/app-shell/server.ts [--port 3000]
@@ -56,6 +57,7 @@ import {
 } from "../session/index.js";
 import type { GitExecutor } from "../session/index.js";
 import { classifyEvent } from "./timeline-helpers.js";
+import { buildConsoleFeed } from "./console-helpers.js";
 
 // ---------------------------------------------------------------------------
 // Routing
@@ -253,6 +255,23 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
       category: classifyEvent(e.kind),
     }));
     return json(res, { sessionId, events });
+  }
+
+  // API: session console feed by id (GET) — Phase 24
+  const consoleMatch = path.match(/^\/api\/session\/([^/]+)\/console$/);
+  if (consoleMatch && method === "GET") {
+    const sessionId = decodeURIComponent(consoleMatch[1]);
+    const session = _workspaceSessionManager.getSession(sessionId);
+    if (!session) {
+      return notFound(res, `Session not found: ${sessionId}`);
+    }
+    const summary = _workspaceSessionManager.getSessionSummary(sessionId);
+    const classifiedEvents = session.events.map((e) => ({
+      ...e,
+      category: classifyEvent(e.kind),
+    }));
+    const feed = buildConsoleFeed(sessionId, classifiedEvents, summary);
+    return json(res, feed);
   }
 
   // API: single scenario (or sub-view)

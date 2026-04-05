@@ -60,3 +60,30 @@ export type {
   TimelineEventCategory,
   ClassifiedTimelineEvent,
 } from "./timeline-helpers.js";
+
+// Console helpers (Phase 24)
+export {
+  classifyActor,
+  actorLabel,
+  actorIcon,
+  actorCssClass,
+  classifyCard,
+  cardCssClass,
+  toConsoleMessage,
+  groupMessages,
+  buildPresence,
+  buildConsoleFeed,
+  buildDemoConsoleFeed,
+  filterByActor,
+  CONSOLE_FILTERS,
+} from "./console-helpers.js";
+
+export type {
+  ConsoleActor,
+  ConsoleCardType,
+  ConsoleMessage,
+  ConsoleMessageGroup,
+  PresenceEntry,
+  ConsoleFeedPresence,
+  ConsoleFeed,
+} from "./console-helpers.js";
