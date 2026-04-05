@@ -563,3 +563,30 @@ Error response:
 ```
 
 > **Reminder**: Install plans shown in the shell are informational only. They describe what *would* be done, but the shell never executes them.
+
+---
+
+## Phase 22 — Session Timeline UI
+
+Phase 22 adds a **session timeline** and **session summary panel** to the app shell, providing structured visibility into session events and state progression.
+
+### New features
+
+- **Session summary panel** — a compact grid above the main content showing session ID, status, stage, workspace state, git metadata, MCP server count, and error/approval indicators.
+- **Session timeline** — a chronological event list with 5 category-colored dots (info/progress/warning/blocked/failure), timestamps, and event messages. The timeline has a show/hide toggle.
+- **Demo mode support** — synthetic timeline events are generated client-side for demo scenarios.
+- **Real mode support** — actual session events are fetched from the server API after workspace open/clone or workflow runs.
+
+### New API endpoints
+
+| Method | Path                           | Description                                  |
+|--------|-------------------------------|----------------------------------------------|
+| GET    | `/api/session/current`         | Latest session summary + classified events   |
+| GET    | `/api/session/:id/summary`     | Session summary for a specific session       |
+| GET    | `/api/session/:id/timeline`    | Session events with `category` classification|
+
+### New module
+
+- `src/app-shell/timeline-helpers.ts` — event classification, category icons/CSS classes, demo timeline builder
+
+See [docs/SESSION-TIMELINE.md](./SESSION-TIMELINE.md) for full details.
