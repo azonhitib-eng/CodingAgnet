@@ -30,7 +30,7 @@ import type {
  *
  * @param plan   - The install plan to evaluate.
  * @param policy - The execution policy governing safety rules.
- * @returns A SafetyReport summarising violations, warnings, and approval.
+ * @returns A SafetyReport summarizing violations, warnings, and approval.
  */
 export function evaluatePlanSafety(
   plan: InstallPlan,

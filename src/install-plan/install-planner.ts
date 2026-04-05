@@ -206,7 +206,7 @@ function classifyStepRisk(command: string): RiskLevel {
   if (lower.includes("rm -rf") || lower.includes("format") || lower.includes("dd if=")) {
     return "dangerous";
   }
-  if (lower.includes("sudo") || lower.includes("curl") && lower.includes("| sh")) {
+  if (lower.includes("sudo") || (lower.includes("curl") && lower.includes("| sh"))) {
     return "caution";
   }
   return "safe";
