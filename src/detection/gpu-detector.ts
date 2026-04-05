@@ -91,20 +91,29 @@ export function parseNvidiaSmiCsv(stdout: string): GpuInfo {
  */
 export function parseSystemProfiler(stdout: string): GpuInfo {
   const chipsetMatch = stdout.match(/Chipset Model:\s*(.+)/i);
-  const vramMatch = stdout.match(/VRAM[^:]*:\s*([\d.]+)\s*(?:GB|MB)/i);
-  const vramUnit = stdout.match(/VRAM[^:]*:\s*[\d.]+\s*(GB|MB)/i);
+
+  // Parse VRAM from the line containing "VRAM" to avoid backtracking
+  let vramGb: number | null = null;
+  const lines = stdout.split("\n");
+  for (const line of lines) {
+    if (!/vram/i.test(line)) continue;
+    const colonIdx = line.indexOf(":");
+    if (colonIdx < 0) continue;
+    const after = line.slice(colonIdx + 1).trim();
+    const numMatch = after.match(/^([\d.]+)\s*(GB|MB)/i);
+    if (numMatch) {
+      const raw = parseFloat(numMatch[1]);
+      if (!isNaN(raw)) {
+        vramGb =
+          numMatch[2].toUpperCase() === "MB"
+            ? Math.round((raw / 1024) * 10) / 10
+            : raw;
+      }
+    }
+    break;
+  }
 
   const model = chipsetMatch?.[1]?.trim() ?? null;
-  let vramGb: number | null = null;
-  if (vramMatch) {
-    const raw = parseFloat(vramMatch[1]);
-    if (!isNaN(raw)) {
-      vramGb =
-        vramUnit?.[1]?.toUpperCase() === "MB"
-          ? Math.round((raw / 1024) * 10) / 10
-          : raw;
-    }
-  }
 
   return {
     present: model ? certain(true, "system_profiler") : unknown("system_profiler"),
