@@ -25,6 +25,10 @@
     "./frontend-contracts": {
       "import": "./dist/frontend-contracts/index.js",
       "types": "./dist/frontend-contracts/index.d.ts"
+    },
+    "./app-shell": {
+      "import": "./dist/app-shell/index.js",
+      "types": "./dist/app-shell/index.d.ts"
     }
   },
   "bin": {
@@ -42,7 +46,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src/ tests/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "app-shell": "tsx src/app-shell/server.ts"
   },
   "engines": {
     "node": ">=18.0.0"

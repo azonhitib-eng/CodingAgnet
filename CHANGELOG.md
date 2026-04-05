@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 12** — Minimal app shell
+  - New module: `src/app-shell/` (5 files: `index.ts`, `data-provider.ts`, `demo-scenarios.ts`, `server.ts`, `views.ts`)
+  - Local web app shell served via Node.js built-in HTTP server (zero new dependencies)
+  - Single-page HTML app with vanilla CSS/JS — no framework
+  - Service/boundary layer (`data-provider.ts`) that maps demo scenarios through frontend-contract layer
+  - 6 embedded demo scenarios: mid-range GPU, high-end GPU, low-end CPU-only, unsupported, blocked workflow, partial workflow
+  - JSON API: `GET /api/scenarios`, `GET /api/scenarios/:id`, `GET /api/scenarios/:id/:view`
+  - 5 core views: host summary, recommendation, compatibility detail, plan review, workflow summary
+  - Scenario selector for switching between demo fixtures
+  - `./app-shell` subpath export in `package.json`
+  - `npm run app-shell` script for quick startup
+  - 92 new tests: data provider, server HTTP handlers, demo scenario contract integration, view renderer
+  - Documentation: `docs/APP-SHELL.md`
+
 - **Phase 11** — Frontend contract / view-model layer
   - New module: `src/frontend-contracts/` (4 files: `types.ts`, `status-labels.ts`, `errors.ts`, `mappers.ts`, `index.ts`)
   - View-model types: `HostSummaryViewModel`, `ArtifactListItem`, `RecommendationItem`, `CompatibilityViewModel`, `PlanReviewViewModel`, `SafetyStatusView`, `WorkflowViewModel`, `FinalReviewState`
