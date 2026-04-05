@@ -6,6 +6,35 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 24** — Chat-like Session Console
+  - New `src/app-shell/console-helpers.ts` module with actor/card classification, grouping, presence, and feed builders
+  - 5 console actors: `system`, `workspace`, `mcp`, `agent`, `workflow` — every event kind mapped to an actor
+  - 7 console card types: `message`, `approval_card`, `blocked_card`, `failure_card`, `success_card`, `lifecycle_card`, `discovery_card`
+  - `ConsoleMessage` enrichment: adds actor, cardType to classified events
+  - `groupMessages()`: time-window + actor-based message grouping into `ConsoleMessageGroup[]`
+  - `buildPresence()`: derives workspace/MCP/agent presence from session summary
+  - `buildConsoleFeed()`: assembles complete console feed with messages, groups, presence
+  - `buildDemoConsoleFeed()`: enhanced demo timeline with MCP/agent lifecycle events
+  - `filterByActor()`: filter messages by actor category
+  - `CONSOLE_FILTERS`: predefined filter definitions for UI
+  - New API endpoint: `GET /api/session/:id/console` — returns full console feed
+  - Chat-like console UI in views.ts:
+    - Sticky status header with stage/status/approval/blocked indicators
+    - Presence bar showing workspace, MCP servers, agents with ready indicators
+    - Filter bar with toggle buttons per actor category
+    - Grouped console feed with actor icons, labels, timestamps
+    - Action-oriented cards for approval, blocked, failure, success, lifecycle, discovery events
+    - Click-to-expand event detail JSON
+    - Navigation links from action cards to detail sections (Host, Workflow)
+    - Console panel with show/hide toggle
+  - Demo timeline now includes workspace open, MCP lifecycle, and agent lifecycle events
+  - Demo summary includes MCP servers and agents for presence rendering
+  - Agent event categories added to client-side classification
+  - Section nav updated with Console entry
+  - All existing detail views preserved (host, recommendations, compatibility, plan, workflow)
+  - 112 new tests covering actor/card classification, message enrichment, grouping, presence, console feeds, demo feeds, filters, HTML structure, CSS styles, client JS logic, demo/real coherence, mixed events, detail accessibility, API endpoint
+  - New documentation: `docs/SESSION-CONSOLE.md`
+
 - **Phase 23** — Attached Agent Registry and Agent Attachment Model
   - New `src/agents/` module with 4 files: `types.ts`, `session-integration.ts`, `agent-registry.ts`, `index.ts`
   - 10 agent domain types: `AgentId`, `AgentKind`, `AgentStatus`, `AgentCapability`, `AgentStageAffinity`, `AgentDefinition`, `AgentAttachmentStatus`, `AgentAttachment`, `AgentSummary`, `AgentRecord`
