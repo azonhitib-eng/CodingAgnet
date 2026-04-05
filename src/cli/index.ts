@@ -14,3 +14,4 @@ export { runRecommendModels, type RecommendModelsArgs } from "./commands/recomme
 export { runCheckCompatibility, type CheckCompatibilityArgs } from "./commands/check-compatibility.js";
 export { runPlanInstall, type PlanInstallArgs, type PlanInstallResult } from "./commands/plan-install.js";
 export { runRenderPlan, type RenderPlanArgs, type RenderPlanResult } from "./commands/render-plan.js";
+export { runRunWorkflow, type RunWorkflowArgs } from "./commands/run-workflow.js";

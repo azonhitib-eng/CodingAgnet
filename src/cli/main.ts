@@ -16,6 +16,7 @@
  *   check-compatibility  Check artifact compatibility with host
  *   plan-install         Generate an install plan (informational only)
  *   render-plan          Render a saved plan JSON file
+ *   run-workflow          Run the full staged workflow pipeline
  */
 
 import { resolve } from "node:path";
@@ -28,6 +29,7 @@ import { runRecommendModels } from "./commands/recommend-models.js";
 import { runCheckCompatibility } from "./commands/check-compatibility.js";
 import { runPlanInstall } from "./commands/plan-install.js";
 import { runRenderPlan } from "./commands/render-plan.js";
+import { runRunWorkflow } from "./commands/run-workflow.js";
 import { detectHost } from "../detection/host-detector.js";
 import { loadHostProfile } from "./host-loader.js";
 
@@ -61,6 +63,7 @@ Commands:
   check-compatibility  Check artifact compatibility with host
   plan-install         Generate an install plan (informational only)
   render-plan          Render a saved plan JSON file
+  run-workflow         Run the full staged workflow pipeline
 
 Global options:
   --json               Output as JSON
@@ -85,6 +88,13 @@ Command-specific options:
 
   render-plan:
     --plan-file <path>      Path to a saved plan JSON file (required)
+
+  run-workflow:
+    --artifact <id>         Target a specific artifact (optional; defaults to top recommendation)
+    --stop-after <stage>    Stop after the given stage for review (optional)
+                            Stages: catalog_loading, host_acquisition, recommendation,
+                            target_selection, compatibility_evaluation, install_planning,
+                            safety_evaluation, rendering
 
 Note: Install plans are INFORMATIONAL ONLY and are NOT executed.
       Use --host-file for deterministic, reproducible results.
@@ -195,6 +205,22 @@ export async function main(
           bundle,
           host,
           artifactId,
+          json: jsonMode,
+          writer,
+        });
+        return EXIT_OK;
+      }
+
+      case "run-workflow": {
+        const hostFilePath = getFlagValue(argv, "--host-file");
+        const host = hostFilePath
+          ? loadHostProfile(hostFilePath)
+          : await detectHost({ catalogRuntimes: bundle.runtimes.listAll() });
+        runRunWorkflow({
+          bundle,
+          host,
+          artifactId: getFlagValue(argv, "--artifact"),
+          stopAfter: getFlagValue(argv, "--stop-after"),
           json: jsonMode,
           writer,
         });

@@ -92,6 +92,7 @@ describe("CLI main — help and routing", () => {
     expect(output).toContain("check-compatibility");
     expect(output).toContain("plan-install");
     expect(output).toContain("render-plan");
+    expect(output).toContain("run-workflow");
   });
 
   it("shows help with no arguments", async () => {
@@ -748,6 +749,111 @@ describe("CLI main — output normalization", () => {
       (msg) => lines2.push(msg),
     );
     expect(lines1.join("\n")).toBe(lines2.join("\n"));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// run-workflow via main()
+// ---------------------------------------------------------------------------
+
+describe("CLI main — run-workflow", () => {
+  let hostFilePath: string;
+  let validArtifactId: string;
+
+  beforeAll(() => {
+    hostFilePath = join(TMP_DIR, "workflow-host-profile.json");
+    writeFileSync(hostFilePath, JSON.stringify(makeHost(), null, 2));
+    const artifacts = bundle.models.listArtifacts();
+    validArtifactId = artifacts[0].id;
+  });
+
+  it("runs full workflow with --host-file in pretty format", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["run-workflow", "--data-dir", DATA_DIR, "--host-file", hostFilePath],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const output = lines.join("\n");
+    expect(output).toContain("Workflow Result");
+    expect(output).toContain("INFORMATIONAL ONLY");
+    expect(output).toContain("Completed stages");
+  });
+
+  it("runs full workflow with --host-file --json", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["run-workflow", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--json"],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(lines.join("\n"));
+    expect(parsed).toHaveProperty("status");
+    expect(parsed).toHaveProperty("completedStages");
+    expect(parsed).toHaveProperty("stageOutputs");
+  });
+
+  it("runs workflow with --artifact flag", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["run-workflow", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--artifact", validArtifactId, "--json"],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(lines.join("\n"));
+    expect(parsed.stageOutputs.target_selection.selectionMethod).toBe("explicit_artifact_id");
+    expect(parsed.stageOutputs.target_selection.artifactId).toBe(validArtifactId);
+  });
+
+  it("runs workflow with --stop-after flag", async () => {
+    const lines: string[] = [];
+    const code = await main(
+      ["run-workflow", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--stop-after", "recommendation", "--json"],
+      (msg) => lines.push(msg),
+    );
+
+    expect(code).toBe(0);
+    const parsed = JSON.parse(lines.join("\n"));
+    expect(parsed.status).toBe("partial");
+    expect(parsed.stoppedAfter).toBe("recommendation");
+    expect(parsed.stageOutputs.recommendation).toBeDefined();
+  });
+
+  it("returns error for invalid --stop-after", async () => {
+    const errLines: string[] = [];
+    const code = await main(
+      ["run-workflow", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--stop-after", "bad_stage"],
+      () => {},
+      (msg) => errLines.push(msg),
+    );
+
+    expect(code).toBeGreaterThan(0);
+    expect(errLines.join("\n")).toContain("bad_stage");
+  });
+
+  it("deterministic: same host-file produces identical workflow output", async () => {
+    const lines1: string[] = [];
+    await main(
+      ["run-workflow", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--json"],
+      (msg) => lines1.push(msg),
+    );
+
+    const lines2: string[] = [];
+    await main(
+      ["run-workflow", "--data-dir", DATA_DIR, "--host-file", hostFilePath, "--json"],
+      (msg) => lines2.push(msg),
+    );
+
+    expect(lines1.join("\n")).toBe(lines2.join("\n"));
+  });
+
+  it("help text mentions --stop-after", async () => {
+    const lines: string[] = [];
+    await main(["--help"], (msg) => lines.push(msg));
+    expect(lines.join("\n")).toContain("--stop-after");
   });
 });
 

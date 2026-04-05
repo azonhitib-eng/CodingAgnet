@@ -433,6 +433,33 @@ npx tsx src/cli/main.ts render-plan --plan-file ./my-plan.json --json
 **Input expectations:**
 The plan file must be valid JSON conforming to the `InstallPlanSchema`. Required fields include `artifactId`, `runtimeId`, `targetPlatform`, `prerequisites`, `steps`, `postInstallVerification`, `resourceEstimate`, `risks`, and `humanSummary`. Each step must have valid `riskLevel` values (`safe`, `caution`, `dangerous`, `blocked`) and a valid `targetPlatform` (`linux`, `darwin`, `win32`). Invalid plans produce clear schema validation errors with field paths.
 
+#### `run-workflow`
+
+Run the full staged workflow pipeline. This command invokes the workflow runner (`runWorkflow()`) which
+orchestrates catalog loading → host acquisition → recommendation → target selection → compatibility
+evaluation → install planning → safety evaluation → rendering in a single deterministic pass.
+
+```bash
+npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json
+npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json --json
+npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json --artifact codellama-7b-q4_k_m-ollama
+npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json --stop-after recommendation
+npx tsx src/cli/main.ts run-workflow --data-dir ./data --host-file host.json --stop-after safety_evaluation --json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--artifact <id>` | Target a specific artifact (optional; defaults to top recommendation) |
+| `--stop-after <stage>` | Stop after the given stage for review (optional) |
+
+Valid `--stop-after` stages: `catalog_loading`, `host_acquisition`, `recommendation`, `target_selection`, `compatibility_evaluation`, `install_planning`, `safety_evaluation`, `rendering`.
+
+**Output:**
+- Pretty mode shows status, completed stages, target selection reasoning, safety summary, and rendered plan
+- JSON mode provides structured output with `status`, `completedStages`, `stageOutputs`, and optional `stoppedAfter`/`error`/`failedStage` fields
+
+**⚠ IMPORTANT: This is NOT an execution engine. Plans are INFORMATIONAL ONLY and are NOT executed.**
+
 ### JSON output
 
 All commands support `--json` to output structured JSON instead of human-readable text.
@@ -489,6 +516,7 @@ When using `plan-install` or `render-plan`, the safety report uses a 3-state mod
 | `check-compatibility` | `checkCompatibility()` from `src/compatibility/compatibility-engine.ts` |
 | `plan-install` | `generateInstallPlan()`, `evaluatePlanSafety()`, `renderPlan()` from `src/install-plan/` |
 | `render-plan` | `evaluatePlanSafety()`, `renderPlan()` from `src/install-plan/` |
+| `run-workflow` | `runWorkflow()` from `src/workflow/workflow-runner.ts` |
 
 ## Testing
 
