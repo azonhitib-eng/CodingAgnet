@@ -44,6 +44,15 @@ import { detectHost } from "../detection/host-detector.js";
 import { validateHostProfile } from "../cli/host-loader.js";
 import { toHostSummary } from "../frontend-contracts/index.js";
 
+import {
+  SessionManager,
+  openWorkspace,
+  cloneWorkspace,
+  validateLocalPath,
+  validateCloneUrl,
+} from "../session/index.js";
+import type { GitExecutor } from "../session/index.js";
+
 // ---------------------------------------------------------------------------
 // Routing
 // ---------------------------------------------------------------------------
@@ -167,6 +176,37 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
   // API: validate host profile object (POST)
   if (path === "/api/host/validate" && method === "POST") {
     handleHostValidate(req, res);
+    return;
+  }
+
+  // API: open workspace (POST)
+  if (path === "/api/workspace/open" && method === "POST") {
+    handleWorkspaceOpen(req, res);
+    return;
+  }
+
+  // API: clone workspace (POST)
+  if (path === "/api/workspace/clone" && method === "POST") {
+    handleWorkspaceClone(req, res);
+    return;
+  }
+
+  // API: validate workspace path (POST)
+  if (path === "/api/workspace/validate-path" && method === "POST") {
+    handleWorkspaceValidatePath(req, res);
+    return;
+  }
+
+  // API: validate clone URL (POST)
+  if (path === "/api/workspace/validate-url" && method === "POST") {
+    handleWorkspaceValidateUrl(req, res);
+    return;
+  }
+
+  // API: get workspace state for a session (GET)
+  const wsStateMatch = path.match(/^\/api\/workspace\/state\/([^/]+)$/);
+  if (wsStateMatch && method === "GET") {
+    handleWorkspaceState(wsStateMatch[1], res);
     return;
   }
 
@@ -321,6 +361,174 @@ async function handleHostValidate(req: IncomingMessage, res: ServerResponse): Pr
       error: message,
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Workspace session manager (shared instance for workspace endpoints)
+// ---------------------------------------------------------------------------
+
+const _workspaceSessionManager = new SessionManager();
+
+/** Exposed for testing — returns the shared workspace session manager. */
+export function getWorkspaceSessionManager(): SessionManager {
+  return _workspaceSessionManager;
+}
+
+/** Optional git executor override for testing. */
+let _gitExecutorOverride: GitExecutor | undefined;
+
+/** Set a custom git executor (for testing). */
+export function setGitExecutor(executor: GitExecutor | undefined): void {
+  _gitExecutorOverride = executor;
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/workspace/open
+// ---------------------------------------------------------------------------
+
+async function handleWorkspaceOpen(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  if (typeof input.path !== "string" || !input.path.trim()) {
+    return badRequest(res, "Missing required field: path");
+  }
+
+  const session = _workspaceSessionManager.createSession();
+  const result = await openWorkspace(input.path, _gitExecutorOverride);
+
+  // Append lifecycle events
+  _workspaceSessionManager.appendEvents(session.id, result.events);
+
+  if (result.ok && result.workspace) {
+    _workspaceSessionManager.bindWorkspace(session.id, result.workspace);
+    _workspaceSessionManager.updateStage(session.id, "workspace_binding");
+    _workspaceSessionManager.updateStatus(session.id, "active");
+  } else {
+    if (result.workspace) {
+      _workspaceSessionManager.bindWorkspace(session.id, result.workspace);
+    }
+    _workspaceSessionManager.updateStatus(session.id, "failed");
+  }
+
+  const summary = _workspaceSessionManager.getSessionSummary(session.id);
+
+  return json(res, {
+    ok: result.ok,
+    sessionId: session.id,
+    workspace: result.workspace,
+    summary,
+    error: result.error,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/workspace/clone
+// ---------------------------------------------------------------------------
+
+async function handleWorkspaceClone(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  if (typeof input.url !== "string" || !input.url.trim()) {
+    return badRequest(res, "Missing required field: url");
+  }
+  if (typeof input.targetPath !== "string" || !input.targetPath.trim()) {
+    return badRequest(res, "Missing required field: targetPath");
+  }
+
+  const session = _workspaceSessionManager.createSession();
+  const result = await cloneWorkspace(
+    {
+      url: input.url,
+      targetPath: input.targetPath,
+      branch: typeof input.branch === "string" ? input.branch : undefined,
+    },
+    _gitExecutorOverride,
+  );
+
+  // Append lifecycle events
+  _workspaceSessionManager.appendEvents(session.id, result.events);
+
+  if (result.ok && result.workspace) {
+    _workspaceSessionManager.bindWorkspace(session.id, result.workspace);
+    _workspaceSessionManager.updateStage(session.id, "workspace_binding");
+    _workspaceSessionManager.updateStatus(session.id, "active");
+  } else {
+    if (result.workspace) {
+      _workspaceSessionManager.bindWorkspace(session.id, result.workspace);
+    }
+    _workspaceSessionManager.updateStatus(session.id, "failed");
+  }
+
+  const summary = _workspaceSessionManager.getSessionSummary(session.id);
+
+  return json(res, {
+    ok: result.ok,
+    sessionId: session.id,
+    workspace: result.workspace,
+    summary,
+    error: result.error,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/workspace/validate-path
+// ---------------------------------------------------------------------------
+
+async function handleWorkspaceValidatePath(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  if (typeof input.path !== "string") {
+    return badRequest(res, "Missing required field: path");
+  }
+
+  const result = await validateLocalPath(input.path);
+  return json(res, result);
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/workspace/validate-url
+// ---------------------------------------------------------------------------
+
+async function handleWorkspaceValidateUrl(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  if (typeof input.url !== "string") {
+    return badRequest(res, "Missing required field: url");
+  }
+
+  const result = validateCloneUrl(input.url);
+  return json(res, result);
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/workspace/state/:sessionId
+// ---------------------------------------------------------------------------
+
+function handleWorkspaceState(sessionId: string, res: ServerResponse): void {
+  const session = _workspaceSessionManager.getSession(sessionId);
+  if (!session) {
+    return notFound(res, `Session not found: ${sessionId}`);
+  }
+
+  const summary = _workspaceSessionManager.getSessionSummary(sessionId);
+  const workspaceEvents = session.events.filter((e) =>
+    e.kind.startsWith("workspace_") || e.kind.startsWith("clone_"),
+  );
+
+  return json(res, {
+    sessionId,
+    workspace: session.workspace,
+    workspaceEvents,
+    summary,
+  });
 }
 
 // ---------------------------------------------------------------------------

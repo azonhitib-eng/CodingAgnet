@@ -51,7 +51,7 @@ export interface Session {
 export type WorkspaceSource = "local_existing" | "cloned" | "generic_directory";
 
 /** Lifecycle status of a workspace. */
-export type WorkspaceStatus = "pending" | "ready" | "invalid" | "closed";
+export type WorkspaceStatus = "pending" | "ready" | "invalid" | "closed" | "bootstrapping";
 
 /** Workspace model — local-first, repository-agnostic. */
 export interface Workspace {
@@ -62,7 +62,41 @@ export interface Workspace {
   ref: string | null;
   /** Optional clone origin, populated when source is 'cloned'. */
   cloneUrl: string | null;
+  /** Repository metadata, populated during open/clone lifecycle. */
+  repoMeta: RepositoryMeta | null;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Repository metadata                                               */
+/* ------------------------------------------------------------------ */
+
+/** Minimal repository metadata attached to a workspace. */
+export interface RepositoryMeta {
+  /** Whether this workspace appears to be a git repository. */
+  readonly isGitRepo: boolean;
+  /** Absolute path to the repository root. */
+  readonly repoPath: string;
+  /** Remote origin URL, if detectable. */
+  readonly remoteUrl: string | null;
+  /** Current branch name, if detectable. */
+  readonly branch: string | null;
+  /** Current HEAD ref, if detectable. */
+  readonly headRef: string | null;
+  /** ISO-8601 timestamp when the workspace was opened or cloned. */
+  readonly openedAt: string;
+  /** Readiness state of the repository. */
+  readonly readiness: WorkspaceReadiness;
+  /** Optional notes or warnings about workspace state. */
+  readonly notes: string[];
+}
+
+/** Readiness state for workspace bootstrap. */
+export type WorkspaceReadiness =
+  | "ready"
+  | "pending"
+  | "bootstrapping"
+  | "invalid"
+  | "unavailable";
 
 /* ------------------------------------------------------------------ */
 /*  Events / Timeline                                                 */
@@ -92,7 +126,16 @@ export type SessionEventKind =
   | "mcp_stopped"
   | "mcp_discovered_tools"
   | "mcp_discovered_resources"
-  | "mcp_discovered_prompts";
+  | "mcp_discovered_prompts"
+  /* Workspace / repository lifecycle events (Phase 21) */
+  | "workspace_open_requested"
+  | "workspace_opened"
+  | "workspace_invalid"
+  | "clone_requested"
+  | "clone_started"
+  | "clone_completed"
+  | "clone_failed"
+  | "workspace_ready";
 
 /** Structured session event. */
 export interface SessionEvent {

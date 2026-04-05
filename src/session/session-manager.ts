@@ -46,6 +46,10 @@ export interface SessionSummary {
   readonly workspacePath: string | null;
   readonly workspaceSource: string | null;
   readonly workspaceStatus: string | null;
+  readonly workspaceReadiness: string | null;
+  readonly workspaceIsGitRepo: boolean | null;
+  readonly workspaceRemoteUrl: string | null;
+  readonly workspaceBranch: string | null;
   readonly eventCount: number;
   readonly lastEventKind: string | null;
   readonly lastEventMessage: string | null;
@@ -235,6 +239,10 @@ export class SessionManager {
       workspacePath: session.workspace?.path ?? null,
       workspaceSource: session.workspace?.source ?? null,
       workspaceStatus: session.workspace?.status ?? null,
+      workspaceReadiness: session.workspace?.repoMeta?.readiness ?? null,
+      workspaceIsGitRepo: session.workspace?.repoMeta?.isGitRepo ?? null,
+      workspaceRemoteUrl: session.workspace?.repoMeta?.remoteUrl ?? null,
+      workspaceBranch: session.workspace?.repoMeta?.branch ?? session.workspace?.branch ?? null,
       eventCount: session.events.length,
       lastEventKind: lastEvent?.kind ?? null,
       lastEventMessage: lastEvent?.message ?? null,

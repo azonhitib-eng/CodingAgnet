@@ -14,6 +14,8 @@ export type {
   Workspace,
   WorkspaceSource,
   WorkspaceStatus,
+  RepositoryMeta,
+  WorkspaceReadiness,
   AttachedResource,
   AttachedResourceKind,
 } from "./types.js";
@@ -34,6 +36,14 @@ export {
   noteEvent,
   infoEvent,
   warningEvent,
+  workspaceOpenRequested,
+  workspaceOpened,
+  workspaceInvalid,
+  cloneRequested,
+  cloneStarted,
+  cloneCompleted,
+  cloneFailed,
+  workspaceReady,
 } from "./events.js";
 
 /* workspace */
@@ -43,6 +53,7 @@ export {
   markWorkspaceReady,
   markWorkspaceInvalid,
   markWorkspaceClosed,
+  markWorkspaceBootstrapping,
   openGenericDirectory,
   isWorkspaceReady,
   isCloneWorkspace,
@@ -66,3 +77,22 @@ export {
 } from "./session-manager.js";
 
 export type { SessionSummary } from "./session-manager.js";
+
+/* repo lifecycle (Phase 21) */
+export {
+  validateLocalPath,
+  validateCloneUrl,
+  validateCloneTarget,
+  defaultGitExecutor,
+  openWorkspace,
+  cloneWorkspace,
+} from "./repo-lifecycle.js";
+
+export type {
+  ValidationResult as RepoValidationResult,
+  GitExecutor,
+  CloneExecResult,
+  OpenWorkspaceResult,
+  CloneRequest,
+  CloneWorkspaceResult,
+} from "./repo-lifecycle.js";

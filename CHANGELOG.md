@@ -6,6 +6,25 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 21** — Repository Open/Clone Lifecycle and Workspace Bootstrap
+  - Extended Workspace model with `repoMeta` (RepositoryMeta) for git repo detection
+  - New `bootstrapping` workspace status for in-progress clone operations
+  - `RepositoryMeta`: `isGitRepo`, `repoPath`, `remoteUrl`, `branch`, `headRef`, `openedAt`, `readiness`, `notes`
+  - `WorkspaceReadiness` type: `ready`, `pending`, `bootstrapping`, `invalid`, `unavailable`
+  - New `src/session/repo-lifecycle.ts`: repository open and clone lifecycle
+  - `openWorkspace()`: validate path, detect git repo, build metadata, create workspace with events
+  - `cloneWorkspace()`: validate URL/target, execute `git clone --single-branch`, build metadata
+  - `GitExecutor` interface for testability (mock git in tests, real git in production)
+  - Path validation: `validateLocalPath()`, `validateCloneTarget()`
+  - URL validation: `validateCloneUrl()` — allows https/http/git/SSH, blocks file://
+  - 8 new session event kinds: `workspace_open_requested`, `workspace_opened`, `workspace_invalid`, `clone_requested`, `clone_started`, `clone_completed`, `clone_failed`, `workspace_ready`
+  - Event factories for all 8 workspace lifecycle events
+  - `SessionSummary` extended with `workspaceReadiness`, `workspaceIsGitRepo`, `workspaceRemoteUrl`, `workspaceBranch`
+  - `markWorkspaceBootstrapping()` workspace transition helper
+  - 5 new server endpoints: `POST /api/workspace/open`, `POST /api/workspace/clone`, `POST /api/workspace/validate-path`, `POST /api/workspace/validate-url`, `GET /api/workspace/state/:sessionId`
+  - 77 new tests covering path validation, URL validation, open flows, clone flows, failure handling, session events, summary exposure, server endpoints
+  - Updated `docs/SESSION-WORKSPACE.md` with workspace lifecycle, repo metadata, open vs clone, server endpoints
+
 - **Phase 20** — MCP Manager and Server Attachment Lifecycle
   - New `src/mcp/` module with 6 files: `types.ts`, `process-manager.ts`, `capability-discovery.ts`, `session-integration.ts`, `config.ts`, `mcp-manager.ts`, `index.ts`
   - 11 MCP domain types: `McpServerId`, `McpServerConfig`, `McpTransport`, `McpServerStatus`, `McpServerHealth`, `McpAttachment`, `McpAttachmentStatus`, `McpDiscoveredTool`, `McpDiscoveredResource`, `McpDiscoveredPrompt`, `McpRuntimeInfo`
