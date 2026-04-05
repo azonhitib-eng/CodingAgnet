@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
   - `resolvePort()` function: supports `--port` flag, `PORT` env var, and default 3000
   - `--help` flag for the app shell server
   - New npm scripts: `app-shell:demo`, `app-shell:help`, `generate-host-profile`, `preflight`
-  - 48 new tests: port resolution, package script sanity, source/docs/data directory checks, QUICKSTART content alignment
+  - 47 new tests: port resolution, package script sanity, source/docs/data directory checks, QUICKSTART content alignment
   - Updated CHANGELOG, README, and APP-SHELL.md with Phase 15 documentation
 
 - **Phase 12** — Minimal app shell
