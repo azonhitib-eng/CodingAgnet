@@ -46,12 +46,16 @@ const KIND_TO_CATEGORY: Record<string, TimelineEventCategory> = {
   mcp_discovered_tools: "progress",
   mcp_discovered_resources: "progress",
   mcp_discovered_prompts: "progress",
+  agent_attached: "progress",
+  agent_enabled: "progress",
+  agent_capabilities_updated: "progress",
 
   // warning — needs attention / pending approval
   warning: "warning",
   requires_approval: "warning",
   mcp_attach_requested: "warning",
   mcp_starting: "warning",
+  agent_attach_requested: "warning",
 
   // blocked
   blocked: "blocked",
@@ -62,6 +66,9 @@ const KIND_TO_CATEGORY: Record<string, TimelineEventCategory> = {
   clone_failed: "failure",
   mcp_failed: "failure",
   mcp_stopped: "failure",
+  agent_failed: "failure",
+  agent_disabled: "failure",
+  agent_detached: "failure",
 };
 
 /** Classify a SessionEventKind string into a rendering category. */

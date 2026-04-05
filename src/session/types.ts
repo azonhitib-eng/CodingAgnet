@@ -135,7 +135,15 @@ export type SessionEventKind =
   | "clone_started"
   | "clone_completed"
   | "clone_failed"
-  | "workspace_ready";
+  | "workspace_ready"
+  /* Agent lifecycle events (Phase 23) */
+  | "agent_attach_requested"
+  | "agent_attached"
+  | "agent_detached"
+  | "agent_enabled"
+  | "agent_disabled"
+  | "agent_failed"
+  | "agent_capabilities_updated";
 
 /** Structured session event. */
 export interface SessionEvent {
