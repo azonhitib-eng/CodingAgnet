@@ -30,6 +30,7 @@ import {
   toWorkflowView,
 } from "../frontend-contracts/index.js";
 import type { ScenarioViewModel } from "./data-provider.js";
+import type { HostSource } from "./data-provider.js";
 import { readFileSync } from "node:fs";
 
 // ---------------------------------------------------------------------------
@@ -40,8 +41,16 @@ import { readFileSync } from "node:fs";
 export interface RealWorkflowInput {
   /** Path to the data directory containing models/, runtimes/, agent-tools/. */
   dataDir: string;
-  /** Path to a host profile JSON file. */
-  hostFile: string;
+  /**
+   * Path to a host profile JSON file.
+   * Required unless `hostProfile` is provided.
+   */
+  hostFile?: string;
+  /**
+   * Inline host profile object (e.g. from live detection).
+   * If provided, `hostFile` is not required.
+   */
+  hostProfile?: import("../types/host.js").HostProfile;
   /** Optional: specific artifact to target. */
   artifactId?: string;
   /** Optional: stop workflow after this stage. */
@@ -163,12 +172,30 @@ export function executeRealWorkflow(input: RealWorkflowInput): RealWorkflowRespo
       };
     }
 
-    // 2. Validate host file
-    const hostFileCheck = validateHostFile(input.hostFile);
-    if (!hostFileCheck.valid) {
+    // 2. Determine host source and load host profile
+    let host: import("../types/host.js").HostProfile;
+    let hostSource: HostSource;
+
+    if (input.hostProfile) {
+      // Inline host profile (e.g. from live detection)
+      host = validateHostProfile(input.hostProfile);
+      hostSource = "detected";
+    } else if (input.hostFile) {
+      // Load from file
+      const hostFileCheck = validateHostFile(input.hostFile);
+      if (!hostFileCheck.valid) {
+        return {
+          ok: false,
+          error: normalizeFrontendError(hostFileCheck.error!),
+        };
+      }
+      const hostRaw = readFileSync(resolve(input.hostFile), "utf-8");
+      host = validateHostProfile(JSON.parse(hostRaw));
+      hostSource = "file";
+    } else {
       return {
         ok: false,
-        error: normalizeFrontendError(hostFileCheck.error!),
+        error: normalizeFrontendError("Missing required input: provide either hostFile or hostProfile"),
       };
     }
 
@@ -192,11 +219,7 @@ export function executeRealWorkflow(input: RealWorkflowInput): RealWorkflowRespo
     };
     const bundle: CatalogBundle = loadCatalogBundleSync(paths);
 
-    // 5. Load host profile
-    const hostRaw = readFileSync(resolve(input.hostFile), "utf-8");
-    const host = validateHostProfile(JSON.parse(hostRaw));
-
-    // 6. Build workflow input
+    // 5. Build workflow input
     const workflowInput: WorkflowInput = {
       bundle,
       host,
@@ -204,11 +227,11 @@ export function executeRealWorkflow(input: RealWorkflowInput): RealWorkflowRespo
       ...(input.stopAfter ? { stopAfter: input.stopAfter as WorkflowStageName } : {}),
     };
 
-    // 7. Run workflow
+    // 6. Run workflow
     const result = runWorkflow(workflowInput);
 
-    // 8. Map to view-model
-    const viewModel = mapWorkflowResultToViewModel(result, host);
+    // 7. Map to view-model
+    const viewModel = mapWorkflowResultToViewModel(result, host, hostSource);
 
     return { ok: true, viewModel, rawResult: result };
   } catch (err) {
@@ -232,6 +255,7 @@ export function executeRealWorkflow(input: RealWorkflowInput): RealWorkflowRespo
 function mapWorkflowResultToViewModel(
   result: WorkflowResult,
   host: import("../types/host.js").HostProfile,
+  hostSource: HostSource = "file",
 ): ScenarioViewModel {
   const outputs = result.stageOutputs;
 
@@ -250,6 +274,7 @@ function mapWorkflowResultToViewModel(
     label: "Real Workflow Run",
     description: `Live workflow execution — status: ${result.status}`,
     host: toHostSummary(host),
+    hostSource,
     recommendation: topRec ? toRecommendationItem(topRec) : null,
     compatibility: compat ? toCompatibilityView(compat) : null,
     planReview: plan && safety ? toPlanReviewView(plan, safety) : null,

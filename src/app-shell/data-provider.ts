@@ -28,6 +28,19 @@ import type { DemoScenario, DemoScenarioName } from "./demo-scenarios.js";
 import { DEMO_SCENARIOS, DEMO_SCENARIO_NAMES } from "./demo-scenarios.js";
 
 // ---------------------------------------------------------------------------
+// Host source semantics
+// ---------------------------------------------------------------------------
+
+/**
+ * Indicates how the current host profile was obtained.
+ *
+ * - "demo"     — embedded demo scenario fixture
+ * - "file"     — loaded from a user-supplied host profile file
+ * - "detected" — obtained via live host detection
+ */
+export type HostSource = "demo" | "file" | "detected";
+
+// ---------------------------------------------------------------------------
 // Scenario view-model (fully mapped)
 // ---------------------------------------------------------------------------
 
@@ -36,6 +49,8 @@ export interface ScenarioViewModel {
   label: string;
   description: string;
   host: HostSummaryViewModel;
+  /** How the host profile was obtained. */
+  hostSource: HostSource;
   recommendation: RecommendationItem | null;
   compatibility: CompatibilityViewModel | null;
   planReview: PlanReviewViewModel | null;
@@ -62,6 +77,7 @@ export function mapScenario(id: string, scenario: DemoScenario): ScenarioViewMod
     label: scenario.label,
     description: scenario.description,
     host: toHostSummary(scenario.host),
+    hostSource: "demo",
     recommendation: scenario.recommendation
       ? toRecommendationItem(scenario.recommendation)
       : null,

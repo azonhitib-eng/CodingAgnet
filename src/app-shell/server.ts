@@ -10,6 +10,8 @@
  *   GET  /api/scenarios/:id/host    — host summary only
  *   GET  /api/scenarios/:id/workflow — workflow summary only
  *   GET  /api/stages                — list valid workflow stage names
+ *   POST /api/host/detect           — detect host profile live
+ *   POST /api/host/validate         — validate a host profile object
  *   POST /api/workflow/run          — run real workflow (JSON body)
  *   POST /api/workflow/validate     — validate inputs without running
  *
@@ -36,6 +38,10 @@ import {
   getStageNames,
   type RealWorkflowInput,
 } from "./workflow-bridge.js";
+
+import { detectHost } from "../detection/host-detector.js";
+import { validateHostProfile } from "../cli/host-loader.js";
+import { toHostSummary } from "../frontend-contracts/index.js";
 
 // ---------------------------------------------------------------------------
 // Routing
@@ -151,6 +157,18 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
     return;
   }
 
+  // API: detect host live (POST)
+  if (path === "/api/host/detect" && method === "POST") {
+    handleHostDetect(req, res);
+    return;
+  }
+
+  // API: validate host profile object (POST)
+  if (path === "/api/host/validate" && method === "POST") {
+    handleHostValidate(req, res);
+    return;
+  }
+
   // API: single scenario (or sub-view)
   const scenarioMatch = path.match(/^\/api\/scenarios\/([^/]+)(?:\/([^/]+))?$/);
   if (scenarioMatch && method === "GET") {
@@ -183,18 +201,28 @@ async function handleWorkflowRun(req: IncomingMessage, res: ServerResponse): Pro
 
   const input = body as Record<string, unknown>;
 
-  // Require dataDir and hostFile
+  // Require dataDir
   if (typeof input.dataDir !== "string" || !input.dataDir.trim()) {
     return badRequest(res, "Missing required field: dataDir");
   }
-  if (typeof input.hostFile !== "string" || !input.hostFile.trim()) {
-    return badRequest(res, "Missing required field: hostFile");
+
+  // Require either hostFile or hostProfile
+  const hasHostFile = typeof input.hostFile === "string" && input.hostFile.trim() !== "";
+  const hasHostProfile = input.hostProfile != null && typeof input.hostProfile === "object";
+  if (!hasHostFile && !hasHostProfile) {
+    return badRequest(res, "Missing required field: provide either hostFile or hostProfile");
   }
 
   const workflowInput: RealWorkflowInput = {
     dataDir: input.dataDir as string,
-    hostFile: input.hostFile as string,
   };
+
+  if (hasHostFile) {
+    workflowInput.hostFile = input.hostFile as string;
+  }
+  if (hasHostProfile) {
+    workflowInput.hostProfile = input.hostProfile as import("../types/host.js").HostProfile;
+  }
 
   if (typeof input.artifactId === "string" && input.artifactId.trim()) {
     workflowInput.artifactId = input.artifactId;
@@ -244,6 +272,57 @@ async function handleWorkflowValidate(req: IncomingMessage, res: ServerResponse)
 }
 
 // ---------------------------------------------------------------------------
+// POST /api/host/detect
+// ---------------------------------------------------------------------------
+
+async function handleHostDetect(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+  try {
+    const hostProfile = await detectHost();
+    const summary = toHostSummary(hostProfile);
+    return json(res, {
+      ok: true,
+      hostProfile,
+      summary,
+      source: "detected" as const,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json(res, {
+      ok: false,
+      error: {
+        code: "HOST_DETECTION_FAILED",
+        message: `Host detection failed: ${message}`,
+      },
+    }, 500);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/host/validate
+// ---------------------------------------------------------------------------
+
+async function handleHostValidate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  try {
+    const validated = validateHostProfile(body);
+    const summary = toHostSummary(validated);
+    return json(res, {
+      valid: true,
+      hostProfile: validated,
+      summary,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return json(res, {
+      valid: false,
+      error: message,
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Server entrypoint
 // ---------------------------------------------------------------------------
 
@@ -260,12 +339,13 @@ export function startServer(port: number): ReturnType<typeof createServer> {
     console.log();
     console.log("  Modes:");
     console.log("    • Demo  — pre-built scenarios, no setup required");
-    console.log("    • Real  — connect your own data-dir + host profile");
+    console.log("    • Real  — connect your own data-dir + host profile or detect live");
     console.log();
     console.log("  Quick tips:");
     console.log("    - Open the URL above in your browser");
     console.log("    - Demo mode is selected by default");
     console.log("    - For real mode, prepare a data directory and host profile");
+    console.log("    - Or use the \"Detect Host\" button to detect your host live");
     console.log("    - See docs/QUICKSTART.md for detailed instructions");
     console.log();
     console.log("  Press Ctrl+C to stop the server");
