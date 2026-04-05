@@ -60,10 +60,8 @@ import {
   validateCloneUrl,
   SessionPersistence,
   RecentSessions,
-  fromPersistedSession,
-  buildRestoreWarnings,
 } from "../session/index.js";
-import type { GitExecutor, RestoredSession } from "../session/index.js";
+import type { GitExecutor } from "../session/index.js";
 import { classifyEvent } from "./timeline-helpers.js";
 import { buildConsoleFeed } from "./console-helpers.js";
 

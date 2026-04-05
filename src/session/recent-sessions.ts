@@ -13,7 +13,6 @@ import type {
 
 import type {
   PersistedSessionMeta,
-  PersistedSession,
 } from "./persistence.js";
 
 import {

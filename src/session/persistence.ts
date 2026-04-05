@@ -14,9 +14,8 @@
  *       <session-id>.json — full session snapshot (metadata + events + context)
  */
 
-import { readFile, writeFile, mkdir, readdir, unlink } from "node:fs/promises";
-import { join, dirname } from "node:path";
-import { existsSync } from "node:fs";
+import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
+import { join } from "node:path";
 
 import type {
   Session,
