@@ -47,7 +47,11 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src/ tests/",
     "typecheck": "tsc --noEmit",
-    "app-shell": "tsx src/app-shell/server.ts"
+    "app-shell": "tsx src/app-shell/server.ts",
+    "app-shell:demo": "tsx src/app-shell/server.ts",
+    "app-shell:help": "tsx src/app-shell/server.ts --help",
+    "generate-host-profile": "tsx src/cli/main.ts detect-host --json",
+    "preflight": "tsx scripts/preflight.ts"
   },
   "engines": {
     "node": ">=18.0.0"

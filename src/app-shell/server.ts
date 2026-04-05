@@ -250,7 +250,27 @@ async function handleWorkflowValidate(req: IncomingMessage, res: ServerResponse)
 export function startServer(port: number): ReturnType<typeof createServer> {
   const server = createServer(handleRequest);
   server.listen(port, () => {
-    console.log(`CodingAgent app shell running at http://localhost:${port}`);
+    const line = "─".repeat(56);
+    console.log();
+    console.log(line);
+    console.log("  CodingAgent App Shell");
+    console.log(line);
+    console.log();
+    console.log(`  ➜  Local:   http://localhost:${port}`);
+    console.log();
+    console.log("  Modes:");
+    console.log("    • Demo  — pre-built scenarios, no setup required");
+    console.log("    • Real  — connect your own data-dir + host profile");
+    console.log();
+    console.log("  Quick tips:");
+    console.log("    - Open the URL above in your browser");
+    console.log("    - Demo mode is selected by default");
+    console.log("    - For real mode, prepare a data directory and host profile");
+    console.log("    - See docs/QUICKSTART.md for detailed instructions");
+    console.log();
+    console.log("  Press Ctrl+C to stop the server");
+    console.log(line);
+    console.log();
   });
   return server;
 }
@@ -259,18 +279,53 @@ export function startServer(port: number): ReturnType<typeof createServer> {
 // CLI entrypoint
 // ---------------------------------------------------------------------------
 
-function main(): void {
-  const args = process.argv.slice(2);
-  let port = 3000;
-
+/**
+ * Resolve the port number from CLI args or environment.
+ * Priority: --port flag > PORT env var > default 3000.
+ */
+export function resolvePort(args: string[]): number {
   const portIdx = args.indexOf("--port");
   if (portIdx !== -1 && args[portIdx + 1]) {
     const parsed = parseInt(args[portIdx + 1], 10);
     if (!Number.isNaN(parsed) && parsed > 0 && parsed < 65536) {
-      port = parsed;
+      return parsed;
     }
   }
+  const envPort = process.env.PORT;
+  if (envPort) {
+    const parsed = parseInt(envPort, 10);
+    if (!Number.isNaN(parsed) && parsed > 0 && parsed < 65536) {
+      return parsed;
+    }
+  }
+  return 3000;
+}
 
+function main(): void {
+  const args = process.argv.slice(2);
+
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(`
+Usage: npx tsx src/app-shell/server.ts [options]
+
+Options:
+  --port <number>   Port to listen on (default: 3000, or PORT env var)
+  --help, -h        Show this help message
+
+Environment variables:
+  PORT              Port to listen on (overridden by --port flag)
+
+Examples:
+  npm run app-shell                           # Start on port 3000
+  npm run app-shell -- --port 8080            # Start on port 8080
+  PORT=4000 npm run app-shell                 # Start on port 4000
+
+See docs/QUICKSTART.md for full setup instructions.
+`);
+    return;
+  }
+
+  const port = resolvePort(args);
   startServer(port);
 }
 

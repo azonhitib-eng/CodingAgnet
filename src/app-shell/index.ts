@@ -41,7 +41,7 @@ export type {
 } from "./workflow-bridge.js";
 
 // Server
-export { handleRequest, startServer } from "./server.js";
+export { handleRequest, startServer, resolvePort } from "./server.js";
 
 // View renderer
 export { renderShellHtml } from "./views.js";
