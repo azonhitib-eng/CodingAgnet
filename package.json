@@ -5,6 +5,9 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "codingagent-cli": "dist/cli/main.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
