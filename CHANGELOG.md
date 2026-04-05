@@ -6,6 +6,22 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 18** — Product-shell polish and session usability
+  - Sticky section navigation bar — jump links to Host, Recommendation, Compatibility, Plan Review, Workflow sections
+  - IntersectionObserver-based active section highlighting in the nav bar
+  - Section anchor IDs on all result cards for hash-based navigation
+  - Run context summary bar — shows mode, label, timestamp, artifact, stop-after for each run
+  - Compact summary strip — one-line overview at top of results with status, host, recommendation, compatibility
+  - "Clear Results" button — clears output but preserves form inputs (distinct from existing "Reset")
+  - Export Result JSON — downloads full workflow result as timestamped `.json` file
+  - Export Host JSON — downloads host profile section as timestamped `.json` file
+  - Copy Summary Text — copies plain-text summary to clipboard
+  - Import Host JSON — file input in real mode for loading host profiles from the local filesystem (validated via backend)
+  - Contextual recovery hints on errors — specific guidance for missing data-dir, invalid host file, unknown artifact, stale host file
+  - `_lastRunMeta` session tracking — timestamps and parameters for both demo and real runs
+  - 82 new tests: section navigation, session context, export/import, readability, error recovery, CSS additions, HTML structure, no regression
+  - Updated APP-SHELL.md with Phase 18 documentation
+
 - **Phase 17** — Desktop packaging decision and first packaging slice
   - Packaging decision: enhanced local web shell + desktop launcher (Electron/Tauri deferred)
   - `openBrowser()` utility — cross-platform browser opener with URL protocol validation (http/https only)
