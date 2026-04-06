@@ -788,7 +788,7 @@ describe("Session summary extension (buildLanguageServiceSessionSummary)", () =>
     expect(summary.serviceKind).toBe("typescript");
     expect(summary.diagnosticsAvailable).toBe(true);
     expect(summary.unavailableReason).toBeNull();
-    expect(summary.serviceLabel).toContain("Typescript");
+    expect(summary.serviceLabel).toBe("TypeScript Language Service");
   });
 
   it("builds summary for unavailable service", () => {

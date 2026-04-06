@@ -188,10 +188,20 @@ export function buildLanguageServiceSessionSummary(
 ): LanguageServiceSessionSummary {
   const isAvailable = availability.status === "available" || availability.status === "likely_available";
 
+  const SERVICE_LABELS: Record<string, string> = {
+    typescript: "TypeScript",
+    javascript: "JavaScript",
+    python: "Python",
+    php: "PHP",
+    rust: "Rust",
+    go: "Go",
+    none: "No",
+  };
+
   return {
     serviceKind: availability.serviceKind,
     serviceStatus: availability.status,
-    serviceLabel: `${availability.serviceKind === "none" ? "No" : availability.serviceKind.charAt(0).toUpperCase() + availability.serviceKind.slice(1)} Language Service`,
+    serviceLabel: `${SERVICE_LABELS[availability.serviceKind] ?? availability.serviceKind} Language Service`,
     diagnosticsAvailable: isAvailable,
     unavailableReason: availability.unavailableReason,
     lastDiagnosticsErrorCount: diagnosticsSummary?.collected ? diagnosticsSummary.errorCount : null,

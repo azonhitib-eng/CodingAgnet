@@ -63,11 +63,11 @@ export function parseSimpleDiagnostics(
   const lines = output.split("\n").filter((l) => l.trim().length > 0);
 
   // Pattern: file(line,col): severity TS1234: message (tsc)
-  const tscPattern = /^(.+?)\((\d+),(\d+)\):\s*(error|warning)\s+(TS\d+):\s*(.+)$/;
+  const tscPattern = /^([^(]+)\((\d+),(\d+)\):\s(error|warning)\s(TS\d+):\s(.+)$/;
   // Pattern: file:line:col: error/warning: message (generic)
-  const genericPattern = /^(.+?):(\d+):(\d+):\s*(error|warning|note|hint|info|information):\s*(.+)$/;
+  const genericPattern = /^([^:]+):(\d+):(\d+):\s(error|warning|note|hint|info|information):\s(.+)$/;
   // Pattern: file:line: error/warning: message (no column)
-  const noColPattern = /^(.+?):(\d+):\s*(error|warning|note|hint|info|information):\s*(.+)$/;
+  const noColPattern = /^([^:]+):(\d+):\s(error|warning|note|hint|info|information):\s(.+)$/;
 
   for (const line of lines) {
     let match = tscPattern.exec(line);
