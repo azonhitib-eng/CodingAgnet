@@ -371,6 +371,24 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 .command-result.result-completed { background: #f0fff4; border: 1px solid #c3e6cb; color: #155724; }
 .command-result.result-failed { background: #fff5f5; border: 1px solid #f5c6cb; color: #721c24; }
 .command-result.result-validation_failed { background: #fffbeb; border: 1px solid #ffeeba; color: #856404; }
+/* Phase 47: Adapter status bar */
+.adapter-status-bar { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: .5rem 1rem; margin-bottom: .75rem; font-size: .82rem; display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.adapter-status-bar .asb-label { font-weight: 600; color: var(--muted); font-size: .75rem; text-transform: uppercase; }
+.adapter-status-bar .asb-kind { font-weight: 600; }
+.adapter-status-bar .asb-badge { padding: .15rem .5rem; border-radius: 3px; font-size: .75rem; font-weight: 600; }
+.asb-badge-model { background: #d1e7dd; color: #0f5132; }
+.asb-badge-stub { background: #fff3cd; color: #664d03; }
+.asb-badge-echo { background: #e8f4fd; color: #084298; }
+.asb-badge-available { background: #d1e7dd; color: #0f5132; }
+.asb-badge-unavailable { background: #f8d7da; color: #842029; }
+.asb-badge-not-configured { background: #e9ecef; color: var(--muted); }
+.asb-model-name { font-size: .78rem; color: var(--fg); font-family: monospace; }
+/* Phase 47: Agent output card */
+.agent-output-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: .75rem 1rem; margin: .5rem 0; }
+.agent-output-card .aoc-header { display: flex; align-items: center; gap: .5rem; font-size: .78rem; color: var(--muted); margin-bottom: .35rem; flex-wrap: wrap; }
+.agent-output-card .aoc-header .aoc-badge { padding: .1rem .4rem; border-radius: 3px; font-size: .72rem; font-weight: 600; }
+.agent-output-card .aoc-body { font-size: .85rem; line-height: 1.5; white-space: pre-wrap; font-family: monospace; background: #f8f9fa; border-radius: 3px; padding: .5rem .75rem; max-height: 300px; overflow: auto; }
+.agent-output-card .aoc-meta { font-size: .72rem; color: var(--muted); margin-top: .35rem; display: flex; gap: .75rem; flex-wrap: wrap; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -1244,6 +1262,7 @@ const CLIENT_JS = `
     agent_context_assembled: 'progress', agent_context_refreshed: 'progress',
     agent_run_requested: 'info', agent_run_started: 'progress',
     agent_run_completed: 'progress', agent_run_failed: 'failure',
+    agent_adapter_resolved: 'progress', agent_adapter_status_refreshed: 'info',
   };
 
   var CATEGORY_ICONS = {
@@ -1274,6 +1293,7 @@ const CLIENT_JS = `
     agent_context_assembled: 'agent', agent_context_refreshed: 'agent', agent_context_failed: 'agent',
     agent_run_requested: 'agent', agent_run_started: 'agent',
     agent_run_completed: 'agent', agent_run_failed: 'agent',
+    agent_adapter_resolved: 'agent', agent_adapter_status_refreshed: 'agent',
     repo_fingerprinted: 'workspace', profile_selected: 'workspace',
     catalogs_loaded: 'workflow', host_detected: 'workflow', workflow_started: 'workflow',
     stage_completed: 'workflow', requires_approval: 'workflow', blocked: 'workflow',
@@ -1317,6 +1337,7 @@ const CLIENT_JS = `
     agent_context_failed: 'failure_card',
     agent_run_requested: 'lifecycle_card', agent_run_started: 'lifecycle_card',
     agent_run_completed: 'success_card', agent_run_failed: 'failure_card',
+    agent_adapter_resolved: 'lifecycle_card', agent_adapter_status_refreshed: 'lifecycle_card',
   };
 
   var CARD_CSS = {
@@ -1336,6 +1357,139 @@ const CLIENT_JS = `
 
   function classifyActor(kind) { return KIND_TO_ACTOR[kind] || 'system'; }
   function classifyCard(kind) { return KIND_TO_CARD[kind] || 'message'; }
+
+  // ── Adapter status helpers (Phase 47) ─────────────────────────────
+
+  var ADAPTER_KIND_LABELS = {
+    stub: 'Stub (Demo)',
+    openai_compatible: 'OpenAI-Compatible API',
+    echo_test: 'Echo Test',
+  };
+
+  var ADAPTER_AVAILABILITY_LABELS = {
+    configured_available: 'Available',
+    configured_unavailable: 'Unavailable',
+    not_configured: 'Not Configured',
+    unsupported: 'Unsupported',
+  };
+
+  function adapterKindBadgeClass(kind) {
+    if (kind === 'openai_compatible') return 'asb-badge asb-badge-model';
+    if (kind === 'echo_test') return 'asb-badge asb-badge-echo';
+    return 'asb-badge asb-badge-stub';
+  }
+
+  function adapterAvailBadgeClass(avail) {
+    if (avail === 'configured_available') return 'asb-badge asb-badge-available';
+    if (avail === 'configured_unavailable') return 'asb-badge asb-badge-unavailable';
+    return 'asb-badge asb-badge-not-configured';
+  }
+
+  function adapterModelBackedLabel(isModelBacked, kind) {
+    if (isModelBacked) return 'Model-Backed';
+    if (kind === 'echo_test') return 'Echo Test (Not Model Output)';
+    return 'Stub (Not Model Output)';
+  }
+
+  function renderAdapterStatusInline(status) {
+    var html = '<div class="cpb-group"><span class="cpb-label">\\ud83e\\udde0 Adapter:</span>';
+    var kindLabel = ADAPTER_KIND_LABELS[status.kind] || status.kind;
+    html += '<span class="' + adapterKindBadgeClass(status.kind) + '">' + esc(kindLabel) + '</span>';
+    var availLabel = ADAPTER_AVAILABILITY_LABELS[status.availability] || status.availability;
+    html += '<span class="' + adapterAvailBadgeClass(status.availability) + '">' + esc(availLabel) + '</span>';
+    if (status.isModelBacked !== null && status.isModelBacked !== undefined) {
+      var mbLabel = adapterModelBackedLabel(status.isModelBacked, status.kind);
+      var mbClass = status.isModelBacked ? 'asb-badge asb-badge-model' : 'asb-badge asb-badge-stub';
+      html += '<span class="' + mbClass + '">' + esc(mbLabel) + '</span>';
+    }
+    if (status.modelName) {
+      html += '<span class="asb-model-name">' + esc(status.modelName) + '</span>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderAgentOutputCard(msg) {
+    var d = msg.detail || {};
+    var isModel = d.isModelGenerated === true;
+    var adapterKind = d.adapterKind || 'unknown';
+    var kindLabel = ADAPTER_KIND_LABELS[adapterKind] || adapterKind;
+    var outputPreview = d.outputPreview || '';
+    var durationMs = d.durationMs;
+    var agentName = d.agentName || 'agent';
+    var taskKind = d.taskKind || '';
+
+    // Header badges
+    var html = '<div class="agent-output-card">';
+    html += '<div class="aoc-header">';
+    html += '<strong>' + esc(agentName) + '</strong>';
+    if (taskKind) html += '<span style="color:var(--muted)">\\u2014 ' + esc(taskKind) + '</span>';
+    // Model vs Stub badge
+    if (isModel) {
+      html += '<span class="aoc-badge asb-badge-model">Model Output</span>';
+    } else if (adapterKind === 'echo_test') {
+      html += '<span class="aoc-badge asb-badge-echo">Echo Test Output</span>';
+    } else {
+      html += '<span class="aoc-badge asb-badge-stub">Stub Output</span>';
+    }
+    html += '<span class="aoc-badge" style="background:#f0f4f8;color:var(--muted)">' + esc(kindLabel) + '</span>';
+    html += '</div>';
+
+    // Output body
+    if (outputPreview) {
+      html += '<div class="aoc-body">' + esc(outputPreview) + '</div>';
+    }
+
+    // Metadata row
+    html += '<div class="aoc-meta">';
+    if (msg.timestamp) html += '<span>\\ud83d\\udd52 ' + new Date(msg.timestamp).toLocaleTimeString() + '</span>';
+    if (durationMs !== null && durationMs !== undefined) html += '<span>\\u23f1 ' + durationMs + 'ms</span>';
+    if (d.runId) html += '<span>ID: ' + esc(String(d.runId).substring(0, 8)) + '</span>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderAgentErrorCard(msg) {
+    var d = msg.detail || {};
+    var errorCode = d.errorCode || 'UNKNOWN';
+    var errorMessage = d.errorMessage || msg.message || 'Agent run failed';
+
+    var html = '<div class="console-card-failure">';
+    html += '<div class="cc-title">\\u274c Agent Run Failed</div>';
+    html += '<div class="cc-body">';
+    html += '<strong>' + esc(errorCode) + '</strong> \\u2014 ' + esc(errorMessage);
+    html += '</div>';
+    html += '<div class="aoc-meta">';
+    if (msg.timestamp) html += '<span>\\ud83d\\udd52 ' + new Date(msg.timestamp).toLocaleTimeString() + '</span>';
+    if (d.runId) html += '<span>ID: ' + esc(String(d.runId).substring(0, 8)) + '</span>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderAdapterResolvedCard(msg) {
+    var d = msg.detail || {};
+    var adapterKind = d.adapterKind || 'unknown';
+    var kindLabel = ADAPTER_KIND_LABELS[adapterKind] || adapterKind;
+    var isModel = d.isModelBacked === true;
+    var avail = d.availability || 'not_configured';
+    var availLabel = ADAPTER_AVAILABILITY_LABELS[avail] || avail;
+
+    var html = '<div class="adapter-status-bar">';
+    html += '<span class="asb-label">\\ud83e\\udde0 Adapter Resolved</span>';
+    html += '<span class="' + adapterKindBadgeClass(adapterKind) + '">' + esc(kindLabel) + '</span>';
+    html += '<span class="' + adapterAvailBadgeClass(avail) + '">' + esc(availLabel) + '</span>';
+    if (isModel) {
+      html += '<span class="asb-badge asb-badge-model">Model-Backed</span>';
+    } else {
+      html += '<span class="asb-badge asb-badge-stub">' + esc(adapterModelBackedLabel(false, adapterKind)) + '</span>';
+    }
+    if (d.modelName) html += '<span class="asb-model-name">' + esc(d.modelName) + '</span>';
+    if (d.label) html += '<span style="font-size:.78rem;color:var(--muted)">' + esc(d.label) + '</span>';
+    html += '</div>';
+    return html;
+  }
 
   // ── Console rendering (Phase 24) ──────────────────────────────────
 
@@ -1377,6 +1531,10 @@ const CLIENT_JS = `
         html += '<span class="cpb-item ' + (a.ready ? 'cpb-ready' : 'cpb-pending') + '">' + esc(a.label) + '</span>';
       }
       html += '</div>';
+    }
+    // Adapter status (Phase 47)
+    if (presence.adapterStatus) {
+      html += renderAdapterStatusInline(presence.adapterStatus);
     }
     $consolePresenceBar.innerHTML = html;
     $consolePresenceBar.style.display = '';
@@ -1495,6 +1653,17 @@ const CLIENT_JS = `
     var cat = msg.category || classifyEventKind(msg.kind);
     var catIcon = CATEGORY_ICONS[cat] || '\\u2139\\ufe0f';
     var time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+
+    // Phase 47: Specialized agent output/error/adapter cards
+    if (msg.kind === 'agent_run_completed' && msg.detail) {
+      return renderAgentOutputCard(msg);
+    }
+    if (msg.kind === 'agent_run_failed' && msg.detail) {
+      return renderAgentErrorCard(msg);
+    }
+    if ((msg.kind === 'agent_adapter_resolved' || msg.kind === 'agent_adapter_status_refreshed') && msg.detail) {
+      return renderAdapterResolvedCard(msg);
+    }
 
     // Action-oriented cards for high-value states
     if (cardType !== 'message') {
