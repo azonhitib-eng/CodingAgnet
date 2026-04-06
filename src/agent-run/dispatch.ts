@@ -28,6 +28,7 @@ import { generateAgentRunId, buildAgentRunSummary, ALL_TASK_KINDS } from "./type
 import { selectAgent, getDefaultTaskDescription } from "./selection.js";
 import type { AgentExecutionAdapter } from "./adapter.js";
 import type { AgentSelectionCriteria } from "./selection.js";
+import { isStreamingAdapter } from "./streaming.js";
 
 /* ------------------------------------------------------------------ */
 /*  Dispatch dependencies (injected)                                   */
@@ -101,8 +102,12 @@ function defaultContextInput(
  * 1. Validate input
  * 2. Select agent (explicit ID or best-fit)
  * 3. Assemble agent context
- * 4. Execute via adapter
+ * 4. Execute via adapter (streaming if supported and requested)
  * 5. Return result
+ *
+ * Phase 49: Optional onChunk callback enables streaming output.
+ * If the adapter supports streaming and onChunk is provided,
+ * the streaming path is used. Otherwise falls back to full-response.
  *
  * Deterministic: same inputs + same adapter → same result structure.
  * No hidden retries or background loops.
@@ -110,6 +115,7 @@ function defaultContextInput(
 export async function dispatchAgentTask(
   input: AgentRunInput,
   deps: AgentRunDispatchDeps,
+  onChunk?: (chunk: import("./streaming.js").StreamChunk) => void | Promise<void>,
 ): Promise<AgentRunResult> {
   const runId: AgentRunId = generateAgentRunId();
   const startedAt = new Date().toISOString();
@@ -168,9 +174,14 @@ export async function dispatchAgentTask(
     requestedAt: startedAt,
   };
 
-  // Step 4: Execute via adapter
+  // Step 4: Execute via adapter (streaming if supported and callback provided)
   try {
-    const output = await deps.adapter.execute(request);
+    let output;
+    if (onChunk && isStreamingAdapter(deps.adapter)) {
+      output = await deps.adapter.executeStreaming(request, onChunk);
+    } else {
+      output = await deps.adapter.execute(request);
+    }
     const finishedAt = new Date().toISOString();
 
     return {

@@ -87,6 +87,12 @@ const KIND_TO_ACTOR: Record<string, ConsoleActor> = {
   agent_adapter_resolved: "agent",
   agent_adapter_status_refreshed: "agent",
 
+  // Streaming (Phase 49)
+  agent_run_stream_started: "agent",
+  agent_run_stream_chunk: "agent",
+  agent_run_stream_completed: "agent",
+  agent_run_stream_failed: "agent",
+
   // Fingerprinting / profile (Phase 38)
   repo_fingerprinted: "workspace",
   profile_selected: "workspace",
@@ -208,6 +214,12 @@ const KIND_TO_CARD: Record<string, ConsoleCardType> = {
   // Execution adapter (Phase 46–47)
   agent_adapter_resolved: "lifecycle_card",
   agent_adapter_status_refreshed: "lifecycle_card",
+
+  // Streaming (Phase 49)
+  agent_run_stream_started: "lifecycle_card",
+  agent_run_stream_chunk: "message",
+  agent_run_stream_completed: "success_card",
+  agent_run_stream_failed: "failure_card",
 };
 
 /** Classify an event kind to its card type. */

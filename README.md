@@ -226,6 +226,7 @@ For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **[docs/EXECUTION-ADAPTER.md](docs/EXECUTION-ADAPTER.md)** — Model-backed execution adapter: OpenAI-compatible API, configuration, and availability
 - **[docs/ADAPTER-DISPLAY.md](docs/ADAPTER-DISPLAY.md)** — Shell adapter status display and agent output rendering
 - **[docs/ADAPTER-WIRING.md](docs/ADAPTER-WIRING.md)** — End-to-end execution adapter wiring and shell agent run path
+- **[docs/STREAMING.md](docs/STREAMING.md)** — Streaming adapter output: progressive model output in the shell
 - **[docs/ELECTRON.md](docs/ELECTRON.md)** — Electron desktop wrapper
 - **[docs/PACKAGING.md](docs/PACKAGING.md)** — Packaging and desktop launcher decisions
 - **[docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)** — Code-signing strategy and release readiness

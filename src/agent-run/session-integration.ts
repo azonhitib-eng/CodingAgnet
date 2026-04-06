@@ -11,6 +11,7 @@ import { createEvent } from "../session/events.js";
 import type { AgentRunResult, AgentRunSummary } from "./types.js";
 import { buildAgentRunSummary } from "./types.js";
 import type { AdapterStatus } from "./adapter-config.js";
+import { getStreamingCapability } from "./streaming.js";
 
 /* ------------------------------------------------------------------ */
 /*  Event kinds                                                        */
@@ -23,7 +24,11 @@ export type AgentRunEventKind =
   | "agent_run_completed"
   | "agent_run_failed"
   | "agent_adapter_resolved"
-  | "agent_adapter_status_refreshed";
+  | "agent_adapter_status_refreshed"
+  | "agent_run_stream_started"
+  | "agent_run_stream_chunk"
+  | "agent_run_stream_completed"
+  | "agent_run_stream_failed";
 
 /** All agent run event kinds. */
 export const AGENT_RUN_EVENT_KINDS: readonly AgentRunEventKind[] = [
@@ -33,6 +38,10 @@ export const AGENT_RUN_EVENT_KINDS: readonly AgentRunEventKind[] = [
   "agent_run_failed",
   "agent_adapter_resolved",
   "agent_adapter_status_refreshed",
+  "agent_run_stream_started",
+  "agent_run_stream_chunk",
+  "agent_run_stream_completed",
+  "agent_run_stream_failed",
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -136,6 +145,75 @@ export function agentAdapterStatusRefreshed(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Streaming event factories (Phase 49)                               */
+/* ------------------------------------------------------------------ */
+
+/** Create an "agent run stream started" event. */
+export function agentRunStreamStarted(
+  runId: string,
+  adapterKind: string,
+  isModelBacked: boolean,
+): SessionEvent {
+  return createEvent(
+    "agent_run_stream_started",
+    `Streaming started: ${adapterKind} adapter${isModelBacked ? " (model-backed)" : ""}`,
+    { runId, adapterKind, isModelBacked },
+  );
+}
+
+/**
+ * Create an "agent run stream chunk" event.
+ *
+ * This groups chunks sensibly — it is NOT emitted for every token.
+ * The caller should batch/throttle before emitting this event.
+ */
+export function agentRunStreamChunk(
+  runId: string,
+  chunkIndex: number,
+  contentPreview: string,
+  totalCharsReceived: number,
+): SessionEvent {
+  return createEvent(
+    "agent_run_stream_chunk",
+    `Stream update: ${totalCharsReceived} chars received`,
+    {
+      runId,
+      chunkIndex,
+      contentPreview: contentPreview.substring(0, 100),
+      totalCharsReceived,
+    },
+  );
+}
+
+/** Create an "agent run stream completed" event. */
+export function agentRunStreamCompleted(
+  runId: string,
+  totalChunks: number,
+  totalChars: number,
+  durationMs: number,
+  finishReason: string | null,
+): SessionEvent {
+  return createEvent(
+    "agent_run_stream_completed",
+    `Streaming completed: ${totalChunks} chunks, ${totalChars} chars in ${durationMs}ms`,
+    { runId, totalChunks, totalChars, durationMs, finishReason },
+  );
+}
+
+/** Create an "agent run stream failed" event. */
+export function agentRunStreamFailed(
+  runId: string,
+  errorMessage: string,
+  chunksReceivedBeforeError: number,
+): SessionEvent {
+  return createEvent(
+    "agent_run_stream_failed",
+    `Streaming failed after ${chunksReceivedBeforeError} chunks: ${errorMessage}`,
+    { runId, errorMessage, chunksReceivedBeforeError },
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Event filtering                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -188,6 +266,10 @@ export interface AgentRunSessionSummary {
   readonly activeAdapterIsModelBacked: boolean | null;
   /** Active adapter model name (Phase 46). */
   readonly activeAdapterModelName: string | null;
+  /** Whether the last run used streaming (Phase 49). */
+  readonly lastAgentRunStreamed: boolean | null;
+  /** Streaming capability of the active adapter (Phase 49). */
+  readonly activeAdapterStreamingCapability: string | null;
 }
 
 /** Build agent run session summary from a result and running count. */
@@ -195,7 +277,10 @@ export function buildAgentRunSessionSummary(
   result: AgentRunResult | null,
   totalRuns: number,
   adapterStatus?: AdapterStatus | null,
+  adapter?: unknown,
 ): AgentRunSessionSummary {
+  const streamingCapability = getStreamingCapability(adapter);
+
   if (!result) {
     return {
       agentRunExecuted: false,
@@ -212,10 +297,13 @@ export function buildAgentRunSessionSummary(
       activeAdapterAvailability: adapterStatus?.availability ?? null,
       activeAdapterIsModelBacked: adapterStatus?.isModelBacked ?? null,
       activeAdapterModelName: adapterStatus?.modelName ?? null,
+      lastAgentRunStreamed: null,
+      activeAdapterStreamingCapability: streamingCapability,
     };
   }
 
   const summary = buildAgentRunSummary(result);
+  const wasStreamed = result.output?.structuredData?.streamed === true;
   return {
     agentRunExecuted: true,
     lastAgentRunId: summary.runId,
@@ -231,6 +319,8 @@ export function buildAgentRunSessionSummary(
     activeAdapterAvailability: adapterStatus?.availability ?? null,
     activeAdapterIsModelBacked: adapterStatus?.isModelBacked ?? null,
     activeAdapterModelName: adapterStatus?.modelName ?? null,
+    lastAgentRunStreamed: wasStreamed,
+    activeAdapterStreamingCapability: streamingCapability,
   };
 }
 

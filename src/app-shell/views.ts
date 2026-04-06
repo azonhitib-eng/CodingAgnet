@@ -389,6 +389,16 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 .agent-output-card .aoc-header .aoc-badge { padding: .1rem .4rem; border-radius: 3px; font-size: .72rem; font-weight: 600; }
 .agent-output-card .aoc-body { font-size: .85rem; line-height: 1.5; white-space: pre-wrap; font-family: monospace; background: #f8f9fa; border-radius: 3px; padding: .5rem .75rem; max-height: 300px; overflow: auto; }
 .agent-output-card .aoc-meta { font-size: .72rem; color: var(--muted); margin-top: .35rem; display: flex; gap: .75rem; flex-wrap: wrap; }
+
+/* Phase 49: Streaming output cards */
+.stream-status-bar { display: flex; align-items: center; gap: .5rem; padding: .4rem .75rem; background: #e8f4f8; border-radius: var(--card-radius); border: 1px solid #bee5eb; margin: .35rem 0; font-size: .78rem; flex-wrap: wrap; }
+.stream-status-bar .ssb-label { font-weight: 600; color: #0c5460; }
+.stream-chunk-card { display: flex; align-items: center; gap: .75rem; padding: .25rem .75rem; background: #f8f9fa; border-left: 3px solid #17a2b8; margin: .15rem 0; font-size: .75rem; color: var(--muted); }
+.stream-chunk-card .scc-progress { font-weight: 600; }
+.stream-chunk-card .scc-preview { font-family: monospace; font-size: .72rem; color: #555; }
+.stream-complete-card { background: var(--card-bg); border: 1px solid #28a745; border-radius: var(--card-radius); padding: .5rem .75rem; margin: .35rem 0; }
+.stream-complete-card .aoc-header { display: flex; align-items: center; gap: .5rem; font-size: .78rem; color: #155724; margin-bottom: .25rem; }
+.stream-complete-card .aoc-meta { font-size: .72rem; color: var(--muted); display: flex; gap: .75rem; flex-wrap: wrap; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -1263,6 +1273,8 @@ const CLIENT_JS = `
     agent_run_requested: 'info', agent_run_started: 'progress',
     agent_run_completed: 'progress', agent_run_failed: 'failure',
     agent_adapter_resolved: 'progress', agent_adapter_status_refreshed: 'info',
+    agent_run_stream_started: 'progress', agent_run_stream_chunk: 'info',
+    agent_run_stream_completed: 'progress', agent_run_stream_failed: 'failure',
   };
 
   var CATEGORY_ICONS = {
@@ -1294,6 +1306,8 @@ const CLIENT_JS = `
     agent_run_requested: 'agent', agent_run_started: 'agent',
     agent_run_completed: 'agent', agent_run_failed: 'agent',
     agent_adapter_resolved: 'agent', agent_adapter_status_refreshed: 'agent',
+    agent_run_stream_started: 'agent', agent_run_stream_chunk: 'agent',
+    agent_run_stream_completed: 'agent', agent_run_stream_failed: 'agent',
     repo_fingerprinted: 'workspace', profile_selected: 'workspace',
     catalogs_loaded: 'workflow', host_detected: 'workflow', workflow_started: 'workflow',
     stage_completed: 'workflow', requires_approval: 'workflow', blocked: 'workflow',
@@ -1338,6 +1352,8 @@ const CLIENT_JS = `
     agent_run_requested: 'lifecycle_card', agent_run_started: 'lifecycle_card',
     agent_run_completed: 'success_card', agent_run_failed: 'failure_card',
     agent_adapter_resolved: 'lifecycle_card', agent_adapter_status_refreshed: 'lifecycle_card',
+    agent_run_stream_started: 'lifecycle_card', agent_run_stream_chunk: 'message',
+    agent_run_stream_completed: 'success_card', agent_run_stream_failed: 'failure_card',
   };
 
   var CARD_CSS = {
@@ -1487,6 +1503,75 @@ const CLIENT_JS = `
     }
     if (d.modelName) html += '<span class="asb-model-name">' + esc(d.modelName) + '</span>';
     if (d.label) html += '<span style="font-size:.78rem;color:var(--muted)">' + esc(d.label) + '</span>';
+    html += '</div>';
+    return html;
+  }
+
+  // ── Streaming output cards (Phase 49) ─────────────────────────────
+
+  function renderStreamStartedCard(msg) {
+    var d = msg.detail || {};
+    var adapterKind = d.adapterKind || 'unknown';
+    var isModel = d.isModelBacked === true;
+    var kindLabel = ADAPTER_KIND_LABELS[adapterKind] || adapterKind;
+
+    var html = '<div class="stream-status-bar">';
+    html += '<span class="ssb-label">\\u25b6\\ufe0f Streaming Started</span>';
+    html += '<span class="asb-badge">' + esc(kindLabel) + '</span>';
+    if (isModel) {
+      html += '<span class="asb-badge asb-badge-model">Model Streaming</span>';
+    } else {
+      html += '<span class="asb-badge asb-badge-stub">Non-Model</span>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderStreamChunkCard(msg) {
+    var d = msg.detail || {};
+    var totalChars = d.totalCharsReceived || 0;
+    var preview = d.contentPreview || '';
+
+    var html = '<div class="stream-chunk-card">';
+    html += '<span class="scc-progress">\\u2699\\ufe0f ' + totalChars + ' chars received</span>';
+    if (preview) html += '<span class="scc-preview">' + esc(preview.substring(0, 60)) + (preview.length > 60 ? '\\u2026' : '') + '</span>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderStreamCompletedCard(msg) {
+    var d = msg.detail || {};
+    var totalChunks = d.totalChunks || 0;
+    var totalChars = d.totalChars || 0;
+    var durationMs = d.durationMs;
+    var finishReason = d.finishReason || '';
+
+    var html = '<div class="stream-complete-card">';
+    html += '<div class="aoc-header">';
+    html += '<span>\\u2705 Streaming Complete</span>';
+    html += '<span class="asb-badge asb-badge-model">Streamed</span>';
+    html += '</div>';
+    html += '<div class="aoc-meta">';
+    html += '<span>' + totalChunks + ' chunks</span>';
+    html += '<span>' + totalChars + ' chars</span>';
+    if (durationMs !== null && durationMs !== undefined) html += '<span>\\u23f1 ' + durationMs + 'ms</span>';
+    if (finishReason) html += '<span>Finish: ' + esc(finishReason) + '</span>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderStreamFailedCard(msg) {
+    var d = msg.detail || {};
+    var errorMessage = d.errorMessage || msg.message || 'Streaming failed';
+    var chunksReceived = d.chunksReceivedBeforeError || 0;
+
+    var html = '<div class="console-card-failure">';
+    html += '<div class="cc-title">\\u274c Streaming Failed</div>';
+    html += '<div class="cc-body">';
+    html += esc(errorMessage);
+    if (chunksReceived > 0) html += ' (' + chunksReceived + ' chunks received before error)';
+    html += '</div>';
     html += '</div>';
     return html;
   }
@@ -1663,6 +1748,20 @@ const CLIENT_JS = `
     }
     if ((msg.kind === 'agent_adapter_resolved' || msg.kind === 'agent_adapter_status_refreshed') && msg.detail) {
       return renderAdapterResolvedCard(msg);
+    }
+
+    // Phase 49: Streaming output cards
+    if (msg.kind === 'agent_run_stream_started' && msg.detail) {
+      return renderStreamStartedCard(msg);
+    }
+    if (msg.kind === 'agent_run_stream_chunk' && msg.detail) {
+      return renderStreamChunkCard(msg);
+    }
+    if (msg.kind === 'agent_run_stream_completed' && msg.detail) {
+      return renderStreamCompletedCard(msg);
+    }
+    if (msg.kind === 'agent_run_stream_failed' && msg.detail) {
+      return renderStreamFailedCard(msg);
     }
 
     // Action-oriented cards for high-value states
