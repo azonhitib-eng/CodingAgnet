@@ -32,7 +32,10 @@ export type CommandId =
   | "list_mcp_tools"
   | "inspect_mcp_tool"
   | "invoke_mcp_tool"
-  | "attach_github_mcp";
+  | "attach_github_mcp"
+  | "inspect_workspace_context"
+  | "inspect_file_context"
+  | "refresh_context_summary";
 
 /** Logical category grouping for commands. */
 export type CommandCategory =
@@ -43,7 +46,8 @@ export type CommandCategory =
   | "workflow"
   | "session"
   | "toolchain"
-  | "language_service";
+  | "language_service"
+  | "language_context";
 
 /* ------------------------------------------------------------------ */
 /*  Command definition (static metadata)                               */
@@ -148,6 +152,14 @@ export interface AttachGitHubMcpPayload {
   readonly token?: string;
 }
 
+export type InspectWorkspaceContextPayload = Record<string, never>;
+
+export interface InspectFileContextPayload {
+  readonly filePath: string;
+}
+
+export type RefreshContextSummaryPayload = Record<string, never>;
+
 /** Discriminated union of all command payloads. */
 export type CommandPayload =
   | { readonly commandId: "open_workspace"; readonly data: OpenWorkspacePayload }
@@ -169,7 +181,10 @@ export type CommandPayload =
   | { readonly commandId: "list_mcp_tools"; readonly data: ListMcpToolsPayload }
   | { readonly commandId: "inspect_mcp_tool"; readonly data: InspectMcpToolPayload }
   | { readonly commandId: "invoke_mcp_tool"; readonly data: InvokeMcpToolPayload }
-  | { readonly commandId: "attach_github_mcp"; readonly data: AttachGitHubMcpPayload };
+  | { readonly commandId: "attach_github_mcp"; readonly data: AttachGitHubMcpPayload }
+  | { readonly commandId: "inspect_workspace_context"; readonly data: InspectWorkspaceContextPayload }
+  | { readonly commandId: "inspect_file_context"; readonly data: InspectFileContextPayload }
+  | { readonly commandId: "refresh_context_summary"; readonly data: RefreshContextSummaryPayload };
 
 /* ------------------------------------------------------------------ */
 /*  Validation                                                         */
@@ -361,6 +376,24 @@ export const COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
     label: "Attach GitHub MCP",
     description: "Attach a GitHub MCP server and register known GitHub tools.",
   },
+  {
+    id: "inspect_workspace_context",
+    category: "language_context",
+    label: "Inspect Workspace Context",
+    description: "Inspect profile-aware workspace context: entrypoints, config, tests, notable symbols.",
+  },
+  {
+    id: "inspect_file_context",
+    category: "language_context",
+    label: "Inspect File Context",
+    description: "Inspect context for a specific file: symbols, imports, exports, role.",
+  },
+  {
+    id: "refresh_context_summary",
+    category: "language_context",
+    label: "Refresh Context Summary",
+    description: "Re-collect workspace context summary using current profile and file inventory.",
+  },
 ] as const;
 
 /** Lookup a command definition by id. */
@@ -381,6 +414,7 @@ export const ALL_COMMAND_CATEGORIES: readonly CommandCategory[] = [
   "session",
   "toolchain",
   "language_service",
+  "language_context",
 ] as const;
 
 /** Group command definitions by category. */

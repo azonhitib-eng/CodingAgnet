@@ -184,6 +184,26 @@ export interface CommandExecutorDeps {
     error?: string;
     detail?: Record<string, unknown>;
   }>;
+  /** Inspect workspace context. Returns {ok, error?, detail?}. */
+  readonly inspectWorkspaceContext?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Inspect file context. Returns {ok, error?, detail?}. */
+  readonly inspectFileContext?: (
+    filePath: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Refresh context summary. Returns {ok, error?, detail?}. */
+  readonly refreshContextSummary?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -489,6 +509,36 @@ async function dispatchCommand(
       return res.ok
         ? makeResult(payload.commandId, "completed", "GitHub MCP server attached.", res.detail)
         : makeResult(payload.commandId, "failed", res.error ?? "GitHub MCP attachment failed.");
+    }
+
+    case "inspect_workspace_context": {
+      if (!deps.inspectWorkspaceContext) {
+        return makeResult(payload.commandId, "failed", "Workspace context inspection not available.");
+      }
+      const res = await deps.inspectWorkspaceContext();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Workspace context inspected.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Workspace context inspection failed.");
+    }
+
+    case "inspect_file_context": {
+      if (!deps.inspectFileContext) {
+        return makeResult(payload.commandId, "failed", "File context inspection not available.");
+      }
+      const res = await deps.inspectFileContext(payload.data.filePath);
+      return res.ok
+        ? makeResult(payload.commandId, "completed", `File context inspected: ${payload.data.filePath}`, res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "File context inspection failed.");
+    }
+
+    case "refresh_context_summary": {
+      if (!deps.refreshContextSummary) {
+        return makeResult(payload.commandId, "failed", "Context summary refresh not available.");
+      }
+      const res = await deps.refreshContextSummary();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Context summary refreshed.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Context summary refresh failed.");
     }
   }
 }

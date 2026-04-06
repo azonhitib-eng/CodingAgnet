@@ -205,6 +205,39 @@ function checkAttachGitHubMcp(ctx: CommandContextState): CommandAvailability {
   return { commandId: "attach_github_mcp", available: true };
 }
 
+function checkInspectWorkspaceContext(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "inspect_workspace_context", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "inspect_workspace_context", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "inspect_workspace_context", available: true };
+}
+
+function checkInspectFileContext(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "inspect_file_context", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "inspect_file_context", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "inspect_file_context", available: true };
+}
+
+function checkRefreshContextSummary(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "refresh_context_summary", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "refresh_context_summary", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "refresh_context_summary", available: true };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Availability dispatcher                                            */
 /* ------------------------------------------------------------------ */
@@ -230,6 +263,9 @@ const CHECKERS: Record<CommandId, (ctx: CommandContextState) => CommandAvailabil
   inspect_mcp_tool: checkInspectMcpTool,
   invoke_mcp_tool: checkInvokeMcpTool,
   attach_github_mcp: checkAttachGitHubMcp,
+  inspect_workspace_context: checkInspectWorkspaceContext,
+  inspect_file_context: checkInspectFileContext,
+  refresh_context_summary: checkRefreshContextSummary,
 };
 
 /** Get availability of a single command given the current state. */

@@ -30,3 +30,4 @@ export * from "./commands/index.js";
 export * from "./fingerprint/index.js";
 export * from "./toolchain/index.js";
 export * from "./language-service/index.js";
+export * from "./language-context/index.js";

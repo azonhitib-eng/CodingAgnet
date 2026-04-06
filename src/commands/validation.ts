@@ -20,6 +20,7 @@ import type {
   RunWorkspaceCheckPayload,
   InspectMcpToolPayload,
   InvokeMcpToolPayload,
+  InspectFileContextPayload,
 } from "./types.js";
 
 /* ------------------------------------------------------------------ */
@@ -183,6 +184,14 @@ export function validateInvokeMcpTool(data: InvokeMcpToolPayload): CommandValida
   return errors.length > 0 ? invalid(errors) : VALID_OK;
 }
 
+export function validateInspectFileContext(data: InspectFileContextPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.filePath)) {
+    errors.push(fieldError("filePath", "File path is required."));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Top-level dispatcher                                               */
 /* ------------------------------------------------------------------ */
@@ -230,5 +239,11 @@ export function validateCommand(payload: CommandPayload): CommandValidationResul
       return validateInvokeMcpTool(payload.data);
     case "attach_github_mcp":
       return VALID_OK; // Optional token, no required fields.
+    case "inspect_workspace_context":
+      return VALID_OK; // No inputs required.
+    case "inspect_file_context":
+      return validateInspectFileContext(payload.data);
+    case "refresh_context_summary":
+      return VALID_OK; // No inputs required.
   }
 }
