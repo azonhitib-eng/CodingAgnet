@@ -2,6 +2,7 @@
  * OpenAI-compatible execution adapter.
  *
  * Phase 46: Model-backed execution adapter boundary.
+ * Phase 49: Streaming support via SSE chat/completions with stream=true.
  *
  * This adapter works with any provider that exposes a chat-completions-compatible
  * REST endpoint: OpenAI, Azure OpenAI, Ollama, LM Studio, vLLM, etc.
@@ -20,6 +21,7 @@
 import type { AgentRunRequest, AgentRunOutput } from "./types.js";
 import type { AgentExecutionAdapter } from "./adapter.js";
 import type { OpenAIAdapterConfig } from "./adapter-config.js";
+import type { StreamingExecutionAdapter, StreamChunkCallback, StreamChunk } from "./streaming.js";
 
 /* ------------------------------------------------------------------ */
 /*  Chat completions request/response shapes                           */
@@ -37,6 +39,7 @@ interface ChatCompletionsRequest {
   readonly messages: readonly ChatMessage[];
   readonly max_tokens: number;
   readonly temperature: number;
+  readonly stream?: boolean;
 }
 
 /** Minimal response body from the chat completions API. */
@@ -113,6 +116,27 @@ export type FetchFn = (
   },
 ) => Promise<{ ok: boolean; status: number; statusText: string; json: () => Promise<unknown> }>;
 
+/**
+ * Extended fetch function type for streaming support.
+ *
+ * Returns an object with a `body` ReadableStream for SSE parsing.
+ * Phase 49: Used by executeStreaming() for streaming chat completions.
+ */
+export type StreamingFetchFn = (
+  url: string,
+  init: {
+    method: string;
+    headers: Record<string, string>;
+    body: string;
+    signal?: AbortSignal;
+  },
+) => Promise<{
+  ok: boolean;
+  status: number;
+  statusText: string;
+  body: ReadableStream<Uint8Array> | null;
+}>;
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -136,22 +160,27 @@ function stripTrailingSlashes(url: string): string {
  * Uses native fetch() to call any chat-completions-compatible API.
  * Supports: OpenAI, Azure OpenAI, Ollama, LM Studio, vLLM, etc.
  *
+ * Phase 49: Also implements StreamingExecutionAdapter for progressive output.
+ *
  * This is honest:
  * - isModelBacked = true
  * - adapterKind = "openai_compatible"
  * - The response includes the backend model name
  * - Errors are structured and explicit
  */
-export class OpenAIExecutionAdapter implements AgentExecutionAdapter {
+export class OpenAIExecutionAdapter implements AgentExecutionAdapter, StreamingExecutionAdapter {
   readonly kind = "openai_compatible";
   readonly isModelBacked = true;
+  readonly supportsStreaming = true as const;
 
   private readonly config: Readonly<OpenAIAdapterConfig>;
   private readonly fetchFn: FetchFn;
+  private readonly streamingFetchFn: StreamingFetchFn | null;
 
-  constructor(config: OpenAIAdapterConfig, fetchFn?: FetchFn) {
+  constructor(config: OpenAIAdapterConfig, fetchFn?: FetchFn, streamingFetchFn?: StreamingFetchFn) {
     this.config = config;
     this.fetchFn = fetchFn ?? (globalThis.fetch as unknown as FetchFn);
+    this.streamingFetchFn = streamingFetchFn ?? null;
   }
 
   /** The configured model name. */
@@ -251,6 +280,206 @@ export class OpenAIExecutionAdapter implements AgentExecutionAdapter {
         completionTokens: body.usage?.completion_tokens ?? null,
         totalTokens: body.usage?.total_tokens ?? null,
         backendUrl: this.config.baseUrl,
+      },
+      durationMs,
+    };
+  }
+
+  /**
+   * Execute a bounded task with streaming output.
+   *
+   * Phase 49: Uses the chat completions API with stream=true.
+   * Parses SSE (Server-Sent Events) from the response body.
+   *
+   * If no streaming fetch function is available, falls back to
+   * the non-streaming execute() method.
+   *
+   * Stream lifecycle:
+   *   1. onChunk({ type: "start" })
+   *   2. onChunk({ type: "delta", content: "..." }) — repeated
+   *   3. onChunk({ type: "complete", content: fullText })
+   *
+   * On error: onChunk({ type: "error" }) then throw.
+   */
+  async executeStreaming(
+    request: AgentRunRequest,
+    onChunk: StreamChunkCallback,
+  ): Promise<AgentRunOutput> {
+    // If no streaming fetch function, fall back to non-streaming
+    if (!this.streamingFetchFn) {
+      return this.execute(request);
+    }
+
+    const start = Date.now();
+    const messages = buildMessages(request);
+    const maxTokens = this.config.maxTokens ?? 1024;
+    const temperature = this.config.temperature ?? 0.2;
+    const timeoutMs = this.config.timeoutMs ?? 30_000;
+
+    const requestBody: ChatCompletionsRequest = {
+      model: this.config.model,
+      messages,
+      max_tokens: maxTokens,
+      temperature,
+      stream: true,
+    };
+
+    const url = `${stripTrailingSlashes(this.config.baseUrl)}/chat/completions`;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (this.config.apiKey) {
+      headers["Authorization"] = `Bearer ${this.config.apiKey}`;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response: Awaited<ReturnType<StreamingFetchFn>>;
+    try {
+      response = await this.streamingFetchFn(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      const msg = err instanceof Error ? err.message : String(err);
+      const errorChunk: StreamChunk = {
+        type: "error",
+        content: msg,
+        index: 0,
+        finishReason: null,
+      };
+      await onChunk(errorChunk);
+      if (msg.includes("abort") || msg.includes("Abort")) {
+        throw new Error(`Request timed out after ${timeoutMs}ms to ${this.config.baseUrl}`);
+      }
+      throw new Error(`Network error calling ${this.config.baseUrl}: ${msg}`);
+    }
+
+    if (!response.ok) {
+      clearTimeout(timer);
+      const errorMsg = `API returned HTTP ${response.status} ${response.statusText}`;
+      const errorChunk: StreamChunk = {
+        type: "error",
+        content: errorMsg,
+        index: 0,
+        finishReason: null,
+      };
+      await onChunk(errorChunk);
+      throw new Error(errorMsg);
+    }
+
+    // Emit start chunk
+    await onChunk({
+      type: "start",
+      content: "",
+      index: 0,
+      finishReason: null,
+      metadata: { model: this.config.model, baseUrl: this.config.baseUrl },
+    });
+
+    // Parse SSE stream
+    let assembledText = "";
+    let chunkIndex = 1;
+    let finishReason: string | null = null;
+
+    try {
+      if (!response.body) {
+        throw new Error("Response body is null — streaming not supported by this endpoint.");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE lines
+        const lines = buffer.split("\n");
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith(":")) continue; // skip empty lines and comments
+          if (trimmed === "data: [DONE]") {
+            // Stream complete signal from OpenAI
+            continue;
+          }
+          if (trimmed.startsWith("data: ")) {
+            const jsonStr = trimmed.slice(6);
+            try {
+              const parsed = JSON.parse(jsonStr) as {
+                choices?: readonly {
+                  delta?: { content?: string };
+                  finish_reason?: string | null;
+                }[];
+                model?: string;
+              };
+
+              const delta = parsed.choices?.[0]?.delta?.content;
+              const reason = parsed.choices?.[0]?.finish_reason;
+
+              if (reason) {
+                finishReason = reason;
+              }
+
+              if (delta) {
+                assembledText += delta;
+                await onChunk({
+                  type: "delta",
+                  content: delta,
+                  index: chunkIndex++,
+                  finishReason: null,
+                });
+              }
+            } catch {
+              // Skip unparseable SSE lines
+            }
+          }
+        }
+      }
+    } catch (err) {
+      clearTimeout(timer);
+      const msg = err instanceof Error ? err.message : String(err);
+      await onChunk({
+        type: "error",
+        content: msg,
+        index: chunkIndex,
+        finishReason: null,
+      });
+      throw new Error(`Streaming error: ${msg}`);
+    } finally {
+      clearTimeout(timer);
+    }
+
+    // Emit complete chunk
+    await onChunk({
+      type: "complete",
+      content: assembledText,
+      index: chunkIndex,
+      finishReason,
+    });
+
+    const durationMs = Date.now() - start;
+
+    return {
+      responseText: assembledText,
+      isModelGenerated: true,
+      adapterKind: "openai_compatible",
+      structuredData: {
+        model: this.config.model,
+        finishReason,
+        backendUrl: this.config.baseUrl,
+        streamed: true,
+        chunkCount: chunkIndex - 1, // exclude start chunk
       },
       durationMs,
     };

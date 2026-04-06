@@ -70,6 +70,7 @@ export {
 /* openai adapter (Phase 46) */
 export type {
   FetchFn,
+  StreamingFetchFn,
 } from "./openai-adapter.js";
 
 export {
@@ -112,6 +113,10 @@ export {
   agentRunFailed,
   agentAdapterResolved,
   agentAdapterStatusRefreshed,
+  agentRunStreamStarted,
+  agentRunStreamChunk,
+  agentRunStreamCompleted,
+  agentRunStreamFailed,
   isAgentRunEvent,
   filterAgentRunEvents,
   buildAgentRunSessionSummary,
@@ -131,6 +136,28 @@ export {
   loadAdapterConfigFromEnv,
   buildEnvConfigReport,
 } from "./env-config.js";
+
+/* streaming (Phase 49) */
+export type {
+  StreamChunkType,
+  StreamChunk,
+  StreamingCapability,
+  StreamChunkCallback,
+  StreamingExecutionAdapter,
+  StreamAccumulator,
+  StreamRunStatus,
+  StreamRunState,
+} from "./streaming.js";
+
+export {
+  isStreamingAdapter,
+  getStreamingCapability,
+  createStreamAccumulator,
+  applyChunk,
+  createStreamRunState,
+  updateStreamRunState,
+  markFallbackCompleted,
+} from "./streaming.js";
 
 /* server adapter state (Phase 48) */
 export type {

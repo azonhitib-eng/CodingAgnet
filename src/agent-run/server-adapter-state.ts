@@ -40,10 +40,16 @@ import {
   agentAdapterResolved,
   agentAdapterStatusRefreshed,
   buildAgentRunSessionSummary,
+  agentRunStreamStarted,
+  agentRunStreamChunk,
+  agentRunStreamCompleted,
+  agentRunStreamFailed,
 } from "./session-integration.js";
 import type { AgentSummary, AgentAttachmentStatus } from "../agents/types.js";
 import type { SessionManager } from "../session/index.js";
 import type { FetchFn } from "./openai-adapter.js";
+import { isStreamingAdapter, getStreamingCapability } from "./streaming.js";
+import type { StreamChunk, StreamingCapability } from "./streaming.js";
 
 /* ------------------------------------------------------------------ */
 /*  Server adapter state                                               */
@@ -197,6 +203,9 @@ export function buildRunAgentTaskDep(
       ),
     );
 
+    // Determine streaming capability
+    const streamingCapability: StreamingCapability = getStreamingCapability(state.adapter);
+
     // Build dispatch deps
     const dispatchDeps: AgentRunDispatchDeps = {
       adapter: state.adapter,
@@ -218,10 +227,55 @@ export function buildRunAgentTaskDep(
       },
     };
 
-    // Dispatch
-    const result = await dispatchAgentTask(input, dispatchDeps);
+    // Build streaming chunk callback if adapter supports streaming
+    let chunksReceived = 0;
+    let totalCharsReceived = 0;
+    const streamingRunId = "(pending)";
+    const onChunk = streamingCapability === "streaming"
+      ? (chunk: StreamChunk): void => {
+          if (chunk.type === "start") {
+            sessionManager.appendEvent(
+              session.id,
+              agentRunStreamStarted(streamingRunId, state.adapter!.kind, state.adapter!.isModelBacked),
+            );
+          } else if (chunk.type === "delta") {
+            chunksReceived++;
+            totalCharsReceived += chunk.content.length;
+            // Emit stream chunk events at sensible intervals (not every token)
+            if (chunksReceived === 1 || chunksReceived % 10 === 0 || totalCharsReceived % 200 < chunk.content.length) {
+              sessionManager.appendEvent(
+                session.id,
+                agentRunStreamChunk(streamingRunId, chunk.index, chunk.content, totalCharsReceived),
+              );
+            }
+          } else if (chunk.type === "error") {
+            sessionManager.appendEvent(
+              session.id,
+              agentRunStreamFailed(streamingRunId, chunk.content, chunksReceived),
+            );
+          }
+          // "complete" is handled after dispatch returns
+        }
+      : undefined;
+
+    // Dispatch (with streaming callback if available)
+    const result = await dispatchAgentTask(input, dispatchDeps, onChunk);
     state.lastRunResult = result;
     state.totalRuns += 1;
+
+    // Emit streaming completion event if streaming was used
+    if (streamingCapability === "streaming" && result.status === "completed") {
+      sessionManager.appendEvent(
+        session.id,
+        agentRunStreamCompleted(
+          result.runId,
+          chunksReceived,
+          totalCharsReceived,
+          result.durationMs,
+          (result.output?.structuredData?.finishReason as string) ?? null,
+        ),
+      );
+    }
 
     // Emit result events to session
     const resultEvents = agentRunResultToEvents(result);
@@ -242,6 +296,8 @@ export function buildRunAgentTaskDep(
           isModelGenerated: result.output.isModelGenerated,
           durationMs: result.durationMs,
           outputPreview: result.output.responseText.substring(0, 500),
+          streamed: result.output.structuredData?.streamed === true,
+          streamingCapability,
         },
       };
     }
@@ -440,5 +496,6 @@ export function getAdapterSessionSummary(
     state.lastRunResult,
     state.totalRuns,
     state.status,
+    state.adapter,
   );
 }

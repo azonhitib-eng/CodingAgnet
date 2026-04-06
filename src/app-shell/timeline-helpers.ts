@@ -65,6 +65,12 @@ const KIND_TO_CATEGORY: Record<string, TimelineEventCategory> = {
   agent_adapter_resolved: "progress",
   agent_adapter_status_refreshed: "info",
 
+  // streaming lifecycle (Phase 49)
+  agent_run_stream_started: "progress",
+  agent_run_stream_chunk: "info",
+  agent_run_stream_completed: "progress",
+  agent_run_stream_failed: "failure",
+
   // fingerprinting / profile (Phase 38)
   repo_fingerprinted: "info",
   profile_selected: "progress",

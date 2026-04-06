@@ -795,7 +795,7 @@ describe("Phase 46 — Model-Backed Execution Adapter", () => {
     it("should include adapter event kinds in AGENT_RUN_EVENT_KINDS", () => {
       expect(AGENT_RUN_EVENT_KINDS).toContain("agent_adapter_resolved");
       expect(AGENT_RUN_EVENT_KINDS).toContain("agent_adapter_status_refreshed");
-      expect(AGENT_RUN_EVENT_KINDS.length).toBe(6); // 4 original + 2 new
+      expect(AGENT_RUN_EVENT_KINDS.length).toBe(10); // 4 original + 2 adapter + 4 streaming
     });
 
     it("should create agent_adapter_resolved event", () => {
