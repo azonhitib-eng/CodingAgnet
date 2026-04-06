@@ -204,6 +204,32 @@ export interface CommandExecutorDeps {
     error?: string;
     detail?: Record<string, unknown>;
   }>;
+  /** Inspect agent context. Returns {ok, error?, detail?}. */
+  readonly inspectAgentContext?: (
+    agentKind: string,
+    roleHint?: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Build agent prompt context. Returns {ok, error?, detail?}. */
+  readonly buildAgentPromptContext?: (
+    agentKind: string,
+    roleHint?: string,
+    maxTotalChars?: number,
+    maxSlices?: number,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Refresh agent context. Returns {ok, error?, detail?}. */
+  readonly refreshAgentContext?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -539,6 +565,41 @@ async function dispatchCommand(
       return res.ok
         ? makeResult(payload.commandId, "completed", "Context summary refreshed.", res.detail)
         : makeResult(payload.commandId, "failed", res.error ?? "Context summary refresh failed.");
+    }
+
+    case "inspect_agent_context": {
+      if (!deps.inspectAgentContext) {
+        return makeResult(payload.commandId, "failed", "Agent context inspection not available.");
+      }
+      const res = await deps.inspectAgentContext(payload.data.agentKind, payload.data.roleHint);
+      return res.ok
+        ? makeResult(payload.commandId, "completed", `Agent context inspected for ${payload.data.agentKind}.`, res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Agent context inspection failed.");
+    }
+
+    case "build_agent_prompt_context": {
+      if (!deps.buildAgentPromptContext) {
+        return makeResult(payload.commandId, "failed", "Agent prompt context build not available.");
+      }
+      const res = await deps.buildAgentPromptContext(
+        payload.data.agentKind,
+        payload.data.roleHint,
+        payload.data.maxTotalChars,
+        payload.data.maxSlices,
+      );
+      return res.ok
+        ? makeResult(payload.commandId, "completed", `Agent prompt context built for ${payload.data.agentKind}.`, res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Agent prompt context build failed.");
+    }
+
+    case "refresh_agent_context": {
+      if (!deps.refreshAgentContext) {
+        return makeResult(payload.commandId, "failed", "Agent context refresh not available.");
+      }
+      const res = await deps.refreshAgentContext();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Agent context refreshed.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Agent context refresh failed.");
     }
   }
 }

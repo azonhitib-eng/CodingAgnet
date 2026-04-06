@@ -35,7 +35,10 @@ export type CommandId =
   | "attach_github_mcp"
   | "inspect_workspace_context"
   | "inspect_file_context"
-  | "refresh_context_summary";
+  | "refresh_context_summary"
+  | "inspect_agent_context"
+  | "build_agent_prompt_context"
+  | "refresh_agent_context";
 
 /** Logical category grouping for commands. */
 export type CommandCategory =
@@ -47,7 +50,8 @@ export type CommandCategory =
   | "session"
   | "toolchain"
   | "language_service"
-  | "language_context";
+  | "language_context"
+  | "agent_context";
 
 /* ------------------------------------------------------------------ */
 /*  Command definition (static metadata)                               */
@@ -160,6 +164,20 @@ export interface InspectFileContextPayload {
 
 export type RefreshContextSummaryPayload = Record<string, never>;
 
+export interface InspectAgentContextPayload {
+  readonly agentKind: string;
+  readonly roleHint?: string;
+}
+
+export interface BuildAgentPromptContextPayload {
+  readonly agentKind: string;
+  readonly roleHint?: string;
+  readonly maxTotalChars?: number;
+  readonly maxSlices?: number;
+}
+
+export type RefreshAgentContextPayload = Record<string, never>;
+
 /** Discriminated union of all command payloads. */
 export type CommandPayload =
   | { readonly commandId: "open_workspace"; readonly data: OpenWorkspacePayload }
@@ -184,7 +202,10 @@ export type CommandPayload =
   | { readonly commandId: "attach_github_mcp"; readonly data: AttachGitHubMcpPayload }
   | { readonly commandId: "inspect_workspace_context"; readonly data: InspectWorkspaceContextPayload }
   | { readonly commandId: "inspect_file_context"; readonly data: InspectFileContextPayload }
-  | { readonly commandId: "refresh_context_summary"; readonly data: RefreshContextSummaryPayload };
+  | { readonly commandId: "refresh_context_summary"; readonly data: RefreshContextSummaryPayload }
+  | { readonly commandId: "inspect_agent_context"; readonly data: InspectAgentContextPayload }
+  | { readonly commandId: "build_agent_prompt_context"; readonly data: BuildAgentPromptContextPayload }
+  | { readonly commandId: "refresh_agent_context"; readonly data: RefreshAgentContextPayload };
 
 /* ------------------------------------------------------------------ */
 /*  Validation                                                         */
@@ -394,6 +415,24 @@ export const COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
     label: "Refresh Context Summary",
     description: "Re-collect workspace context summary using current profile and file inventory.",
   },
+  {
+    id: "inspect_agent_context",
+    category: "agent_context",
+    label: "Inspect Agent Context",
+    description: "Inspect the assembled context for a specific agent kind, showing included/excluded slices and reasons.",
+  },
+  {
+    id: "build_agent_prompt_context",
+    category: "agent_context",
+    label: "Build Agent Prompt Context",
+    description: "Assemble a full agent prompt context packet for a specific agent kind and role.",
+  },
+  {
+    id: "refresh_agent_context",
+    category: "agent_context",
+    label: "Refresh Agent Context",
+    description: "Re-assemble agent context using latest session/workspace/profile data.",
+  },
 ] as const;
 
 /** Lookup a command definition by id. */
@@ -415,6 +454,7 @@ export const ALL_COMMAND_CATEGORIES: readonly CommandCategory[] = [
   "toolchain",
   "language_service",
   "language_context",
+  "agent_context",
 ] as const;
 
 /** Group command definitions by category. */

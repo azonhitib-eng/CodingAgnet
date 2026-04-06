@@ -102,10 +102,10 @@ describe("Phase 42 — README subpath exports completeness", () => {
     });
   }
 
-  it("package.json exports match README count (14 total)", () => {
+  it("package.json exports match README count (15 total)", () => {
     const pkg = pkgJson();
     const exportKeys = Object.keys(pkg.exports);
-    expect(exportKeys.length).toBe(14);
+    expect(exportKeys.length).toBe(15);
   });
 });
 

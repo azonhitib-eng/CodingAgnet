@@ -21,6 +21,8 @@ import type {
   InspectMcpToolPayload,
   InvokeMcpToolPayload,
   InspectFileContextPayload,
+  InspectAgentContextPayload,
+  BuildAgentPromptContextPayload,
 } from "./types.js";
 
 /* ------------------------------------------------------------------ */
@@ -192,6 +194,34 @@ export function validateInspectFileContext(data: InspectFileContextPayload): Com
   return errors.length > 0 ? invalid(errors) : VALID_OK;
 }
 
+const VALID_AGENT_KINDS = ["system", "coding", "review", "planning", "testing", "external"];
+
+export function validateInspectAgentContext(data: InspectAgentContextPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.agentKind)) {
+    errors.push(fieldError("agentKind", "Agent kind is required."));
+  } else if (!VALID_AGENT_KINDS.includes(data.agentKind)) {
+    errors.push(fieldError("agentKind", `Invalid agent kind. Must be one of: ${VALID_AGENT_KINDS.join(", ")}.`));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
+export function validateBuildAgentPromptContext(data: BuildAgentPromptContextPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.agentKind)) {
+    errors.push(fieldError("agentKind", "Agent kind is required."));
+  } else if (!VALID_AGENT_KINDS.includes(data.agentKind)) {
+    errors.push(fieldError("agentKind", `Invalid agent kind. Must be one of: ${VALID_AGENT_KINDS.join(", ")}.`));
+  }
+  if (data.maxTotalChars !== undefined && (typeof data.maxTotalChars !== "number" || data.maxTotalChars < 100)) {
+    errors.push(fieldError("maxTotalChars", "Max total chars must be a number >= 100."));
+  }
+  if (data.maxSlices !== undefined && (typeof data.maxSlices !== "number" || data.maxSlices < 1)) {
+    errors.push(fieldError("maxSlices", "Max slices must be a number >= 1."));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Top-level dispatcher                                               */
 /* ------------------------------------------------------------------ */
@@ -244,6 +274,12 @@ export function validateCommand(payload: CommandPayload): CommandValidationResul
     case "inspect_file_context":
       return validateInspectFileContext(payload.data);
     case "refresh_context_summary":
+      return VALID_OK; // No inputs required.
+    case "inspect_agent_context":
+      return validateInspectAgentContext(payload.data);
+    case "build_agent_prompt_context":
+      return validateBuildAgentPromptContext(payload.data);
+    case "refresh_agent_context":
       return VALID_OK; // No inputs required.
   }
 }
