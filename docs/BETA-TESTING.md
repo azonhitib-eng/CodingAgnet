@@ -1,12 +1,13 @@
-# Desktop Beta Testing Guide — Phase 37
+# Desktop Beta Testing & V1 Release Guide
 
 ## Overview
 
-CodingAgent desktop is available as a **public beta**. This document covers
+CodingAgent desktop is available as a **V1 release**. This document covers
 everything a tester needs to install, run, and report issues with the desktop
-application on each supported platform.
+application on each supported platform. The beta testing procedures below
+remain valid for the V1 release.
 
-> **Current status:** Beta builds are **unsigned**. You will see OS security
+> **Current status:** V1 builds are **unsigned**. You will see OS security
 > warnings on first launch. This is expected and documented below.
 
 ## Quick start by platform
@@ -227,3 +228,35 @@ Before distributing a new beta build:
   - Unsigned build warning
   - Download link
 - [ ] Update CHANGELOG.md
+
+## V1 release notes
+
+### What changed from beta to V1
+
+- **Version** — package.json version updated from `0.1.0` to `1.0.0`
+- **Release stage** — `RELEASE_STAGE` constant set to `"v1"` in electron/config.cjs
+- **Documentation** — README, CHANGELOG, and all docs updated for V1 accuracy
+- **Known limitations** — expanded to cover all subsystems honestly (GitHub MCP, language service, toolchain, fingerprinting)
+- **Subpath exports** — all 13 exports documented in README
+
+### V1 known limitations
+
+See `V1_KNOWN_LIMITATIONS` in `electron/config.cjs` and the README "Known limitations (V1)" section for the canonical list.
+
+### V1 release checklist
+
+Before distributing a V1 build:
+
+- [ ] All tests pass (`npm run test`)
+- [ ] TypeScript compiles cleanly (`npm run build`)
+- [ ] Linting passes (`npm run lint`)
+- [ ] CHANGELOG.md updated with V1 release notes
+- [ ] README reflects current product state
+- [ ] All docs are current and honest about limitations
+- [ ] `npm run desktop:pack` succeeds on the target platform
+- [ ] `npm run desktop:installer` produces the expected artifact
+- [ ] Artifact file name matches expected pattern (e.g. `CodingAgent-1.0.0-x86_64.AppImage`)
+- [ ] Launch the packaged app — loading screen appears, then full app shell loads
+- [ ] Window title shows correct version
+- [ ] Close the app — no orphan processes remain
+- [ ] Publish to npm: `npm publish`

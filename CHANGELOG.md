@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] — V1 Release
+
+### Added
+
+- **Phase 42** — V1 Release Hardening
+  - V1 audit: structured review of all surfaces (shell, desktop, packaging, session, MCP, agents, commands, toolchain, language-service, GitHub MCP, CLI, docs)
+  - `electron/config.cjs`: V1 release helpers — `RELEASE_STAGE`, `V1_KNOWN_LIMITATIONS`, `getReleaseLabel()`, `getReleaseVersion()`, `getReleaseMetadata()`
+  - README: added 3 missing subpath exports (fingerprint, toolchain, language-service)
+  - README: added 6 missing doc references (FINGERPRINTING, TOOLCHAIN, LANGUAGE-SERVICE, GITHUB-MCP, CODE-SIGNING, BETA-TESTING)
+  - README: expanded known limitations with Phase 38–41 scope (GitHub MCP, language service, toolchain, fingerprinting, unsigned builds)
+  - README: updated section header from "release candidate" to "V1"
+  - `package.json`: version updated from `0.1.0` to `1.0.0`
+  - `docs/BETA-TESTING.md`: added V1 release section alongside beta content
+  - V1 smoke-style validation tests for release-critical flows
+  - 101 new tests covering V1 coherence, docs accuracy, cross-surface consistency, and release metadata
+
 ## [Unreleased]
 
 ### Added
