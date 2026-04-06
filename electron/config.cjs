@@ -605,7 +605,7 @@ function getSigningConfig(platform) {
 
   const envVars = expectedVars.map((name) => ({
     name,
-    present: typeof process.env[name] === "string" && process.env[name].length > 0,
+    present: typeof process.env[name] === "string" && (process.env[name]?.length ?? 0) > 0,
   }));
 
   // "configured" means at least the primary certificate variable is set

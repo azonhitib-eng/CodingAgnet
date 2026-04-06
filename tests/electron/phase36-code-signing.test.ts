@@ -350,9 +350,10 @@ describe("Phase 36 — getReleaseReadiness()", () => {
   it("icon section reports presence status", () => {
     const r = getReleaseReadiness();
     expect(typeof r.icon.present).toBe("boolean");
-    // In test env, no icon file exists
-    expect(r.icon.present).toBe(false);
-    expect(r.icon.path).toBeNull();
+    // icon.present must be consistent with getIconPath()
+    const actualIconPath = getIconPath();
+    expect(r.icon.present).toBe(actualIconPath !== null);
+    expect(r.icon.path).toBe(actualIconPath);
   });
 
   it("artifact naming contains template variables", () => {
@@ -369,13 +370,19 @@ describe("Phase 36 — getReleaseReadiness()", () => {
   });
 
   it("unsignedWarning changes when signing is active", () => {
-    // This test simulates signing being active for the current platform
-    process.env.CSC_LINK = "/fake/cert";
-    const r = getReleaseReadiness();
-    // On linux (CI), CSC_LINK is for darwin/win32, so signing may still be inactive
-    // We just verify the output is a string in all cases
-    expect(typeof r.unsignedWarning).toBe("string");
-    expect(r.unsignedWarning.length).toBeGreaterThan(0);
+    // Simulate signing active for current platform by setting its first env var
+    const vars = SIGNING_ENV_VARS[process.platform];
+    if (vars && vars.length > 0) {
+      process.env[vars[0]] = "/fake/cert";
+      const r = getReleaseReadiness();
+      // When signing is active for current platform, warning should say "signed"
+      expect(r.unsignedWarning).toContain("signed");
+      delete process.env[vars[0]];
+    } else {
+      // No signing vars for this platform — unsigned warning should mention UNSIGNED
+      const r = getReleaseReadiness();
+      expect(r.unsignedWarning).toContain("UNSIGNED");
+    }
   });
 });
 
