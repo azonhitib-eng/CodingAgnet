@@ -110,6 +110,10 @@ The interface is ready for real model-backed adapters:
 - `local` — local model execution
 - `api` — remote API-backed execution
 
+**Phase 46 update:** Real model-backed adapters are now available.
+See [docs/EXECUTION-ADAPTER.md](./EXECUTION-ADAPTER.md) for details on the
+OpenAI-compatible adapter and adapter configuration.
+
 ## Status Lifecycle
 
 ```
@@ -186,10 +190,11 @@ console.log(inspectAgentRun(result));
 
 ## What Remains Deferred
 
-- **Model-backed adapters** — real LLM execution adapters
 - **Conversational loop** — multi-turn dialogue management
 - **Autonomous orchestration** — multi-agent coordination
 - **Code modification** — no editing or writing files
 - **Streaming** — no streaming output
 - **Retry/recovery** — no automatic retry on failure
 - **Background execution** — no job queues or background runs
+
+See also: [docs/EXECUTION-ADAPTER.md](./EXECUTION-ADAPTER.md) for adapter-specific deferrals.

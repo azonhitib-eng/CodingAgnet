@@ -1171,7 +1171,7 @@ describe("Phase 44 — Command integration", () => {
   });
 
   it("total command definitions = 26", () => {
-    expect(COMMAND_DEFINITIONS).toHaveLength(28);
+    expect(COMMAND_DEFINITIONS).toHaveLength(30);
   });
 
   describe("validation", () => {
