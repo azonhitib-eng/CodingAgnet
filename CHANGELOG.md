@@ -6,6 +6,29 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 48** — Execution Adapter Wiring & End-to-End Shell Agent Run Path
+  - New `src/agent-run/env-config.ts` — environment-based adapter configuration loader
+    - `AGENT_ADAPTER_KIND`, `AGENT_ADAPTER_OPENAI_*` env vars
+    - `loadAdapterConfigFromEnv()`, `buildEnvConfigReport()`
+    - 3 config states: `not_configured`, `partially_configured`, `configured`
+  - New `src/agent-run/server-adapter-state.ts` — server-level adapter state
+    - `createServerAdapterState()`, `ensureAdapterResolved()`
+    - `buildRunAgentTaskDep()`, `buildInspectAgentAdapterDep()`
+    - `buildRefreshAgentAdapterStatusDep()`, `buildInspectAgentRunDep()`
+    - `emitAdapterResolvedEvent()`, `getAdapterSessionSummary()`
+  - Server wiring: `buildCommandExecutorDeps()` now includes all 4 agent command deps
+  - `run_agent_task` fully wired: select agent → context → adapter → session events → result
+  - `inspect_agent_adapter` fully wired: reports kind, availability, config, run counts
+  - `refresh_agent_adapter_status` fully wired: re-checks availability, emits session event
+  - `inspect_agent_run` fully wired: reports last run result
+  - Clear failure distinctions: not configured, partial config, unavailable, network/auth,
+    runtime execution, invalid task, no eligible agent, session not found
+  - Session events reflect real adapter resolve/refresh/run lifecycle
+  - Falls back to stub adapter honestly when no config is provided
+  - `docs/ADAPTER-WIRING.md` — full documentation
+  - 86 new tests covering env config, server state, command paths, failure states,
+    session integration, all task kinds, export surface, demo mode, no regressions
+
 - **Phase 47** — Shell/Console Adapter Status Display & Agent Output Rendering
   - Adapter events now classified in timeline and console:
     - `agent_adapter_resolved` → progress / lifecycle_card / agent actor

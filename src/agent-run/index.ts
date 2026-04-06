@@ -117,3 +117,33 @@ export {
   buildAgentRunSessionSummary,
   agentRunResultToEvents,
 } from "./session-integration.js";
+
+/* env config (Phase 48) */
+export type {
+  EnvConfigStatus,
+  EnvConfigResult,
+} from "./env-config.js";
+
+export {
+  ENV_PREFIX,
+  ENV_VARS,
+  ALL_ENV_VARS,
+  loadAdapterConfigFromEnv,
+  buildEnvConfigReport,
+} from "./env-config.js";
+
+/* server adapter state (Phase 48) */
+export type {
+  ServerAdapterState,
+} from "./server-adapter-state.js";
+
+export {
+  createServerAdapterState,
+  ensureAdapterResolved,
+  buildRunAgentTaskDep,
+  buildInspectAgentAdapterDep,
+  buildRefreshAgentAdapterStatusDep,
+  buildInspectAgentRunDep,
+  emitAdapterResolvedEvent,
+  getAdapterSessionSummary,
+} from "./server-adapter-state.js";
