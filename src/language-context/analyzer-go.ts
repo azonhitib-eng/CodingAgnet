@@ -183,8 +183,8 @@ export function extractGoImports(content: string): string[] {
     }
   }
 
-  // Grouped imports
-  const groupRegex = /import\s*\(([\s\S]*?)\)/g;
+  // Grouped imports — use bounded whitespace to avoid ReDoS
+  const groupRegex = /import\s{0,5}\(([\s\S]*?)\)/g;
   while ((match = groupRegex.exec(content)) !== null) {
     const block = match[1];
     const lineRegex = /["']([^"']+)["']/g;

@@ -276,8 +276,8 @@ export function extractTsJsImports(content: string): string[] {
   const imports: string[] = [];
   const seen = new Set<string>();
 
-  // ES import statements
-  const esImportRegex = /import\s+.*?\s+from\s+["']([^"']+)["']/g;
+  // ES import statements — use [^\n]* instead of .*? to avoid backtracking
+  const esImportRegex = /import\s[^\n]*?\sfrom\s+["']([^"']+)["']/g;
   let match: RegExpExecArray | null;
   while ((match = esImportRegex.exec(content)) !== null) {
     if (!seen.has(match[1])) {
@@ -327,8 +327,12 @@ export function extractTsJsExports(content: string): string[] {
     const reExportMatch = line.match(/^export\s*\{([^}]+)\}/);
     if (reExportMatch) {
       const names = reExportMatch[1].split(",").map((n) => {
-        const parts = n.trim().split(/\s+as\s+/);
-        return (parts[1] ?? parts[0]).trim();
+        // Split on " as " with word boundaries to avoid ReDoS
+        const asIndex = n.indexOf(" as ");
+        if (asIndex >= 0) {
+          return n.slice(asIndex + 4).trim();
+        }
+        return n.trim();
       });
       for (const name of names) {
         if (name && !seen.has(name)) {

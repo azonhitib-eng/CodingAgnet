@@ -164,8 +164,8 @@ export function extractPythonExports(content: string): string[] {
   const exports: string[] = [];
   const seen = new Set<string>();
 
-  // __all__ = [...]
-  const allMatch = content.match(/__all__\s*=\s*\[([^\]]*)\]/);
+  // __all__ = [...] — use non-greedy character class to avoid backtracking
+  const allMatch = content.match(/__all__\s{0,10}=\s{0,10}\[([^\]]*)\]/);
   if (allMatch) {
     const names = allMatch[1].match(/["'](\w+)["']/g);
     if (names) {
