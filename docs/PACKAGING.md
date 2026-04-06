@@ -1,54 +1,68 @@
-# Packaging Decision — Phase 17
+# Packaging Decision — Phases 17 & 31
 
 ## Decision
 
-**Chosen path: Enhanced local web shell + desktop launcher**
+**Phase 17: Enhanced local web shell + desktop launcher**
+**Phase 31: Electron desktop wrapper — first usable desktop slice**
 
-Keep the current zero-dependency Node.js HTTP server and add a desktop-style
-launcher that starts the server and auto-opens the browser.
+Phase 17 established the browser-based desktop launcher. Phase 31 adds an
+actual Electron wrapper that opens the app in a native desktop window.
+
+Both paths remain available:
+- `npm run app-shell:desktop` — browser-based (Phase 17, no Electron needed)
+- `npm run desktop` — Electron window (Phase 31)
 
 ## Why this fits the current architecture
 
-- **Zero new dependencies** — the shell already runs on Node.js built-in `http`;
-  opening a browser uses `child_process.exec` with platform-native commands.
-- **Minimal disruption** — no framework migration, no build toolchain changes,
-  no native compilation step.
-- **Local-first by design** — the server binds to `localhost`, the browser is the
-  presentation layer, and the entire lifecycle is a single process tree.
-- **Works everywhere Node.js works** — Linux, macOS, Windows with no extra
-  installers or platform-specific packaging.
+- **Wrapper only** — Electron sits on top of the existing app-shell server;
+  no backend logic is duplicated inside Electron.
+- **Child process model** — the Electron main process spawns the existing
+  server as a child process and loads its URL in a BrowserWindow.
+- **Local-first** — only `http://localhost` URLs are loaded; no remote content.
+- **Works everywhere Node.js works** — Linux, macOS, Windows.
+- **Backwards compatible** — all existing browser-based scripts still work.
 
-## Why alternatives are deferred
+## Phase 17 additions (browser-based)
+
+1. `--open` flag on the app shell server
+2. Graceful shutdown (Ctrl+C)
+3. Desktop launcher script (`scripts/desktop-launch.ts`)
+4. `npm run app-shell:desktop` — one-command browser-based launch
+5. `openBrowser()` utility
+
+## Phase 31 additions (Electron)
+
+1. `electron/main.cjs` — Electron main process
+2. `electron/preload.cjs` — minimal secure preload
+3. `electron/config.cjs` — testable configuration constants
+4. `npm run desktop` — one-command Electron window launch
+5. `npm run desktop:dev` — Electron with DevTools
+6. Dynamic port allocation
+7. Clean startup/shutdown lifecycle
+8. Conservative BrowserWindow security defaults
+
+See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
+
+## Why further alternatives are deferred
 
 | Alternative | Reason deferred |
 |-------------|----------------|
-| **Electron** | ~200 MB footprint, Chromium bundling, complex auto-update pipeline, separate build system. Premature before the product surface is stable. |
-| **Tauri** | Requires Rust toolchain and platform-specific build. Good future option if a native window is needed, but adds significant build complexity right now. |
-| **Compiled binary (pkg / nexe)** | Snapshot-based bundling is fragile with dynamic imports and `data/` directories. Better suited for a later release phase. |
-
-## What Phase 17 adds
-
-1. **`--open` flag** on the app shell server — auto-opens the default browser
-   after the server starts listening.
-2. **Graceful shutdown** — Ctrl+C prints a clean shutdown message and closes
-   the server before exiting.
-3. **Desktop launcher script** (`scripts/desktop-launch.ts`) — runs preflight
-   checks, starts the server with `--open`, and provides a single-command
-   desktop-like experience.
-4. **`npm run app-shell:desktop`** script — one-command launch for the desktop
-   product path.
-5. **`openBrowser()` utility** — cross-platform browser opener using
-   platform-native commands (`open`, `xdg-open`, `start`).
+| **Tauri** | Requires Rust toolchain and platform-specific build. Good future option for smaller binaries. |
+| **Compiled binary (pkg / nexe)** | Snapshot-based bundling is fragile with dynamic imports and `data/` directories. |
+| **Electron auto-update** | Requires a release/update server. Premature before the product is distributed. |
+| **Installer generation** | DMG/MSI/AppImage requires `electron-builder` or `electron-forge` config. Deferred until the product surface is stable. |
 
 ## What is still missing before a polished desktop product
 
-- Native window wrapper (Electron or Tauri) for a true desktop feel
 - Application icon and metadata
-- Auto-update mechanism
+- Auto-update mechanism (`electron-updater`)
 - OS-level installer / DMG / MSI / AppImage packaging
 - Tray/dock integration
-- Offline-first asset bundling
+- Offline-first asset bundling (embed server instead of spawning)
 - Splash screen / loading state before server is ready
+- Native file dialogs via IPC
+- Menu bar customization
+- Code signing for distribution
 
 ## CodeQL alert status
 

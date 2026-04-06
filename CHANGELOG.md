@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 31** — Electron Desktop Wrapper
+  - Electron main process (`electron/main.cjs`) spawns existing app-shell server and opens a BrowserWindow
+  - Secure preload script (`electron/preload.cjs`) — intentionally minimal, no Node.js APIs exposed
+  - Configuration module (`electron/config.cjs`) — testable constants for window size, security, and URL helpers
+  - Dynamic port allocation to avoid conflicts
+  - Clean startup/shutdown lifecycle: find port → start server → create window → graceful cleanup
+  - `npm run desktop` — one-command desktop launch via Electron
+  - `npm run desktop:dev` — desktop launch with DevTools available
+  - BrowserWindow security: nodeIntegration=false, contextIsolation=true, sandbox=true, webviewTag=false
+  - Navigation restricted to local origin only; new windows and webview attachment blocked
+  - ELECTRON_DESKTOP environment flag set for child server process
+  - Documentation: `docs/ELECTRON.md` with architecture, launch instructions, security, and limitations
+  - Updated `docs/PACKAGING.md` to reflect Electron availability
+  - Phase 31 test suite: configuration sanity, security defaults, URL validation, file structure, startup path, no regression
+
 - **Phase 30** — Final Debug / RC Hardening
   - README: updated "What this package does" to include session, MCP, agent, command, workspace, and app shell capabilities
   - README: fixed "What this package does NOT do" — removed inaccurate claims about no frontend/UI and no background mode
