@@ -807,8 +807,8 @@ describe("session event emission for agent lifecycle", () => {
 /* ------------------------------------------------------------------ */
 
 describe("agent session event helpers", () => {
-  it("AGENT_EVENT_KINDS has 7 entries", () => {
-    expect(AGENT_EVENT_KINDS).toHaveLength(7);
+  it("AGENT_EVENT_KINDS has 11 entries", () => {
+    expect(AGENT_EVENT_KINDS).toHaveLength(11);
   });
 
   it("isAgentEvent identifies agent events correctly", () => {

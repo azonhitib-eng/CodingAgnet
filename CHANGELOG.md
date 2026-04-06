@@ -6,6 +6,31 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 27** — Agent Routing and Stage Participation Model
+  - New `AgentRoleHint` type: planner, reviewer, tester, editor, explorer, mcp_bridge, narrator, general
+  - New `AgentRoutingMeta` interface on `AgentDefinition`: roleHint, preferredStages, routingPriority, participationEnabled
+  - New `ParticipationReason` type: 9 deterministic reasons for eligibility/ineligibility
+  - New `StageParticipation` interface: per-agent per-stage evaluation with reasons, priority, matching capabilities
+  - New `StageParticipationSummary` interface: eligible, preferred, and skipped agents for a stage
+  - New `src/agents/stage-routing.ts`: `CAPABILITY_STAGE_MAP`, `ALL_STAGES`, `DEFAULT_ROUTING_PRIORITY`
+  - Stage routing helpers: `stagesForCapability()`, `capabilitiesForStage()`, `isCapabilityRelevant()`
+  - New `src/agents/participation.ts`: deterministic participation model
+  - Participation functions: `evaluateAgentForStage()`, `evaluateStageParticipation()`, `evaluateAllStages()`
+  - Convenience queries: `getEligibleAgents()`, `getPreferredAgents()`, `getSkippedAgents()`, `getTopAgent()`
+  - Helper: `buildPreferredStagesMap()` for extracting preferred stages from definitions
+  - 4 new session event kinds: `agent_routing_evaluated`, `agent_stage_participation_updated`, `agent_skipped_for_stage`, `agent_selected_for_stage`
+  - Event factory functions for all 4 new routing events
+  - `AGENT_EVENT_KINDS` expanded from 7 to 11
+  - `buildAgentEventSummary()` tracks routing evaluations, stage selections, and stage skips
+  - `AgentSummary` extended with `roleHint`, `routingPriority`, `participationEnabled`
+  - `AgentRegistry.getSessionAgentSummaries()` includes routing metadata from definitions
+  - `SessionSummary.agents` extended with optional `roleHint`, `routingPriority`, `participationEnabled`, `allowedStages`
+  - `SessionManager.getSessionSummary()` accepts optional agent enrichment parameter
+  - Console helpers classify 4 new events (actor: agent, card: lifecycle_card)
+  - Timeline helpers classify 4 new events (info/progress/warning categories)
+  - 75 new tests covering stage routing, participation model, events, session integration, edge cases
+  - New documentation: `docs/AGENT-ROUTING.md`
+
 - **Phase 26** — MCP Health and Discovery Hardening
   - Extended `McpServerStatus` with 4 new values: `discovery_pending`, `discovery_complete`, `degraded`, `stale`
   - New `McpHealthReport` type — structured health with timestamps, failure reasons, stale flag

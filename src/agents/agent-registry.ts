@@ -399,6 +399,9 @@ export class AgentRegistry {
         allowedStages: [...record.definition.allowedStages],
         failureReason: attachment.failureReason,
         disabledReason: attachment.disabledReason,
+        roleHint: record.definition.routing?.roleHint,
+        routingPriority: record.definition.routing?.routingPriority,
+        participationEnabled: record.definition.routing?.participationEnabled,
       });
     }
 

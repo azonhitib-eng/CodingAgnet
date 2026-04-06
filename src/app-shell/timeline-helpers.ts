@@ -51,6 +51,9 @@ const KIND_TO_CATEGORY: Record<string, TimelineEventCategory> = {
   agent_attached: "progress",
   agent_enabled: "progress",
   agent_capabilities_updated: "progress",
+  agent_routing_evaluated: "info",
+  agent_selected_for_stage: "progress",
+  agent_stage_participation_updated: "info",
 
   // warning — needs attention / pending approval
   warning: "warning",
@@ -73,6 +76,7 @@ const KIND_TO_CATEGORY: Record<string, TimelineEventCategory> = {
   agent_failed: "failure",
   agent_disabled: "failure",
   agent_detached: "failure",
+  agent_skipped_for_stage: "warning",
 };
 
 /** Classify a SessionEventKind string into a rendering category. */

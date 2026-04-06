@@ -67,6 +67,10 @@ const KIND_TO_ACTOR: Record<string, ConsoleActor> = {
   agent_disabled: "agent",
   agent_failed: "agent",
   agent_capabilities_updated: "agent",
+  agent_routing_evaluated: "agent",
+  agent_stage_participation_updated: "agent",
+  agent_skipped_for_stage: "agent",
+  agent_selected_for_stage: "agent",
 
   // Workflow
   catalogs_loaded: "workflow",
@@ -164,6 +168,10 @@ const KIND_TO_CARD: Record<string, ConsoleCardType> = {
   mcp_discovered_resources: "discovery_card",
   mcp_discovered_prompts: "discovery_card",
   agent_capabilities_updated: "discovery_card",
+  agent_routing_evaluated: "lifecycle_card",
+  agent_stage_participation_updated: "lifecycle_card",
+  agent_skipped_for_stage: "lifecycle_card",
+  agent_selected_for_stage: "lifecycle_card",
 };
 
 /** Classify an event kind to its card type. */
