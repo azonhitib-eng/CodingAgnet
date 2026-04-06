@@ -6,6 +6,39 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 49** — Streaming Adapter Output
+  - New `src/agent-run/streaming.ts` — streaming types and helpers
+    - `StreamChunk`, `StreamChunkType`, `StreamingCapability`, `StreamChunkCallback`
+    - `StreamingExecutionAdapter` interface (optional extension for streaming adapters)
+    - `StreamAccumulator` — immutable chunk accumulator with `createStreamAccumulator()`, `applyChunk()`
+    - `StreamRunState` — streaming run lifecycle tracking with `createStreamRunState()`, `updateStreamRunState()`, `markFallbackCompleted()`
+    - `isStreamingAdapter()`, `getStreamingCapability()` — adapter detection
+  - Extended `OpenAIExecutionAdapter` with `executeStreaming()` — SSE-based streaming via `stream: true`
+    - New `StreamingFetchFn` type for injectable streaming HTTP
+    - SSE line parsing with delta content accumulation
+    - Proper stream lifecycle: start → deltas → complete
+    - Error handling: network errors, HTTP errors, mid-stream errors, null body
+    - Falls back to non-streaming `execute()` when no streaming fetch is available
+  - Extended `dispatchAgentTask()` with optional `onChunk` callback for streaming
+    - Detects streaming capability and routes to `executeStreaming()` when available
+    - Full backward compatibility: no callback = no streaming
+  - 4 new session event kinds: `agent_run_stream_started`, `agent_run_stream_chunk`, `agent_run_stream_completed`, `agent_run_stream_failed`
+    - Event factories: `agentRunStreamStarted()`, `agentRunStreamChunk()`, `agentRunStreamCompleted()`, `agentRunStreamFailed()`
+    - Chunk events are throttled (not per-token) to keep the timeline usable
+  - 2 new `AgentRunSessionSummary` fields: `lastAgentRunStreamed`, `activeAdapterStreamingCapability`
+  - Shell/console streaming UI: stream status bar, chunk progress card, completion card, failure card
+    - New CSS classes: `.stream-status-bar`, `.stream-chunk-card`, `.stream-complete-card`
+    - Timeline classification: streaming events → progress/info/failure categories
+    - Console classification: all streaming events → agent actor
+    - Card classification: started=lifecycle, chunk=message, completed=success, failed=failure
+  - Server adapter state: streaming dispatch path with session event emission
+  - Command result includes `streamed` and `streamingCapability` fields
+  - Non-streaming adapters (stub, echo_test) unaffected — clear distinction maintained
+  - `docs/STREAMING.md` — full documentation
+  - 88 new tests covering streaming types, accumulator, adapter detection, SSE parsing,
+    dispatch with streaming, session events, timeline/console classification, UI rendering,
+    non-streaming compatibility, failure handling, export surface, no regressions
+
 - **Phase 48** — Execution Adapter Wiring & End-to-End Shell Agent Run Path
   - New `src/agent-run/env-config.ts` — environment-based adapter configuration loader
     - `AGENT_ADAPTER_KIND`, `AGENT_ADAPTER_OPENAI_*` env vars
