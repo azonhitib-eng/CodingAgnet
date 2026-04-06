@@ -77,10 +77,15 @@ function startAppShellServer(port) {
   return new Promise((resolve, reject) => {
     const launchConfig = config.getServerLaunchConfig();
 
+    // On Windows, .cmd/.bat files require shell: true to be spawnable.
+    // Without it, spawn throws EINVAL.
+    const needsShell = process.platform === "win32";
+
     serverProcess = spawn(launchConfig.command, [...launchConfig.args, "--port", String(port)], {
       cwd: config.getAppRoot(),
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, ELECTRON_DESKTOP: "1" },
+      ...(needsShell ? { shell: true } : {}),
     });
 
     let resolved = false;
