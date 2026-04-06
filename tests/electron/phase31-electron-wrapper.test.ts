@@ -338,19 +338,17 @@ describe("Phase 31 — Preload script safety", () => {
   );
 
   it("preload does not expose Node.js APIs", () => {
-    // Should not actually call exposeInMainWorld — comments are fine
-    // Check that no uncommented contextBridge.exposeInMainWorld() call exists
-    const uncommentedLines = preloadContent
-      .split("\n")
-      .filter((l: string) => !l.trim().startsWith("//") && !l.trim().startsWith("*"));
-    const activeCode = uncommentedLines.join("\n");
-    expect(activeCode).not.toContain("exposeInMainWorld");
+    // Should not expose dangerous APIs like process, require("node:..."), child_process
+    // Phase 32 adds contextBridge.exposeInMainWorld with safe read-only metadata — that is okay
+    expect(preloadContent).not.toContain("process.env");
+    expect(preloadContent).not.toContain('require("node:');
+    expect(preloadContent).not.toContain("child_process");
   });
 
   it("preload is intentionally minimal", () => {
-    // Should be short — mostly comments
+    // Should be short — Phase 32 adds a small desktop bridge, still compact
     const lines = preloadContent.split("\n").filter((l) => l.trim().length > 0);
-    expect(lines.length).toBeLessThan(30);
+    expect(lines.length).toBeLessThan(40);
   });
 });
 
@@ -588,7 +586,9 @@ describe("Phase 31 — Documentation", () => {
 
   it("ELECTRON.md mentions what is still missing", () => {
     const content = readFile("docs/ELECTRON.md");
-    expect(content.toLowerCase()).toContain("missing");
+    // Phase 32 renamed section to "Deferred" — either "missing" or "deferred" is valid
+    const lc = content.toLowerCase();
+    expect(lc.includes("missing") || lc.includes("deferred")).toBe(true);
   });
 
   it("PACKAGING.md is updated to reference Electron", () => {
@@ -611,7 +611,8 @@ describe("Phase 31 — Window configuration", () => {
 
   it("sets window title", () => {
     expect(mainContent).toContain("title:");
-    expect(mainContent).toContain("APP_TITLE");
+    // Phase 32 uses buildWindowTitle() from config instead of APP_TITLE directly
+    expect(mainContent.includes("APP_TITLE") || mainContent.includes("buildWindowTitle") || mainContent.includes("windowTitle")).toBe(true);
   });
 
   it("sets minimum window dimensions", () => {

@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 32** — Desktop Polish and Desktop-Specific UX
+  - Branded loading page shown immediately in the BrowserWindow while app-shell server boots (spinner, version, dark theme)
+  - In-window error page with troubleshooting hints when server fails to start (retry button, npm/Node.js checks, docs reference)
+  - Versioned window title: `CodingAgent v0.1.0` (production) or `CodingAgent v0.1.0 [Dev]` (development)
+  - Icon placeholder path convention (`assets/icon.png`) defined for future icon support
+  - Preload bridge: `window.desktop` exposes `{ isDesktop, appName, version }` for desktop detection in the renderer
+  - Desktop-aware server banner: suppresses terminal-oriented tips (e.g. "Press Ctrl+C") when `ELECTRON_DESKTOP=1`
+  - Dark background color (`#1a1a2e`) on BrowserWindow to prevent white flash between loading page and app
+  - App shell views detect desktop mode via `window.desktop` and update document title
+  - Quiet stdout in production desktop mode (server output only forwarded in dev mode)
+  - Config module extended: `getDesktopVersion()`, `buildWindowTitle()`, `getIconPlaceholderPath()`, `renderLoadingHtml()`, `renderErrorHtml()`
+  - Main process refactored: window created before server attempt, error page shown on failure (no silent quit)
+  - Documentation: browser vs desktop comparison table, troubleshooting section, Phase 32 improvements
+  - Phase 32 test suite: loading page, error page, window title, icon path, startup failure handling, preload bridge, banner awareness, backward compatibility
+
 - **Phase 31** — Electron Desktop Wrapper
   - Electron main process (`electron/main.cjs`) spawns existing app-shell server and opens a BrowserWindow
   - Secure preload script (`electron/preload.cjs`) — intentionally minimal, no Node.js APIs exposed
