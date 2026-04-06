@@ -10,6 +10,9 @@
  *   - Cleans up the child process on quit
  *
  * This is intentionally a thin wrapper — all app logic stays in the app-shell.
+ *
+ * Phase 33: server launch now uses config.getServerLaunchConfig() to support
+ * both dev mode (npx tsx, TypeScript) and packaged mode (node, compiled JS).
  */
 
 "use strict";
@@ -58,7 +61,9 @@ function findAvailablePort() {
 let serverProcess = null;
 
 /**
- * Start the app-shell server as a child process using tsx.
+ * Start the app-shell server as a child process.
+ * In dev mode: uses npx tsx (TypeScript).
+ * In packaged mode: uses node with compiled JS.
  * Returns a Promise that resolves to the local URL once the server is ready.
  *
  * @param {number} port - Port number to use
@@ -66,15 +71,10 @@ let serverProcess = null;
  */
 function startAppShellServer(port) {
   return new Promise((resolve, reject) => {
-    const rootDir = path.resolve(__dirname, "..");
-    const serverScript = path.join(rootDir, "src", "app-shell", "server.ts");
+    const launchConfig = config.getServerLaunchConfig();
 
-    // Use npx tsx to run the TypeScript server
-    const isWindows = process.platform === "win32";
-    const npxCmd = isWindows ? "npx.cmd" : "npx";
-
-    serverProcess = spawn(npxCmd, ["tsx", serverScript, "--port", String(port)], {
-      cwd: rootDir,
+    serverProcess = spawn(launchConfig.command, [...launchConfig.args, "--port", String(port)], {
+      cwd: config.getAppRoot(),
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, ELECTRON_DESKTOP: "1" },
     });
@@ -173,7 +173,7 @@ function createMainWindow() {
       // Security: sandboxed renderer
       sandbox: true,
       // Preload script for any future bridge needs
-      preload: path.join(__dirname, "preload.cjs"),
+      preload: config.getPreloadPath(),
       // Security: disable webview tag
       webviewTag: false,
     },
@@ -243,10 +243,12 @@ function showErrorPage(message) {
 // ---------------------------------------------------------------------------
 
 async function boot() {
+  const packaged = config.isPackaged();
   if (isDev) {
     console.log();
     console.log("  CodingAgent — Desktop Mode (Electron) [Dev]");
     console.log("  " + "─".repeat(44));
+    console.log(`  Packaged: ${packaged}`);
     console.log();
   }
 

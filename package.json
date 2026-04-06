@@ -70,6 +70,8 @@
     "app-shell:help": "tsx src/app-shell/server.ts --help",
     "desktop": "electron electron/main.cjs",
     "desktop:dev": "ELECTRON_DEV=1 electron electron/main.cjs",
+    "desktop:build": "npm run build && npx electron-builder --config electron-builder.config.js",
+    "desktop:pack": "npm run build && npx electron-builder --config electron-builder.config.js --dir",
     "generate-host-profile": "tsx src/cli/main.ts detect-host --json",
     "preflight": "tsx scripts/preflight.ts"
   },
@@ -90,6 +92,7 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "electron": "^41.1.1",
+    "electron-builder": "^26.8.2",
     "eslint": "^9.0.0",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.0.0",

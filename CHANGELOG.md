@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 33** — Installer / Distribution First Slice
+  - electron-builder packaging configuration (`electron-builder.config.js`) for deterministic desktop builds
+  - `npm run desktop:build` — compile TypeScript to `dist/` then run electron-builder full build
+  - `npm run desktop:pack` — compile TypeScript to `dist/` then run electron-builder directory-only build (fastest)
+  - Packaged-mode detection: `isPackaged()` checks for asar archive or Electron's `app.isPackaged` flag
+  - Packaged-mode server launch: uses `node dist/app-shell/server.js` instead of `npx tsx src/app-shell/server.ts`
+  - Packaged-mode path resolution: `getAppRoot()`, `getPreloadPath()`, `getServerLaunchConfig()`
+  - Required files/dirs validation helpers: `getRequiredPackagedFiles()`, `getRequiredPackagedDirs()`
+  - `electron/main.cjs` updated to use config-based launch (no more hard-coded `npx tsx` path)
+  - `dist-electron/` output directory (gitignored)
+  - Platform targets: Linux (`dir`), macOS (`dir`, unsigned), Windows (`dir`)
+  - electron-builder `extraMetadata.main` overrides `package.json` main for Electron entry point
+  - No code signing (`mac.identity: null`), no auto-update, no publishing (`publish: null`)
+  - Documentation: build commands, output location, packaged-mode behavior, known limitations
+  - Updated `docs/ELECTRON.md` and `docs/PACKAGING.md` with Phase 33 details
+  - Phase 33 deterministic test suite: packaging config, build scripts, packaged-mode detection, path resolution, backward compatibility
+
 - **Phase 32** — Desktop Polish and Desktop-Specific UX
   - Branded loading page shown immediately in the BrowserWindow while app-shell server boots (spinner, version, dark theme)
   - In-window error page with troubleshooting hints when server fails to start (retry button, npm/Node.js checks, docs reference)
