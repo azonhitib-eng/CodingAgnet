@@ -276,8 +276,8 @@ export function extractTsJsImports(content: string): string[] {
   const imports: string[] = [];
   const seen = new Set<string>();
 
-  // ES import statements — use [^\n]* instead of .*? to avoid backtracking
-  const esImportRegex = /import\s[^\n]*?\sfrom\s+["']([^"']+)["']/g;
+  // ES import statements — match non-greedy on non-newline chars
+  const esImportRegex = /import\s[^\n]+\sfrom\s+["']([^"']+)["']/g;
   let match: RegExpExecArray | null;
   while ((match = esImportRegex.exec(content)) !== null) {
     if (!seen.has(match[1])) {
