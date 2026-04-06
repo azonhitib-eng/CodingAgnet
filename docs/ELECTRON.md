@@ -1,4 +1,4 @@
-# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33 + Phase 34 + Phase 35
+# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33 + Phase 34 + Phase 35 + Phase 36
 
 ## Overview
 
@@ -7,7 +7,8 @@ shell. Phase 32 polished the desktop experience with a loading page, error
 handling, versioned window titles, desktop-aware server banner, and a preload
 bridge. Phase 33 adds the first real distributable packaging flow using
 electron-builder. Phase 34 polishes the first-run and packaged-mode UX so
-the desktop app feels coherent and resilient in normal use.
+the desktop app feels coherent and resilient in normal use. Phase 36 adds
+code-signing readiness and desktop release polish.
 
 ## Architecture
 
@@ -383,13 +384,49 @@ Cross-platform builds are NOT supported — build on each platform natively.
 
 ### What is still missing before polished public desktop distribution
 
-1. **Code signing** — required for macOS notarization and Windows SmartScreen trust
+1. ~~**Code signing**~~ — signing readiness is configured (Phase 36); actual signing requires real certificates
 2. **Auto-update** — `electron-updater` with a release/update server
 3. **Custom application icon** — `assets/icon.png` (512×512 recommended)
 4. **CI/CD release pipeline** — automated builds per platform per release tag
 5. **Linux package variants** — `.deb`, `.rpm`, Snap, Flatpak
 6. **Offline asset bundling** — embed server instead of child process spawn
 7. **Tree-shaking / bundling** — reduce `node_modules` size in packaged app
+
+## Code Signing Readiness (Phase 36)
+
+Code signing is **environment-driven**. When the correct environment variables
+are set, `electron-builder` signs artifacts automatically during
+`npm run desktop:build` or `npm run desktop:installer`.
+
+### Quick reference
+
+| Platform | Required env vars | Effect |
+|----------|-------------------|--------|
+| macOS | `CSC_LINK`, `CSC_KEY_PASSWORD` | Signs .app and .dmg |
+| macOS (notarize) | + `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | Notarizes with Apple |
+| Windows | `CSC_LINK`, `CSC_KEY_PASSWORD` (or `WIN_CSC_LINK`) | Authenticode signs .exe |
+| Linux | (none required) | AppImage is typically unsigned |
+
+### When no signing credentials are set
+
+Builds are **unsigned**. Users will see OS security warnings:
+
+- **macOS Gatekeeper:** "CodingAgent can't be opened because Apple cannot check
+  it for malicious software." Workaround: right-click → Open → Open.
+- **Windows SmartScreen:** "Windows protected your PC — this app is from an
+  unknown publisher." Workaround: click "More info" → "Run anyway."
+- **Linux:** No warnings.
+
+### Checking readiness programmatically
+
+```js
+const config = require("./electron/config.cjs");
+const signing = config.getSigningConfig();
+console.log(signing.summary);
+// "Signing not configured — set CSC_LINK (and related vars) to enable"
+```
+
+See [`docs/CODE-SIGNING.md`](./CODE-SIGNING.md) for the full signing strategy.
 
 ## What This Phase Includes
 
@@ -465,11 +502,27 @@ Cross-platform builds are NOT supported — build on each platform natively.
 - ✅ Documentation: installer build instructions, platform support, known limitations, missing steps
 - ✅ Phase 35 deterministic test suite
 
+### Phase 36 (Code-signing strategy and desktop release polish)
+- ✅ Environment-driven code-signing readiness in `electron-builder.config.js`
+- ✅ macOS: `identity` is env-driven (signs when `CSC_LINK` is set, `null` otherwise)
+- ✅ macOS: `notarize` is env-driven (active when Apple credentials are present)
+- ✅ Windows: `CSC_LINK` / `WIN_CSC_LINK` signing documented in builder config
+- ✅ Linux: AppImage unsigned by default, optional GPG noted
+- ✅ `SIGNING_ENV_VARS` map in `electron/config.cjs` — per-platform env var definitions
+- ✅ `getSigningConfig(platform?)` — checks env var presence, returns readiness status
+- ✅ `isSigningConfigured(platform?)` — convenience boolean check
+- ✅ `getReleaseReadiness()` — comprehensive release readiness summary
+- ✅ `docs/CODE-SIGNING.md` — full per-platform signing guide with env vars and unsigned behavior
+- ✅ Updated `docs/ELECTRON.md` with Phase 36 signing readiness section
+- ✅ Updated `docs/PACKAGING.md` with Phase 36 additions
+- ✅ No fake signing, no auto-update, no backend changes
+- ✅ Phase 36 deterministic test suite
+
 ## What Is Deferred (Future Phases)
 
 - Application icon asset (the path convention is defined)
 - Auto-update mechanism (`electron-updater`)
-- Code signing for distribution (macOS notarization, Windows Authenticode)
+- Actual signing certificates (readiness is configured, certificates are not)
 - Additional Linux package formats (deb, rpm, Snap, Flatpak)
 - Tray / dock integration
 - Native file dialogs via IPC bridge
@@ -481,8 +534,9 @@ Cross-platform builds are NOT supported — build on each platform natively.
 
 ## Limitations
 
-- **Unsigned installer** — the installer is not code-signed; users will see OS
-  security warnings (Gatekeeper on macOS, SmartScreen on Windows)
+- **Unsigned by default** — builds are unsigned unless signing environment
+  variables are set; users will see OS security warnings (see
+  [Code Signing](./CODE-SIGNING.md) for details and workarounds)
 - **Requires Node.js and npm** for development builds; the installer bundles
   its own runtime
 - **Server is a child process** — there is a brief startup delay while the

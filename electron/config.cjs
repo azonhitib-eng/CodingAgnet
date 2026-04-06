@@ -13,6 +13,9 @@
  * runtime validation, environment summary, icon fallback, escapeHtml helper.
  *
  * Phase 35: added installer target metadata helper (getInstallerTargets).
+ *
+ * Phase 36: added code-signing readiness helpers (getSigningConfig,
+ * isSigningConfigured, getReleaseReadiness) and SIGNING_ENV_VARS map.
  */
 
 "use strict";
@@ -557,6 +560,127 @@ function getIconPath() {
 }
 
 // ---------------------------------------------------------------------------
+// Code-signing readiness (Phase 36)
+// ---------------------------------------------------------------------------
+
+/**
+ * Environment variable names that drive code-signing configuration.
+ *
+ * These are not invented conventions — they are the standard variables used by
+ * electron-builder and platform tooling:
+ *
+ *   macOS  — CSC_LINK (path/base64 p12), CSC_KEY_PASSWORD,
+ *            APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+ *   Windows — CSC_LINK (path/base64 pfx), CSC_KEY_PASSWORD,
+ *             WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD (platform-specific override)
+ *   Linux  — typically unsigned; GPG_KEY_ID for optional GPG signatures
+ *
+ * This object is informational and used by readiness checks / docs only.
+ */
+const SIGNING_ENV_VARS = {
+  darwin: ["CSC_LINK", "CSC_KEY_PASSWORD", "APPLE_ID", "APPLE_APP_SPECIFIC_PASSWORD", "APPLE_TEAM_ID"],
+  win32: ["CSC_LINK", "CSC_KEY_PASSWORD", "WIN_CSC_LINK", "WIN_CSC_KEY_PASSWORD"],
+  linux: ["GPG_KEY_ID"],
+};
+
+/**
+ * Return the current code-signing readiness status for a given platform.
+ *
+ * This does NOT perform any signing — it merely checks whether the expected
+ * environment variables are present, so tooling / docs / CI can report
+ * whether signing *would* be applied.
+ *
+ * @param {string} [platform] — defaults to process.platform
+ * @returns {{
+ *   platform: string;
+ *   configured: boolean;
+ *   active: boolean;
+ *   envVars: { name: string; present: boolean }[];
+ *   summary: string;
+ * }}
+ */
+function getSigningConfig(platform) {
+  const plat = platform || process.platform;
+  const expectedVars = SIGNING_ENV_VARS[plat] || [];
+
+  const envVars = expectedVars.map((name) => ({
+    name,
+    present: typeof process.env[name] === "string" && (process.env[name]?.length ?? 0) > 0,
+  }));
+
+  // "configured" means at least the primary certificate variable is set
+  const configured = envVars.length > 0 && envVars[0].present;
+  // "active" means configured AND we are on the correct host platform
+  const active = configured && plat === process.platform;
+
+  let summary;
+  if (envVars.length === 0) {
+    summary = `No signing variables defined for platform "${plat}"`;
+  } else if (!configured) {
+    summary = `Signing not configured — set ${expectedVars[0]} (and related vars) to enable`;
+  } else if (!active) {
+    summary = `Signing configured but inactive — host platform is "${process.platform}", target is "${plat}"`;
+  } else {
+    summary = "Signing configured and active for current platform";
+  }
+
+  return { platform: plat, configured, active, envVars, summary };
+}
+
+/**
+ * Check whether code signing is configured for the current (or given) platform.
+ * Convenience wrapper around getSigningConfig().
+ *
+ * @param {string} [platform]
+ * @returns {boolean}
+ */
+function isSigningConfigured(platform) {
+  return getSigningConfig(platform).configured;
+}
+
+/**
+ * Return a human-readable release-readiness summary covering signing,
+ * icon, and version metadata.
+ *
+ * @param {{ forcePackaged?: boolean }} [opts]
+ * @returns {{
+ *   version: string;
+ *   productName: string;
+ *   signing: { configured: boolean; active: boolean; summary: string };
+ *   icon: { present: boolean; path: string | null };
+ *   artifactNaming: string;
+ *   unsignedWarning: string;
+ * }}
+ */
+function getReleaseReadiness(opts) {
+  const signing = getSigningConfig();
+  const iconPath = getIconPath();
+  const version = getDesktopVersion();
+
+  const unsignedWarning = signing.active
+    ? "Artifacts will be signed — no additional OS warnings expected."
+    : [
+        "Artifacts are UNSIGNED. Users will see OS security warnings:",
+        "  • macOS: Gatekeeper will warn the app is from an unidentified developer",
+        "  • Windows: SmartScreen will show an \"unrecognized app\" warning",
+        "  • Linux: No warning (AppImage is not typically signed)",
+      ].join("\n");
+
+  return {
+    version,
+    productName: APP_TITLE,
+    signing: {
+      configured: signing.configured,
+      active: signing.active,
+      summary: signing.summary,
+    },
+    icon: { present: !!iconPath, path: iconPath },
+    artifactNaming: "${productName}-${version}-${os}-${arch}.${ext}",
+    unsignedWarning,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Installer target metadata (Phase 35)
 // ---------------------------------------------------------------------------
 
@@ -632,4 +756,9 @@ module.exports = {
   getIconPath,
   // Phase 35: installer generation helpers
   getInstallerTargets,
+  // Phase 36: code-signing readiness helpers
+  SIGNING_ENV_VARS,
+  getSigningConfig,
+  isSigningConfigured,
+  getReleaseReadiness,
 };
