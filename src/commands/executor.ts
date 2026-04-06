@@ -148,6 +148,42 @@ export interface CommandExecutorDeps {
     error?: string;
     detail?: Record<string, unknown>;
   }>;
+  /** List MCP tools. Returns {ok, error?, detail?}. */
+  readonly listMcpTools?: (
+    serverId?: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Inspect a specific MCP tool. Returns {ok, error?, detail?}. */
+  readonly inspectMcpTool?: (
+    serverId: string,
+    toolId: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Invoke an MCP tool. Returns {ok, error?, detail?}. */
+  readonly invokeMcpTool?: (
+    serverId: string,
+    toolId: string,
+    input: Readonly<Record<string, unknown>>,
+    reason?: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Attach GitHub MCP server. Returns {ok, error?, detail?}. */
+  readonly attachGitHubMcp?: (
+    token?: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -408,6 +444,51 @@ async function dispatchCommand(
       return res.ok
         ? makeResult(payload.commandId, "completed", "Diagnostics summary refreshed.", res.detail)
         : makeResult(payload.commandId, "failed", res.error ?? "Diagnostics summary refresh failed.");
+    }
+
+    case "list_mcp_tools": {
+      if (!deps.listMcpTools) {
+        return makeResult(payload.commandId, "failed", "MCP tool listing not available.");
+      }
+      const res = await deps.listMcpTools(payload.data.serverId);
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "MCP tools listed.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "MCP tool listing failed.");
+    }
+
+    case "inspect_mcp_tool": {
+      if (!deps.inspectMcpTool) {
+        return makeResult(payload.commandId, "failed", "MCP tool inspection not available.");
+      }
+      const res = await deps.inspectMcpTool(payload.data.serverId, payload.data.toolId);
+      return res.ok
+        ? makeResult(payload.commandId, "completed", `MCP tool inspected: ${payload.data.toolId}`, res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "MCP tool inspection failed.");
+    }
+
+    case "invoke_mcp_tool": {
+      if (!deps.invokeMcpTool) {
+        return makeResult(payload.commandId, "failed", "MCP tool invocation not available.");
+      }
+      const res = await deps.invokeMcpTool(
+        payload.data.serverId,
+        payload.data.toolId,
+        payload.data.input,
+        payload.data.reason,
+      );
+      return res.ok
+        ? makeResult(payload.commandId, "completed", `MCP tool invoked: ${payload.data.toolId}`, res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "MCP tool invocation failed.");
+    }
+
+    case "attach_github_mcp": {
+      if (!deps.attachGitHubMcp) {
+        return makeResult(payload.commandId, "failed", "GitHub MCP attachment not available.");
+      }
+      const res = await deps.attachGitHubMcp(payload.data.token);
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "GitHub MCP server attached.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "GitHub MCP attachment failed.");
     }
   }
 }

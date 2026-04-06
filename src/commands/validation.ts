@@ -18,6 +18,8 @@ import type {
   RunWorkflowPayload,
   RestoreSessionPayload,
   RunWorkspaceCheckPayload,
+  InspectMcpToolPayload,
+  InvokeMcpToolPayload,
 } from "./types.js";
 
 /* ------------------------------------------------------------------ */
@@ -156,6 +158,31 @@ export function validateRunWorkspaceCheck(data: RunWorkspaceCheckPayload): Comma
   return errors.length > 0 ? invalid(errors) : VALID_OK;
 }
 
+export function validateInspectMcpTool(data: InspectMcpToolPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.serverId)) {
+    errors.push(fieldError("serverId", "MCP server ID is required."));
+  }
+  if (!isNonEmpty(data.toolId)) {
+    errors.push(fieldError("toolId", "Tool ID is required."));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
+export function validateInvokeMcpTool(data: InvokeMcpToolPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.serverId)) {
+    errors.push(fieldError("serverId", "MCP server ID is required."));
+  }
+  if (!isNonEmpty(data.toolId)) {
+    errors.push(fieldError("toolId", "Tool ID is required."));
+  }
+  if (data.input === undefined || data.input === null || typeof data.input !== "object") {
+    errors.push(fieldError("input", "Tool input must be an object."));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Top-level dispatcher                                               */
 /* ------------------------------------------------------------------ */
@@ -195,5 +222,13 @@ export function validateCommand(payload: CommandPayload): CommandValidationResul
       return VALID_OK; // No inputs required.
     case "refresh_diagnostics_summary":
       return VALID_OK; // No inputs required.
+    case "list_mcp_tools":
+      return VALID_OK; // Optional serverId filter, no required fields.
+    case "inspect_mcp_tool":
+      return validateInspectMcpTool(payload.data);
+    case "invoke_mcp_tool":
+      return validateInvokeMcpTool(payload.data);
+    case "attach_github_mcp":
+      return VALID_OK; // Optional token, no required fields.
   }
 }

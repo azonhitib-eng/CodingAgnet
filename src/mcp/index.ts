@@ -5,6 +5,7 @@
  * Phase 20: local-first MCP management, session integration,
  * and capability discovery modeling.
  * Phase 26: health hardening, discovery state tracking, refresh/recheck.
+ * Phase 41: tool invocation layer, tool registry, GitHub MCP integration.
  */
 
 /* types */
@@ -87,3 +88,60 @@ export type { CreateMcpServerConfigOptions } from "./config.js";
 
 /* mcp manager */
 export { McpManager } from "./mcp-manager.js";
+
+/* tool invocation (Phase 41) */
+export type {
+  McpToolId,
+  McpToolDefinition,
+  McpToolInputSchemaSummary,
+  McpToolInvocationRequest,
+  McpToolInvocationStatus,
+  McpToolInvocationResultSummary,
+  McpToolInvocationError,
+  SessionToolActionSummary,
+} from "./tool-invocation.js";
+export {
+  validateInvocationInput,
+  executeToolInvocation,
+  buildSessionToolActionSummary,
+} from "./tool-invocation.js";
+
+/* tool registry (Phase 41) */
+export type {
+  McpToolState,
+  McpToolRegistryEntry,
+} from "./tool-registry.js";
+export {
+  McpToolRegistry,
+  extractInputSchemaSummary,
+} from "./tool-registry.js";
+
+/* tool session integration (Phase 41) */
+export {
+  mcpToolInvocationStarted,
+  mcpToolInvocationCompleted,
+  mcpToolInvocationFailed,
+  mcpToolListRefreshed,
+  mcpGitHubAttached,
+  mcpGitHubAuthMissing,
+  MCP_TOOL_EVENT_KINDS,
+  isMcpToolEvent,
+  invocationResultToEvents,
+} from "./tool-session-integration.js";
+export type { McpToolEventKind } from "./tool-session-integration.js";
+
+/* GitHub MCP integration (Phase 41) */
+export type { GitHubMcpIntegrationStatus } from "./github-mcp.js";
+export {
+  GITHUB_MCP_SERVER_ID,
+  GITHUB_MCP_SERVER_NAME,
+  GITHUB_MCP_DEFAULT_COMMAND,
+  GITHUB_MCP_DEFAULT_ARGS,
+  GITHUB_TOKEN_ENV_VAR,
+  isGitHubAuthConfigured,
+  getGitHubAuthStatus,
+  createGitHubMcpConfig,
+  getKnownGitHubToolDefinitions,
+  KNOWN_GITHUB_TOOL_IDS,
+  assessGitHubMcpStatus,
+} from "./github-mcp.js";

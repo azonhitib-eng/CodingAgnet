@@ -148,6 +148,23 @@ export interface SessionSummary {
   readonly lastDiagnosticsTotalCount: number | null;
   /** Last collected diagnostics: files affected. */
   readonly lastDiagnosticsFilesAffected: number | null;
+
+  /* MCP tool invocation (Phase 41) */
+
+  /** Total tool invocations in this session. */
+  readonly toolInvocationCount: number | null;
+  /** Successful tool invocations. */
+  readonly toolInvocationSuccessCount: number | null;
+  /** Failed tool invocations. */
+  readonly toolInvocationFailureCount: number | null;
+  /** Unique tool IDs invoked. */
+  readonly toolsUsed: readonly string[] | null;
+  /** Whether GitHub MCP is attached. */
+  readonly githubMcpAttached: boolean;
+  /** Whether GitHub auth is configured. */
+  readonly githubAuthConfigured: boolean;
+  /** GitHub MCP readiness message. */
+  readonly githubMcpReadinessMessage: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -342,6 +359,17 @@ export class SessionManager {
       readonly lastDiagnosticsTotalCount?: number | null;
       readonly lastDiagnosticsFilesAffected?: number | null;
     } | null,
+    toolInvocationSummary?: {
+      readonly totalInvocations?: number;
+      readonly successCount?: number;
+      readonly failureCount?: number;
+      readonly toolsUsed?: readonly string[];
+    } | null,
+    githubMcpSummary?: {
+      readonly attached?: boolean;
+      readonly authConfigured?: boolean;
+      readonly readinessMessage?: string;
+    } | null,
   ): SessionSummary {
     const session = this.requireSession(id);
     const lastEvent =
@@ -427,6 +455,14 @@ export class SessionManager {
       lastDiagnosticsWarningCount: languageServiceSummary?.lastDiagnosticsWarningCount ?? null,
       lastDiagnosticsTotalCount: languageServiceSummary?.lastDiagnosticsTotalCount ?? null,
       lastDiagnosticsFilesAffected: languageServiceSummary?.lastDiagnosticsFilesAffected ?? null,
+      /* MCP tool invocation (Phase 41) */
+      toolInvocationCount: toolInvocationSummary?.totalInvocations ?? null,
+      toolInvocationSuccessCount: toolInvocationSummary?.successCount ?? null,
+      toolInvocationFailureCount: toolInvocationSummary?.failureCount ?? null,
+      toolsUsed: toolInvocationSummary?.toolsUsed ?? null,
+      githubMcpAttached: githubMcpSummary?.attached ?? false,
+      githubAuthConfigured: githubMcpSummary?.authConfigured ?? false,
+      githubMcpReadinessMessage: githubMcpSummary?.readinessMessage ?? null,
     };
   }
 

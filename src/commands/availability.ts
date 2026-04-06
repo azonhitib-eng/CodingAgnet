@@ -169,6 +169,42 @@ function checkRefreshDiagnosticsSummary(ctx: CommandContextState): CommandAvaila
   return { commandId: "refresh_diagnostics_summary", available: true };
 }
 
+function checkListMcpTools(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "list_mcp_tools", available: false, reason: "No active session." };
+  }
+  return { commandId: "list_mcp_tools", available: true };
+}
+
+function checkInspectMcpTool(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "inspect_mcp_tool", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || s.mcpServerCount === 0) {
+    return { commandId: "inspect_mcp_tool", available: false, reason: "No MCP servers attached." };
+  }
+  return { commandId: "inspect_mcp_tool", available: true };
+}
+
+function checkInvokeMcpTool(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "invoke_mcp_tool", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || s.mcpServerCount === 0) {
+    return { commandId: "invoke_mcp_tool", available: false, reason: "No MCP servers attached." };
+  }
+  return { commandId: "invoke_mcp_tool", available: true };
+}
+
+function checkAttachGitHubMcp(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "attach_github_mcp", available: false, reason: "No active session." };
+  }
+  return { commandId: "attach_github_mcp", available: true };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Availability dispatcher                                            */
 /* ------------------------------------------------------------------ */
@@ -190,6 +226,10 @@ const CHECKERS: Record<CommandId, (ctx: CommandContextState) => CommandAvailabil
   inspect_language_service: checkInspectLanguageService,
   collect_diagnostics: checkCollectDiagnostics,
   refresh_diagnostics_summary: checkRefreshDiagnosticsSummary,
+  list_mcp_tools: checkListMcpTools,
+  inspect_mcp_tool: checkInspectMcpTool,
+  invoke_mcp_tool: checkInvokeMcpTool,
+  attach_github_mcp: checkAttachGitHubMcp,
 };
 
 /** Get availability of a single command given the current state. */

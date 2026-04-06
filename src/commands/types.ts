@@ -28,7 +28,11 @@ export type CommandId =
   | "refresh_toolchain_summary"
   | "inspect_language_service"
   | "collect_diagnostics"
-  | "refresh_diagnostics_summary";
+  | "refresh_diagnostics_summary"
+  | "list_mcp_tools"
+  | "inspect_mcp_tool"
+  | "invoke_mcp_tool"
+  | "attach_github_mcp";
 
 /** Logical category grouping for commands. */
 export type CommandCategory =
@@ -124,6 +128,26 @@ export type CollectDiagnosticsPayload = Record<string, never>;
 
 export type RefreshDiagnosticsSummaryPayload = Record<string, never>;
 
+export interface ListMcpToolsPayload {
+  readonly serverId?: string;
+}
+
+export interface InspectMcpToolPayload {
+  readonly serverId: string;
+  readonly toolId: string;
+}
+
+export interface InvokeMcpToolPayload {
+  readonly serverId: string;
+  readonly toolId: string;
+  readonly input: Readonly<Record<string, unknown>>;
+  readonly reason?: string;
+}
+
+export interface AttachGitHubMcpPayload {
+  readonly token?: string;
+}
+
 /** Discriminated union of all command payloads. */
 export type CommandPayload =
   | { readonly commandId: "open_workspace"; readonly data: OpenWorkspacePayload }
@@ -141,7 +165,11 @@ export type CommandPayload =
   | { readonly commandId: "refresh_toolchain_summary"; readonly data: RefreshToolchainSummaryPayload }
   | { readonly commandId: "inspect_language_service"; readonly data: InspectLanguageServicePayload }
   | { readonly commandId: "collect_diagnostics"; readonly data: CollectDiagnosticsPayload }
-  | { readonly commandId: "refresh_diagnostics_summary"; readonly data: RefreshDiagnosticsSummaryPayload };
+  | { readonly commandId: "refresh_diagnostics_summary"; readonly data: RefreshDiagnosticsSummaryPayload }
+  | { readonly commandId: "list_mcp_tools"; readonly data: ListMcpToolsPayload }
+  | { readonly commandId: "inspect_mcp_tool"; readonly data: InspectMcpToolPayload }
+  | { readonly commandId: "invoke_mcp_tool"; readonly data: InvokeMcpToolPayload }
+  | { readonly commandId: "attach_github_mcp"; readonly data: AttachGitHubMcpPayload };
 
 /* ------------------------------------------------------------------ */
 /*  Validation                                                         */
@@ -308,6 +336,30 @@ export const COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
     category: "language_service",
     label: "Refresh Diagnostics Summary",
     description: "Re-assess language-service availability and refresh diagnostics summary.",
+  },
+  {
+    id: "list_mcp_tools",
+    category: "mcp",
+    label: "List MCP Tools",
+    description: "List all available tools from attached MCP servers.",
+  },
+  {
+    id: "inspect_mcp_tool",
+    category: "mcp",
+    label: "Inspect MCP Tool",
+    description: "Get detailed metadata for a specific MCP tool.",
+  },
+  {
+    id: "invoke_mcp_tool",
+    category: "mcp",
+    label: "Invoke MCP Tool",
+    description: "Explicitly invoke a read-only MCP tool with provided inputs.",
+  },
+  {
+    id: "attach_github_mcp",
+    category: "mcp",
+    label: "Attach GitHub MCP",
+    description: "Attach a GitHub MCP server and register known GitHub tools.",
   },
 ] as const;
 
