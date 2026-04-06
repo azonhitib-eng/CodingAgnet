@@ -297,7 +297,8 @@ describe("buildEnvironmentSummary — Phase 34", () => {
 
   it("appRoot is an absolute path", () => {
     const root = buildEnvironmentSummary().appRoot;
-    expect(root).toMatch(/^\//); // Unix absolute path
+    const pathMod = require("node:path");
+    expect(pathMod.isAbsolute(root)).toBe(true);
   });
 });
 

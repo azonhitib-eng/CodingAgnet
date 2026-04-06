@@ -538,7 +538,8 @@ function buildEnvironmentSummary(opts) {
 
 /**
  * Get a usable icon path with fallback behavior.
- * Returns the placeholder path if the icon file exists, or null if not.
+ * Returns the icon placeholder path if the file exists on disk, or null
+ * if no icon file is present (the caller should then use the default icon).
  * @returns {string | null}
  */
 function getIconPath() {
