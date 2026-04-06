@@ -1,11 +1,12 @@
-# Electron Desktop Wrapper — Phase 31 + Phase 32
+# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33
 
 ## Overview
 
 Phase 31 added an Electron desktop wrapper around the existing CodingAgent app
 shell. Phase 32 polished the desktop experience with a loading page, error
 handling, versioned window titles, desktop-aware server banner, and a preload
-bridge.
+bridge. Phase 33 adds the first real distributable packaging flow using
+electron-builder.
 
 ## Architecture
 
@@ -193,6 +194,91 @@ This should not happen after Phase 32 — the window always shows either:
 
 If it does happen, use `npm run desktop:dev` and check the terminal output.
 
+## Generating a Packaged Desktop Build (Phase 33)
+
+### Prerequisites
+
+- Node.js ≥ 18
+- `npm install` completed (installs electron-builder as devDependency)
+
+### Quick build (directory output only, fastest)
+
+```bash
+npm run desktop:pack
+```
+
+This will:
+1. Compile TypeScript to `dist/` via `tsc`
+2. Run electron-builder with `--dir` flag (no installer, just a directory)
+3. Output to `dist-electron/` (e.g. `dist-electron/linux-unpacked/`, `dist-electron/mac/`, or `dist-electron/win-unpacked/`)
+
+### Full build
+
+```bash
+npm run desktop:build
+```
+
+Same as above but may produce additional platform-specific artifacts depending
+on the host platform.
+
+### What is included in the artifact
+
+- Compiled backend code (`dist/`)
+- Data catalogs (`data/`)
+- Electron wrapper files (`electron/main.cjs`, `electron/preload.cjs`, `electron/config.cjs`)
+- Runtime dependencies (`node_modules/` — production only)
+- Package metadata (`package.json`)
+- Bundled Electron binary
+
+### What is NOT included
+
+- TypeScript source (`src/`)
+- Test files (`tests/`)
+- Documentation (`docs/`)
+- Dev-only config files (`eslint.config.js`, `vitest.config.ts`, `tsconfig.json`)
+
+### Where the output appears
+
+```
+dist-electron/
+├── linux-unpacked/   (on Linux)
+├── mac/              (on macOS)
+│   └── CodingAgent.app/
+└── win-unpacked/     (on Windows)
+```
+
+### Platform support in this phase
+
+| Platform | Target | Status |
+|----------|--------|--------|
+| Linux    | `dir`  | ✅ Supported |
+| macOS    | `dir`  | ✅ Supported (unsigned) |
+| Windows  | `dir`  | ✅ Supported |
+
+Cross-platform builds (building for a different OS than the host) are NOT
+supported in this phase.
+
+### Packaged-mode runtime behavior
+
+In packaged mode, the Electron main process detects that it is inside an
+electron-builder artifact and adjusts:
+
+- **Server launch**: uses `node dist/app-shell/server.js` instead of `npx tsx src/app-shell/server.ts`
+- **Path resolution**: uses the packaged app root instead of the source tree
+- **Preload script**: resolved via `config.getPreloadPath()`
+- **Version**: read from the bundled `package.json`
+
+### Known limitations (Phase 33)
+
+- **Unsigned build** — the packaged app is not code-signed; users may see OS warnings
+- **No auto-update** — no `electron-updater` or update server
+- **No installer** — output is a directory/app bundle, not a DMG/MSI/AppImage
+- **No custom icon** — uses default Electron icon
+- **No tray/dock integration**
+- **Production dependencies included** — `node_modules` contains zod and its
+  transitive dependencies; no tree-shaking or bundling is applied
+- **Local-platform-only** — cross-compilation is not supported
+
 ## What This Phase Includes
 
 ### Phase 31 (Electron wrapper)
@@ -220,17 +306,32 @@ If it does happen, use `npm run desktop:dev` and check the terminal output.
 - ✅ Documentation: browser vs desktop comparison, troubleshooting
 - ✅ Phase 32 deterministic test suite
 
+### Phase 33 (Installer / distribution first slice)
+- ✅ electron-builder packaging configuration (`electron-builder.config.js`)
+- ✅ `npm run desktop:build` — compile + package full build
+- ✅ `npm run desktop:pack` — compile + package directory-only (fastest)
+- ✅ Packaged-mode detection (`isPackaged()`)
+- ✅ Packaged-mode server launch (compiled JS via `node` instead of `npx tsx`)
+- ✅ Packaged-mode path resolution (`getAppRoot()`, `getPreloadPath()`)
+- ✅ Required files/dirs validation helpers
+- ✅ `dist-electron/` output directory (gitignored)
+- ✅ Platform targets: Linux, macOS, Windows (all `dir` target)
+- ✅ No code signing, no auto-update, no installer generation
+- ✅ Documentation: build commands, output location, known limitations
+- ✅ Phase 33 deterministic test suite
+
 ## What Is Deferred (Future Phases)
 
 - Application icon asset (the path convention is defined)
 - Auto-update mechanism (`electron-updater`)
-- OS-level installer generation (DMG, MSI, AppImage, deb)
+- OS-level installer generation (DMG, MSI, AppImage, deb) — currently `dir` target only
+- Code signing for distribution
 - Tray / dock integration
 - Native file dialogs via IPC bridge
 - Menu bar customization
 - System notifications
 - Offline-first asset bundling (embed server output instead of spawning)
-- Code signing for distribution
+- Cross-platform build automation (CI matrix)
 - Crash reporting
 
 ## Limitations

@@ -4,6 +4,10 @@
  * Centralizes configurable values used by the main process and tests.
  * Keeping these in a separate file makes them easy to test without
  * importing Electron APIs.
+ *
+ * Phase 33: added packaged-mode detection and path resolution helpers
+ * so that the app works both in dev mode (source tree) and when packaged
+ * by electron-builder into a distributable artifact.
  */
 
 "use strict";
@@ -252,6 +256,129 @@ function renderErrorHtml(message) {
 </html>`;
 }
 
+// ---------------------------------------------------------------------------
+// Packaged-mode detection and path resolution (Phase 33)
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect whether the app is running inside an electron-builder packaged asar
+ * or unpacked directory. In dev mode, __dirname is inside the source tree.
+ * In packaged mode, it is inside the asar archive or unpacked resources.
+ *
+ * Detection heuristic: the app.asar path segment or the presence of an
+ * app-specific marker. We check whether __dirname contains "app.asar" or
+ * whether the `app` module's `isPackaged` flag is set.
+ *
+ * For testability (without requiring Electron), this function also accepts
+ * an explicit override.
+ *
+ * @param {{ forcePackaged?: boolean }} [opts]
+ * @returns {boolean}
+ */
+function isPackaged(opts) {
+  if (opts && typeof opts.forcePackaged === "boolean") {
+    return opts.forcePackaged;
+  }
+  // Check for asar path (works even without Electron APIs)
+  if (__dirname.includes("app.asar")) {
+    return true;
+  }
+  // Check Electron's own flag if available
+  try {
+    const { app } = require("electron");
+    if (app && typeof app.isPackaged === "boolean") {
+      return app.isPackaged;
+    }
+  } catch {
+    // Not in Electron context (e.g. running from tests)
+  }
+  return false;
+}
+
+/**
+ * Get the application root directory.
+ *
+ * - Dev mode: project root (one level up from electron/)
+ * - Packaged mode: the asar/unpacked root (same relative structure)
+ *
+ * @param {{ forcePackaged?: boolean }} [opts]
+ * @returns {string}
+ */
+function getAppRoot(opts) {
+  // In both dev and packaged mode, config.cjs lives in electron/
+  // so one level up is the app root.
+  return path.resolve(__dirname, "..");
+}
+
+/**
+ * Get the path to the compiled server entry point.
+ *
+ * - Dev mode: uses `npx tsx src/app-shell/server.ts` (TypeScript, interpreted)
+ * - Packaged mode: uses `node dist/app-shell/server.js` (compiled JS)
+ *
+ * @param {{ forcePackaged?: boolean }} [opts]
+ * @returns {{ command: string; args: string[]; serverScript: string }}
+ */
+function getServerLaunchConfig(opts) {
+  const appRoot = getAppRoot(opts);
+  const packaged = isPackaged(opts);
+
+  if (packaged) {
+    // In packaged mode, TypeScript is not available — use compiled output
+    const serverScript = path.join(appRoot, "dist", "app-shell", "server.js");
+    return {
+      command: process.execPath, // The bundled Node/Electron executable
+      args: [serverScript],
+      serverScript,
+    };
+  }
+
+  // Dev mode: use npx tsx to run TypeScript source
+  const serverScript = path.join(appRoot, "src", "app-shell", "server.ts");
+  const isWindows = process.platform === "win32";
+  const npxCmd = isWindows ? "npx.cmd" : "npx";
+  return {
+    command: npxCmd,
+    args: ["tsx", serverScript],
+    serverScript,
+  };
+}
+
+/**
+ * Get the path to the preload script.
+ * Works in both dev and packaged mode.
+ * @returns {string}
+ */
+function getPreloadPath() {
+  return path.join(__dirname, "preload.cjs");
+}
+
+/**
+ * List of required files that must be present for the packaged app to work.
+ * Used by smoke tests and validation.
+ * @returns {string[]}
+ */
+function getRequiredPackagedFiles() {
+  return [
+    "electron/main.cjs",
+    "electron/preload.cjs",
+    "electron/config.cjs",
+    "package.json",
+  ];
+}
+
+/**
+ * List of required directories for the packaged app.
+ * @returns {string[]}
+ */
+function getRequiredPackagedDirs() {
+  return [
+    "dist",
+    "data",
+    "electron",
+  ];
+}
+
 module.exports = {
   DEFAULT_WIDTH,
   DEFAULT_HEIGHT,
@@ -268,4 +395,11 @@ module.exports = {
   buildLocalUrl,
   renderLoadingHtml,
   renderErrorHtml,
+  // Phase 33: packaged-mode helpers
+  isPackaged,
+  getAppRoot,
+  getServerLaunchConfig,
+  getPreloadPath,
+  getRequiredPackagedFiles,
+  getRequiredPackagedDirs,
 };

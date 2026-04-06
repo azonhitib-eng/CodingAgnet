@@ -406,7 +406,9 @@ describe("Phase 31 — Startup path behavior", () => {
   const mainContent = readFileSync(join(ELECTRON_DIR, "main.cjs"), "utf-8");
 
   it("main process spawns the existing server (not a new one)", () => {
-    expect(mainContent).toContain("server.ts");
+    // Phase 33: server path is now resolved via config.getServerLaunchConfig()
+    // The main.cjs references getServerLaunchConfig which resolves to server.ts in dev
+    expect(mainContent).toContain("getServerLaunchConfig");
     expect(mainContent).toContain("spawn");
   });
 
@@ -627,7 +629,8 @@ describe("Phase 31 — Window configuration", () => {
 
   it("uses preload script path", () => {
     expect(mainContent).toContain("preload:");
-    expect(mainContent).toContain("preload.cjs");
+    // Phase 33: preload path is now resolved via config.getPreloadPath()
+    expect(mainContent.includes("preload.cjs") || mainContent.includes("getPreloadPath")).toBe(true);
   });
 });
 

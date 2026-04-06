@@ -1,9 +1,10 @@
-# Packaging Decision — Phases 17 & 31
+# Packaging Decision — Phases 17, 31 & 33
 
 ## Decision
 
 **Phase 17: Enhanced local web shell + desktop launcher**
 **Phase 31: Electron desktop wrapper — first usable desktop slice**
+**Phase 33: First distributable desktop build via electron-builder**
 
 Phase 17 established the browser-based desktop launcher. Phase 31 adds an
 actual Electron wrapper that opens the app in a native desktop window.
@@ -43,6 +44,19 @@ Both paths remain available:
 
 See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
 
+## Phase 33 additions (electron-builder packaging)
+
+1. `electron-builder.config.js` — deterministic packaging config
+2. `npm run desktop:build` — compile TypeScript + electron-builder full build
+3. `npm run desktop:pack` — compile TypeScript + electron-builder directory-only build
+4. Packaged-mode detection: `isPackaged()` in `electron/config.cjs`
+5. Packaged-mode server launch: uses `node dist/app-shell/server.js` instead of `npx tsx`
+6. Packaged-mode path helpers: `getAppRoot()`, `getPreloadPath()`, `getServerLaunchConfig()`
+7. Required files/dirs validation helpers for smoke testing
+8. `dist-electron/` output directory (gitignored)
+9. Supports Linux, macOS, Windows — `dir` target only (no installers)
+10. No code signing, no auto-update
+
 ## Why further alternatives are deferred
 
 | Alternative | Reason deferred |
@@ -56,13 +70,14 @@ See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
 
 - Application icon and metadata
 - Auto-update mechanism (`electron-updater`)
-- OS-level installer / DMG / MSI / AppImage packaging
+- OS-level installer / DMG / MSI / AppImage packaging (currently `dir` only)
+- Code signing for distribution
 - Tray/dock integration
 - Offline-first asset bundling (embed server instead of spawning)
-- Splash screen / loading state before server is ready
 - Native file dialogs via IPC
 - Menu bar customization
-- Code signing for distribution
+- Cross-platform build automation (CI matrix)
+- Tree-shaking / bundling of production dependencies
 
 ## CodeQL alert status
 

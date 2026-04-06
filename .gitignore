@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-electron/
 coverage/
 *.tsbuildinfo
 .DS_Store
