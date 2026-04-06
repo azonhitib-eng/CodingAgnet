@@ -127,6 +127,27 @@ export interface SessionSummary {
   readonly toolchainRecommendedCount: number | null;
   /** Number of unavailable checks. */
   readonly toolchainUnavailableCount: number | null;
+
+  /* Language service / diagnostics (Phase 40) */
+
+  /** Language service kind (e.g. "typescript", "python", "none"). */
+  readonly languageServiceKind: string | null;
+  /** Language service runtime status. */
+  readonly languageServiceStatus: string | null;
+  /** Human-readable language service label. */
+  readonly languageServiceLabel: string | null;
+  /** Whether diagnostics are available for this workspace. */
+  readonly diagnosticsAvailable: boolean | null;
+  /** Why diagnostics are unavailable (null if available). */
+  readonly diagnosticsUnavailableReason: string | null;
+  /** Last collected diagnostics: error count. */
+  readonly lastDiagnosticsErrorCount: number | null;
+  /** Last collected diagnostics: warning count. */
+  readonly lastDiagnosticsWarningCount: number | null;
+  /** Last collected diagnostics: total count. */
+  readonly lastDiagnosticsTotalCount: number | null;
+  /** Last collected diagnostics: files affected. */
+  readonly lastDiagnosticsFilesAffected: number | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -310,6 +331,17 @@ export class SessionManager {
       readonly recommendedCount?: number;
       readonly unavailableCount?: number;
     } | null,
+    languageServiceSummary?: {
+      readonly serviceKind?: string;
+      readonly serviceStatus?: string;
+      readonly serviceLabel?: string;
+      readonly diagnosticsAvailable?: boolean;
+      readonly unavailableReason?: string | null;
+      readonly lastDiagnosticsErrorCount?: number | null;
+      readonly lastDiagnosticsWarningCount?: number | null;
+      readonly lastDiagnosticsTotalCount?: number | null;
+      readonly lastDiagnosticsFilesAffected?: number | null;
+    } | null,
   ): SessionSummary {
     const session = this.requireSession(id);
     const lastEvent =
@@ -385,6 +417,16 @@ export class SessionManager {
       toolchainCommandCount: toolchainSummary?.commandCount ?? null,
       toolchainRecommendedCount: toolchainSummary?.recommendedCount ?? null,
       toolchainUnavailableCount: toolchainSummary?.unavailableCount ?? null,
+      /* Language service / diagnostics (Phase 40) */
+      languageServiceKind: languageServiceSummary?.serviceKind ?? null,
+      languageServiceStatus: languageServiceSummary?.serviceStatus ?? null,
+      languageServiceLabel: languageServiceSummary?.serviceLabel ?? null,
+      diagnosticsAvailable: languageServiceSummary?.diagnosticsAvailable ?? null,
+      diagnosticsUnavailableReason: languageServiceSummary?.unavailableReason ?? null,
+      lastDiagnosticsErrorCount: languageServiceSummary?.lastDiagnosticsErrorCount ?? null,
+      lastDiagnosticsWarningCount: languageServiceSummary?.lastDiagnosticsWarningCount ?? null,
+      lastDiagnosticsTotalCount: languageServiceSummary?.lastDiagnosticsTotalCount ?? null,
+      lastDiagnosticsFilesAffected: languageServiceSummary?.lastDiagnosticsFilesAffected ?? null,
     };
   }
 

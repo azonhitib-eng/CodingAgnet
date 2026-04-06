@@ -53,6 +53,10 @@
     "./toolchain": {
       "import": "./dist/toolchain/index.js",
       "types": "./dist/toolchain/index.d.ts"
+    },
+    "./language-service": {
+      "import": "./dist/language-service/index.js",
+      "types": "./dist/language-service/index.d.ts"
     }
   },
   "bin": {

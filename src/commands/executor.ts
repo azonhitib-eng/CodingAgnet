@@ -130,6 +130,24 @@ export interface CommandExecutorDeps {
     error?: string;
     detail?: Record<string, unknown>;
   }>;
+  /** Inspect language service. Returns {ok, error?, detail?}. */
+  readonly inspectLanguageService?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Collect diagnostics. Returns {ok, error?, detail?}. */
+  readonly collectDiagnostics?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Refresh diagnostics summary. Returns {ok, error?, detail?}. */
+  readonly refreshDiagnosticsSummary?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -360,6 +378,36 @@ async function dispatchCommand(
       return res.ok
         ? makeResult(payload.commandId, "completed", "Toolchain summary refreshed.", res.detail)
         : makeResult(payload.commandId, "failed", res.error ?? "Toolchain summary refresh failed.");
+    }
+
+    case "inspect_language_service": {
+      if (!deps.inspectLanguageService) {
+        return makeResult(payload.commandId, "failed", "Language service inspection not available.");
+      }
+      const res = await deps.inspectLanguageService();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Language service inspected.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Language service inspection failed.");
+    }
+
+    case "collect_diagnostics": {
+      if (!deps.collectDiagnostics) {
+        return makeResult(payload.commandId, "failed", "Diagnostics collection not available.");
+      }
+      const res = await deps.collectDiagnostics();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Diagnostics collected.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Diagnostics collection failed.");
+    }
+
+    case "refresh_diagnostics_summary": {
+      if (!deps.refreshDiagnosticsSummary) {
+        return makeResult(payload.commandId, "failed", "Diagnostics summary refresh not available.");
+      }
+      const res = await deps.refreshDiagnosticsSummary();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Diagnostics summary refreshed.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Diagnostics summary refresh failed.");
     }
   }
 }

@@ -189,5 +189,11 @@ export function validateCommand(payload: CommandPayload): CommandValidationResul
       return validateRunWorkspaceCheck(payload.data);
     case "refresh_toolchain_summary":
       return VALID_OK; // No inputs required.
+    case "inspect_language_service":
+      return VALID_OK; // No inputs required.
+    case "collect_diagnostics":
+      return VALID_OK; // No inputs required.
+    case "refresh_diagnostics_summary":
+      return VALID_OK; // No inputs required.
   }
 }
