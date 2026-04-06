@@ -30,6 +30,8 @@
  *   GET  /api/commands/availability — get command availability for current state
  *   POST /api/commands/validate     — validate a command payload
  *   POST /api/commands/execute      — execute a command
+ *   POST /api/workspace/fingerprint — fingerprint a workspace
+ *   GET  /api/profiles              — list all language profiles
  *
  * Usage:
  *   npx tsx src/app-shell/server.ts [--port 3000]
@@ -86,6 +88,12 @@ import type {
   CommandPayload,
   CommandContextState,
 } from "../commands/index.js";
+import {
+  fingerprintRepo,
+  selectProfiles,
+  buildFingerprintSummary,
+  getAllProfiles,
+} from "../fingerprint/index.js";
 
 // ---------------------------------------------------------------------------
 // Routing
@@ -401,6 +409,18 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
   // API: execute a command (POST)
   if (path === "/api/commands/execute" && method === "POST") {
     handleCommandExecute(req, res);
+    return;
+  }
+
+  // API: fingerprint a workspace (POST) — Phase 38
+  if (path === "/api/workspace/fingerprint" && method === "POST") {
+    handleWorkspaceFingerprint(req, res);
+    return;
+  }
+
+  // API: list language profiles (GET) — Phase 38
+  if (path === "/api/profiles" && method === "GET") {
+    json(res, { profiles: getAllProfiles() });
     return;
   }
 
@@ -1112,6 +1132,43 @@ function buildCommandExecutorDeps() {
       }
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/workspace/fingerprint — Phase 38
+// ---------------------------------------------------------------------------
+
+async function handleWorkspaceFingerprint(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  const workspacePath = typeof input.path === "string" ? input.path : null;
+  const files = Array.isArray(input.files) ? (input.files as string[]) : null;
+
+  if (!workspacePath) {
+    return badRequest(res, "Missing required field: path");
+  }
+  if (!files) {
+    return badRequest(res, "Missing required field: files (array of relative file paths)");
+  }
+
+  const fingerprint = fingerprintRepo(workspacePath, files);
+  const selection = selectProfiles(fingerprint);
+  const summary = buildFingerprintSummary(fingerprint, selection);
+
+  return json(res, {
+    fingerprint,
+    selection: {
+      primaryId: selection.primary.id,
+      primaryLabel: selection.primary.label,
+      matched: selection.matched.map((p) => ({ id: p.id, label: p.label })),
+      reason: selection.reason,
+      explanation: selection.explanation,
+      confident: selection.confident,
+    },
+    summary,
+  });
 }
 
 // ---------------------------------------------------------------------------

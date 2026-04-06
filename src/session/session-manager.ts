@@ -93,6 +93,27 @@ export interface SessionSummary {
     /** Allowed stages (Phase 27). */
     readonly allowedStages?: readonly string[];
   }>;
+
+  /* Fingerprint / language profile (Phase 38) */
+
+  /** Detected languages (ordered by signal strength). */
+  readonly detectedLanguages: readonly string[] | null;
+  /** Detected frameworks / toolchains. */
+  readonly detectedFrameworks: readonly string[] | null;
+  /** Whether the repository is a mixed/multi-language project. */
+  readonly isMixedRepo: boolean | null;
+  /** Selected language profile id. */
+  readonly profileId: string | null;
+  /** Selected language profile display label. */
+  readonly profileLabel: string | null;
+  /** Primary detected language. */
+  readonly primaryLanguage: string | null;
+  /** Why the profile was selected. */
+  readonly profileSelectionReason: string | null;
+  /** Human-readable profile selection explanation. */
+  readonly profileSelectionExplanation: string | null;
+  /** Whether the profile selection is confident. */
+  readonly profileConfident: boolean | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -258,6 +279,17 @@ export class SessionManager {
       readonly participationEnabled?: boolean;
       readonly allowedStages?: readonly string[];
     }>,
+    fingerprintSummary?: {
+      readonly detectedLanguages?: readonly string[];
+      readonly detectedFrameworks?: readonly string[];
+      readonly isMixed?: boolean;
+      readonly profileId?: string;
+      readonly profileLabel?: string;
+      readonly primaryLanguage?: string;
+      readonly selectionReason?: string;
+      readonly selectionExplanation?: string;
+      readonly selectionConfident?: boolean;
+    } | null,
   ): SessionSummary {
     const session = this.requireSession(id);
     const lastEvent =
@@ -317,6 +349,16 @@ export class SessionManager {
             : {}),
         };
       }),
+      /* Fingerprint / profile (Phase 38) */
+      detectedLanguages: fingerprintSummary?.detectedLanguages ?? null,
+      detectedFrameworks: fingerprintSummary?.detectedFrameworks ?? null,
+      isMixedRepo: fingerprintSummary?.isMixed ?? null,
+      profileId: fingerprintSummary?.profileId ?? null,
+      profileLabel: fingerprintSummary?.profileLabel ?? null,
+      primaryLanguage: fingerprintSummary?.primaryLanguage ?? null,
+      profileSelectionReason: fingerprintSummary?.selectionReason ?? null,
+      profileSelectionExplanation: fingerprintSummary?.selectionExplanation ?? null,
+      profileConfident: fingerprintSummary?.selectionConfident ?? null,
     };
   }
 

@@ -6,6 +6,30 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 38** — Language Support Architecture and Repository Fingerprinting
+  - New module: `src/fingerprint/` (7 files: `types.ts`, `detect.ts`, `profiles.ts`, `select.ts`, `enrichment.ts`, `session-integration.ts`, `index.ts`)
+  - `RepoFingerprint` type — complete, typed fingerprint of a repository/workspace
+  - `FingerprintSignal` — atomic evidence records with file, language, strength, frameworkHint
+  - `DetectedLanguage` — 7 language identifiers (typescript, javascript, python, php, rust, go, unknown)
+  - `DetectedFramework` — framework/toolchain records with name, language, confidence
+  - `LanguageProfile` type — 8 profiles (typescript-node, javascript-node, python-backend, php-general, php-wordpress, rust-cli, go-module, generic-unknown)
+  - `ProfileSelection` — deterministic result of mapping fingerprint to profiles, with reason and confidence
+  - `ProfileAgentEnrichment` — enrichment hints (preferred/neutral/discouraged) for agent participation
+  - `fingerprintRepo(path, files)` — file-based detection producing a complete `RepoFingerprint`
+  - `selectProfiles(fingerprint)` — deterministic profile selection with explanation
+  - `evaluateAgentForProfile(agent, profile)` — profile-aware agent relevance assessment
+  - `buildFingerprintSummary(fingerprint, selection)` — session-compatible summary builder
+  - 44 signal rules covering TypeScript, JavaScript, Python, PHP, Rust, Go, and 18+ frameworks
+  - 2 new session event kinds: `repo_fingerprinted`, `profile_selected`
+  - 9 new `SessionSummary` fields: `detectedLanguages`, `detectedFrameworks`, `isMixedRepo`, `profileId`, `profileLabel`, `primaryLanguage`, `profileSelectionReason`, `profileSelectionExplanation`, `profileConfident`
+  - Timeline classification: `repo_fingerprinted` → info, `profile_selected` → progress
+  - Console classification: both events → workspace actor, discovery_card type
+  - Shell renders language profile, primary language, detected languages/frameworks, and selection reason in session summary
+  - 2 new API endpoints: `POST /api/workspace/fingerprint`, `GET /api/profiles`
+  - Subpath export: `./fingerprint`
+  - `docs/FINGERPRINTING.md` — comprehensive documentation
+  - 117 new tests covering detection, profiles, selection, enrichment, session integration, timeline/console, edge cases
+
 - **Phase 37** — Desktop Release Polish / Public Beta Readiness
   - Product identity constants: `PRODUCT_APP_ID`, `PRODUCT_NAME`, `PRODUCT_DESCRIPTION` in `electron/config.cjs`
   - `getProductIdentity()` — canonical product metadata for consistency validation
