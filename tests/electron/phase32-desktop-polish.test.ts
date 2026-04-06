@@ -219,7 +219,7 @@ describe("Phase 32 — Error page", () => {
 
   it("error page includes troubleshooting hints", () => {
     const html = renderErrorHtml("err");
-    expect(html).toContain("Troubleshooting");
+    expect(html).toContain("What to try");
     expect(html).toContain("npm install");
     expect(html).toContain("Node.js");
   });
@@ -291,9 +291,9 @@ describe("Phase 32 — main.cjs desktop polish", () => {
 
   it("main.cjs creates window before server is ready", () => {
     // Window creation should happen before startAppShellServer resolves
-    const createIdx = mainSrc.indexOf("createMainWindow()");
+    const createIdx = mainSrc.indexOf("createMainWindow(");
     const startIdx = mainSrc.indexOf("startAppShellServer(");
-    // createMainWindow is called (no-args = loading page), then server starts
+    // createMainWindow is called (with loading page), then server starts
     expect(createIdx).toBeGreaterThan(-1);
     expect(startIdx).toBeGreaterThan(-1);
   });
@@ -615,7 +615,7 @@ describe("Phase 32 — Startup failure handling", () => {
       mainSrc.indexOf("async function boot()"),
       mainSrc.indexOf("// Electron app lifecycle"),
     );
-    const createWinIdx = bootFn.indexOf("createMainWindow()");
+    const createWinIdx = bootFn.indexOf("createMainWindow(");
     const tryIdx = bootFn.indexOf("try {");
     // createMainWindow should be called before the try block
     // (or at least before findAvailablePort inside try)
@@ -626,7 +626,7 @@ describe("Phase 32 — Startup failure handling", () => {
     const mainSrc = readFile("electron/main.cjs");
     // createMainWindow loads the loading HTML
     const createFn = mainSrc.slice(
-      mainSrc.indexOf("function createMainWindow()"),
+      mainSrc.indexOf("function createMainWindow("),
       mainSrc.indexOf("function applyNavigationSecurity"),
     );
     expect(createFn).toContain("renderLoadingHtml");
@@ -641,7 +641,7 @@ describe("Phase 32 — Startup failure handling", () => {
     for (const msg of messages) {
       const html = renderErrorHtml(msg);
       expect(html).toContain("<!DOCTYPE html>");
-      expect(html).toContain("Troubleshooting");
+      expect(html).toContain("What to try");
     }
   });
 });

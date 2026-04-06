@@ -32,4 +32,6 @@ contextBridge.exposeInMainWorld("desktop", {
   appName: config.APP_TITLE,
   /** Package version */
   version: config.getDesktopVersion(),
+  /** Whether running from a packaged artifact */
+  isPackaged: config.isPackaged(),
 });
