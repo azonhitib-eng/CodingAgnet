@@ -1,4 +1,4 @@
-# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33
+# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33 + Phase 34
 
 ## Overview
 
@@ -6,7 +6,8 @@ Phase 31 added an Electron desktop wrapper around the existing CodingAgent app
 shell. Phase 32 polished the desktop experience with a loading page, error
 handling, versioned window titles, desktop-aware server banner, and a preload
 bridge. Phase 33 adds the first real distributable packaging flow using
-electron-builder.
+electron-builder. Phase 34 polishes the first-run and packaged-mode UX so
+the desktop app feels coherent and resilient in normal use.
 
 ## Architecture
 
@@ -175,15 +176,26 @@ Additional protections:
 
 ## Troubleshooting
 
-### Server fails to start
+### Server fails to start (dev mode)
 
-If you see the error page in the Electron window:
+If you see the error page in the Electron window during development:
 
 1. **Check dependencies**: Run `npm install` in the project root
 2. **Check Node.js version**: Requires Node.js ≥ 18
 3. **Run in terminal**: Try `npm run app-shell` to see full server output
 4. **Check ports**: Make sure no firewall rules block localhost connections
 5. **Dev mode**: Use `npm run desktop:dev` for verbose terminal output
+
+### Server fails to start (packaged mode)
+
+In a packaged build, the error page shows user-friendly hints:
+
+1. **Close and reopen** — the issue may be temporary
+2. **Check for other instances** — only one instance should run at a time
+3. **Check local network** — the app needs localhost connections
+4. **Restart your computer** — if the problem persists
+5. **Environment info** — expand the "Help & environment info" section on the
+   error page for version, platform, and mode details to share with support
 
 ### Window is blank
 
@@ -193,6 +205,18 @@ This should not happen after Phase 32 — the window always shows either:
 - An error page (if server failed)
 
 If it does happen, use `npm run desktop:dev` and check the terminal output.
+
+### First-run expectations (Phase 34)
+
+When launching the packaged app for the first time:
+
+- A loading page appears immediately with "Starting up — this may take a moment…"
+- The loading page shows the app name and version
+- If startup fails, an error page with non-technical wording is shown
+- The error page includes a Retry button and a collapsible "Help & environment
+  info" section with version, platform, and mode details
+- Developer-oriented hints (npm commands, terminal instructions) are only shown
+  in development mode, never in the packaged build
 
 ## Generating a Packaged Desktop Build (Phase 33)
 
@@ -268,16 +292,20 @@ electron-builder artifact and adjusts:
 - **Preload script**: resolved via `config.getPreloadPath()`
 - **Version**: read from the bundled `package.json`
 
-### Known limitations (Phase 33)
+### Known limitations (Phase 34)
 
 - **Unsigned build** — the packaged app is not code-signed; users may see OS warnings
 - **No auto-update** — no `electron-updater` or update server
 - **No installer** — output is a directory/app bundle, not a DMG/MSI/AppImage
-- **No custom icon** — uses default Electron icon
+- **No custom icon asset** — the icon fallback mechanism is wired, but no
+  `assets/icon.png` is shipped yet; Electron default icon is used
 - **No tray/dock integration**
 - **Production dependencies included** — `node_modules` contains zod and its
   transitive dependencies; no tree-shaking or bundling is applied
 - **Local-platform-only** — cross-compilation is not supported
+- **No crash reporting** — errors are shown in-window but not reported externally
+- **Server startup delay** — the loading page is always shown briefly while the
+  server boots; this is inherent to the child-process architecture
 
 ## What This Phase Includes
 
@@ -319,6 +347,24 @@ electron-builder artifact and adjusts:
 - ✅ No code signing, no auto-update, no installer generation
 - ✅ Documentation: build commands, output location, known limitations
 - ✅ Phase 33 deterministic test suite
+
+### Phase 34 (Desktop first-run polish and packaged UX hardening)
+- ✅ Loading page adapts wording for packaged mode ("Starting up — this may take a moment…")
+- ✅ Error page adapts wording for packaged vs dev mode
+- ✅ Packaged-mode error hints are user-friendly (no npm/terminal commands)
+- ✅ Dev-mode error hints remain developer-oriented
+- ✅ Error page shows version number in both modes
+- ✅ Error page includes collapsible "Help & environment info" section in packaged mode
+- ✅ Environment summary: version, platform, arch, mode
+- ✅ Runtime validation before server launch in packaged mode (`validatePackagedRuntime`)
+- ✅ Server script existence check in packaged mode
+- ✅ Icon fallback: `getIconPath()` returns actual path or null (no crash on missing icon)
+- ✅ Window icon set from file if it exists, falls back to Electron default
+- ✅ Preload bridge extended with `isPackaged` boolean
+- ✅ `escapeHtml()` utility for safe HTML rendering
+- ✅ `buildEnvironmentSummary()` for diagnostics
+- ✅ All previous behavior preserved (demo mode, real mode, sessions, MCP, agents, commands)
+- ✅ Phase 34 deterministic test suite (63 tests)
 
 ## What Is Deferred (Future Phases)
 

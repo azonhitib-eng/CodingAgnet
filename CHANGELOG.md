@@ -6,6 +6,25 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 34** — Desktop First-Run Polish and Packaged UX Hardening
+  - Loading page adapts wording for packaged mode ("Starting up — this may take a moment…" vs "Starting app shell server…")
+  - Error page adapts hints for packaged mode (user-friendly, no npm/terminal commands) vs dev mode (developer-oriented)
+  - Error page shows version number in both modes
+  - Error page includes collapsible "Help & environment info" section in packaged mode (version, platform, arch, mode)
+  - Packaged-mode runtime validation before server launch: checks required files, dirs, and server script existence
+  - `validatePackagedRuntime()` returns `{ ok, issues }` with human-readable diagnostics
+  - `buildEnvironmentSummary()` returns version, platform, arch, packaged, nodeVersion, appRoot
+  - `getIconPath()` with fallback: returns actual path if icon file exists, `null` otherwise (no crash)
+  - `escapeHtml()` utility for safe HTML rendering in error/loading pages
+  - Preload bridge extended: `window.desktop.isPackaged` boolean for renderer-side detection
+  - Window icon set from `assets/icon.png` if present, falls back to Electron default
+  - `main.cjs` boot sequence validates runtime in packaged mode before creating window
+  - Error page heading changed from "Troubleshooting" to "What to try" (friendlier wording)
+  - Error page subtitle adapts: "The application could not start properly" (packaged) vs "Could not start the app shell server" (dev)
+  - Updated `docs/ELECTRON.md` with Phase 34 section, packaged-mode troubleshooting, first-run expectations, known limitations
+  - Updated `docs/PACKAGING.md` with Phase 34 additions
+  - Phase 34 deterministic test suite: 63 tests covering loading page, error page, runtime validation, environment summary, icon fallback, preload bridge, backward compatibility
+
 - **Phase 33** — Installer / Distribution First Slice
   - electron-builder packaging configuration (`electron-builder.config.js`) for deterministic desktop builds
   - `npm run desktop:build` — compile TypeScript to `dist/` then run electron-builder full build

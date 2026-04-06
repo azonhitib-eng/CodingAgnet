@@ -8,6 +8,9 @@
  * Phase 33: added packaged-mode detection and path resolution helpers
  * so that the app works both in dev mode (source tree) and when packaged
  * by electron-builder into a distributable artifact.
+ *
+ * Phase 34: added first-run polish — packaged-mode loading/error wording,
+ * runtime validation, environment summary, icon fallback, escapeHtml helper.
  */
 
 "use strict";
@@ -113,9 +116,19 @@ function buildLocalUrl(port) {
  * Render the loading HTML page shown in the BrowserWindow while the
  * app-shell server is starting. This avoids a blank/white window during
  * the brief server boot period.
+ *
+ * Phase 34: the loading page adapts its status message based on whether the
+ * app is running in packaged mode (user-friendly wording) or dev mode.
+ *
+ * @param {{ packaged?: boolean }} [opts]
  * @returns {string}
  */
-function renderLoadingHtml() {
+function renderLoadingHtml(opts) {
+  const packaged = !!(opts && opts.packaged);
+  const statusText = packaged
+    ? "Starting up — this may take a moment…"
+    : "Starting app shell server…";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -153,7 +166,7 @@ function renderLoadingHtml() {
     <h1>${APP_TITLE}</h1>
     <p class="version">v${getDesktopVersion()}</p>
     <div class="spinner"></div>
-    <p class="status">Starting app shell server…</p>
+    <p class="status">${statusText}</p>
   </div>
 </body>
 </html>`;
@@ -163,15 +176,59 @@ function renderLoadingHtml() {
  * Render an error HTML page shown in the BrowserWindow when the
  * app-shell server fails to start. Includes retry guidance and
  * troubleshooting hints.
+ *
+ * Phase 34: the error page now adapts wording to packaged vs dev mode,
+ * hides developer-oriented hints from packaged users, and provides
+ * a "what to try next" section with environment summary.
+ *
  * @param {string} message - The error message to display
+ * @param {{ packaged?: boolean }} [opts]
  * @returns {string}
  */
-function renderErrorHtml(message) {
+function renderErrorHtml(message, opts) {
   const safeMessage = String(message || "Unknown error")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+
+  const packaged = !!(opts && opts.packaged);
+  const version = getDesktopVersion();
+
+  // Troubleshooting hints differ between packaged and dev mode
+  const packagedHints = `
+        <li>Close the app and reopen it — the issue may be temporary</li>
+        <li>Make sure no other instance is already running</li>
+        <li>Check that your system allows local network connections</li>
+        <li>If the problem persists, try restarting your computer</li>
+        <li>See the Help section below for advanced details</li>`;
+
+  const devHints = `
+        <li>Make sure <code>npm install</code> has been run</li>
+        <li>Check that Node.js ≥ 18 is installed</li>
+        <li>Try running <code>npm run app-shell</code> in a terminal to see full output</li>
+        <li>Check for port conflicts or firewall rules</li>
+        <li>See <code>docs/ELECTRON.md</code> for desktop troubleshooting</li>`;
+
+  const hints = packaged ? packagedHints : devHints;
+
+  const subtitle = packaged
+    ? "The application could not start properly"
+    : "Could not start the app shell server";
+
+  // Environment summary (packaged mode only, collapsed by default)
+  const envSummary = packaged
+    ? `
+    <details class="env-details">
+      <summary>Help &amp; environment info</summary>
+      <div class="env-content">
+        <p>Version: ${escapeHtml(version)}</p>
+        <p>Platform: ${escapeHtml(process.platform)} (${escapeHtml(process.arch)})</p>
+        <p>Mode: packaged</p>
+        <p class="env-hint">If you need further help, share the error message and environment info above.</p>
+      </div>
+    </details>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -193,6 +250,7 @@ function renderErrorHtml(message) {
   }
   .container { max-width: 500px; padding: 2rem; }
   h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #ffffff; }
+  .version { font-size: 0.8rem; color: #666; margin-bottom: 0.25rem; }
   .error-icon { font-size: 2.5rem; margin-bottom: 1rem; }
   .error-msg {
     background: #2a1a1a;
@@ -232,28 +290,70 @@ function renderErrorHtml(message) {
   }
   .retry-btn:hover { background: #5a52e0; }
   code { background: #2a2a3e; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85rem; }
+  .env-details {
+    text-align: left;
+    margin-top: 1.5rem;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .env-details summary {
+    padding: 0.6rem 1rem;
+    background: #222244;
+    color: #888;
+    font-size: 0.85rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .env-details summary:hover { color: #aaa; }
+  .env-content {
+    padding: 0.8rem 1rem;
+    font-size: 0.8rem;
+    color: #888;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+  }
+  .env-content p { padding: 0.15rem 0; }
+  .env-hint {
+    margin-top: 0.5rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    font-style: italic;
+    color: #666;
+  }
 </style>
 </head>
 <body>
   <div class="container">
     <div class="error-icon">⚠️</div>
     <h1>${APP_TITLE}</h1>
-    <p style="color:#888;margin-top:0.25rem;">Could not start the app shell server</p>
+    <p class="version">v${escapeHtml(version)}</p>
+    <p style="color:#888;margin-top:0.25rem;">${subtitle}</p>
     <div class="error-msg">${safeMessage}</div>
     <div class="hints">
-      <h2>Troubleshooting</h2>
-      <ul>
-        <li>Make sure <code>npm install</code> has been run</li>
-        <li>Check that Node.js ≥ 18 is installed</li>
-        <li>Try running <code>npm run app-shell</code> in a terminal to see full output</li>
-        <li>Check for port conflicts or firewall rules</li>
-        <li>See <code>docs/ELECTRON.md</code> for desktop troubleshooting</li>
+      <h2>What to try</h2>
+      <ul>${hints}
       </ul>
     </div>
-    <button class="retry-btn" onclick="window.location.reload()">Retry</button>
+    <button class="retry-btn" onclick="window.location.reload()">Retry</button>${envSummary}
   </div>
 </body>
 </html>`;
+}
+
+// ---------------------------------------------------------------------------
+// HTML helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Escape a string for safe HTML embedding.
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // ---------------------------------------------------------------------------
@@ -379,6 +479,80 @@ function getRequiredPackagedDirs() {
   ];
 }
 
+// ---------------------------------------------------------------------------
+// Packaged runtime validation (Phase 34)
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate that required files and directories exist for a packaged app.
+ * Returns an array of issues found (empty means everything is OK).
+ *
+ * @param {{ forcePackaged?: boolean }} [opts]
+ * @returns {{ ok: boolean; issues: string[] }}
+ */
+function validatePackagedRuntime(opts) {
+  const appRoot = getAppRoot(opts);
+  const issues = [];
+
+  for (const relFile of getRequiredPackagedFiles()) {
+    const fullPath = path.join(appRoot, relFile);
+    if (!fs.existsSync(fullPath)) {
+      issues.push(`Missing required file: ${relFile}`);
+    }
+  }
+
+  for (const relDir of getRequiredPackagedDirs()) {
+    const fullPath = path.join(appRoot, relDir);
+    if (!fs.existsSync(fullPath)) {
+      issues.push(`Missing required directory: ${relDir}`);
+    }
+  }
+
+  // In packaged mode, the server script must exist
+  if (isPackaged(opts)) {
+    const launchConfig = getServerLaunchConfig(opts);
+    if (!fs.existsSync(launchConfig.serverScript)) {
+      issues.push(`Server script not found: ${launchConfig.serverScript}`);
+    }
+  }
+
+  return { ok: issues.length === 0, issues };
+}
+
+/**
+ * Build a simple environment summary string for diagnostics.
+ *
+ * @param {{ forcePackaged?: boolean }} [opts]
+ * @returns {{ version: string; platform: string; arch: string; packaged: boolean; nodeVersion: string; appRoot: string }}
+ */
+function buildEnvironmentSummary(opts) {
+  return {
+    version: getDesktopVersion(),
+    platform: process.platform,
+    arch: process.arch,
+    packaged: isPackaged(opts),
+    nodeVersion: process.version,
+    appRoot: getAppRoot(opts),
+  };
+}
+
+/**
+ * Get a usable icon path with fallback behavior.
+ * Returns the placeholder path if the icon file exists, or null if not.
+ * @returns {string | null}
+ */
+function getIconPath() {
+  const placeholder = getIconPlaceholderPath();
+  try {
+    if (fs.existsSync(placeholder)) {
+      return placeholder;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 module.exports = {
   DEFAULT_WIDTH,
   DEFAULT_HEIGHT,
@@ -402,4 +576,9 @@ module.exports = {
   getPreloadPath,
   getRequiredPackagedFiles,
   getRequiredPackagedDirs,
+  // Phase 34: first-run polish helpers
+  escapeHtml,
+  validatePackagedRuntime,
+  buildEnvironmentSummary,
+  getIconPath,
 };

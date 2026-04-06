@@ -13,6 +13,10 @@
  *
  * Phase 33: server launch now uses config.getServerLaunchConfig() to support
  * both dev mode (npx tsx, TypeScript) and packaged mode (node, compiled JS).
+ *
+ * Phase 34: loading/error pages now adapt wording for packaged vs dev mode.
+ * Runtime validation runs before server launch in packaged mode.
+ * Window icon uses fallback behavior via getIconPath().
  */
 
 "use strict";
@@ -152,10 +156,16 @@ let mainWindow = null;
  * Create the main application window and immediately show
  * a loading page while the server boots.
  *
+ * @param {{ packaged?: boolean }} [opts]
  * @returns {BrowserWindow}
  */
-function createMainWindow() {
+function createMainWindow(opts) {
+  const packaged = !!(opts && opts.packaged);
   const windowTitle = config.buildWindowTitle({ isDev });
+
+  // Use icon if it exists on disk, otherwise omit (default Electron icon)
+  const iconPath = config.getIconPath();
+  const iconOpts = iconPath ? { icon: iconPath } : {};
 
   mainWindow = new BrowserWindow({
     width: config.DEFAULT_WIDTH,
@@ -163,6 +173,7 @@ function createMainWindow() {
     minWidth: config.MIN_WIDTH,
     minHeight: config.MIN_HEIGHT,
     title: windowTitle,
+    ...iconOpts,
     webPreferences: {
       // Security: no Node.js integration in the renderer
       nodeIntegration: false,
@@ -188,8 +199,8 @@ function createMainWindow() {
     mainWindow.focus();
   });
 
-  // Load the loading page immediately
-  mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(config.renderLoadingHtml())}`);
+  // Load the loading page immediately — adapts wording for packaged mode
+  mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(config.renderLoadingHtml({ packaged }))}`);
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -232,10 +243,12 @@ function navigateToApp(url) {
 /**
  * Show the error page in the main window.
  * @param {string} message
+ * @param {{ packaged?: boolean }} [opts]
  */
-function showErrorPage(message) {
+function showErrorPage(message, opts) {
   if (!mainWindow) return;
-  mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(config.renderErrorHtml(message))}`);
+  const packaged = !!(opts && opts.packaged);
+  mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(config.renderErrorHtml(message, { packaged }))}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -252,8 +265,20 @@ async function boot() {
     console.log();
   }
 
+  // Step 0 (Phase 34): In packaged mode, validate runtime prerequisites
+  if (packaged) {
+    const validation = config.validatePackagedRuntime();
+    if (!validation.ok) {
+      const detail = validation.issues.join("\n");
+      const userMsg = "Some required application files are missing.\n\n" + detail;
+      createMainWindow({ packaged: true });
+      showErrorPage(userMsg, { packaged: true });
+      return;
+    }
+  }
+
   // Step 1: Create window immediately with loading page
-  createMainWindow();
+  createMainWindow({ packaged });
 
   try {
     // Step 2: Find available port
@@ -277,8 +302,8 @@ async function boot() {
     if (isDev) {
       console.error(`  ❌  Desktop startup failed: ${msg}`);
     }
-    // Show error page instead of quitting
-    showErrorPage(msg);
+    // Show error page with mode-appropriate guidance
+    showErrorPage(msg, { packaged });
   }
 }
 

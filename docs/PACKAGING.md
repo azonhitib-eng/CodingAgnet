@@ -57,6 +57,19 @@ See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
 9. Supports Linux, macOS, Windows — `dir` target only (no installers)
 10. No code signing, no auto-update
 
+## Phase 34 additions (first-run polish)
+
+1. Loading page adapts wording for packaged mode (user-friendly, no developer terms)
+2. Error page adapts wording for packaged vs dev mode (different hint sets)
+3. Packaged-mode runtime validation before server launch (`validatePackagedRuntime()`)
+4. Error page includes collapsible "Help & environment info" section (packaged mode)
+5. `buildEnvironmentSummary()` for diagnostics (version, platform, arch, mode)
+6. `getIconPath()` with fallback — uses icon if present, Electron default otherwise
+7. Preload bridge extended: `window.desktop.isPackaged` boolean
+8. `escapeHtml()` utility for safe HTML rendering in error pages
+9. Error page shows version in both modes
+10. Window icon uses file-based fallback (no crash on missing icon)
+
 ## Why further alternatives are deferred
 
 | Alternative | Reason deferred |
