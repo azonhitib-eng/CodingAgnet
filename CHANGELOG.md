@@ -6,6 +6,32 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 39** — Profile-Aware Toolchain Adapter Layer and Workspace Checks
+  - New module: `src/toolchain/` (6 files: `types.ts`, `mapping.ts`, `check-planning.ts`, `execution.ts`, `session-integration.ts`, `index.ts`)
+  - `ToolchainAdapterId` — profile-bound adapter identifier (e.g. `typescript-node-toolchain`)
+  - `ToolchainKind` — 9 toolchain families (npm, pnpm, yarn, pip, poetry, composer, cargo, go, generic)
+  - `ToolchainCommandType` — 6 check categories (lint, test, build, typecheck, format, dependency_check)
+  - `ToolchainCommandDefinition` — typed command with evidence, priority, tool, and expectedLocal flag
+  - `ToolchainAvailability` — availability status (available, likely_available, unavailable, unknown) with reason
+  - `ToolchainCheckResult` / `ToolchainCheckResultSummary` — execution result types with status, exitCode, duration, output summaries
+  - `WorkspaceToolchainSummary` — complete toolchain state: commands, availability, recommended/optional/unavailable, notes
+  - `mapProfileToCommands(profileId, files)` — deterministic, evidence-based mapping for all 8 profiles
+  - `resolveToolchainKind(profileId, files)` — detects npm/pnpm/yarn/pip/poetry from lockfiles
+  - `assessCommandAvailability(command, fileSet, hostTools?)` — honest availability assessment
+  - `buildWorkspaceToolchainSummary(profileId, files, options?)` — main entry point for check planning
+  - `buildToolchainSummaryFromFingerprint(fingerprint, selection, files)` — convenience bridge from Phase 38
+  - `executeCheck(command, cwd, runner)` / `executeChecks(commands, cwd, runner)` — explicit, safe check execution
+  - `buildCheckResultSummary(results)` — aggregate check results
+  - 3 new session event kinds: `toolchain_summary_generated`, `toolchain_check_started`, `toolchain_check_completed`
+  - 5 new `SessionSummary` fields: `toolchainAdapterId`, `toolchainKind`, `toolchainCommandCount`, `toolchainRecommendedCount`, `toolchainUnavailableCount`
+  - 3 new commands: `inspect_toolchain`, `run_workspace_check`, `refresh_toolchain_summary` (toolchain category)
+  - `ToolchainSessionSummary` — session-compatible summary with optional last check results
+  - ShellRunner dependency injection for testable execution
+  - Output truncation (2000 char limit) for check results
+  - Subpath export: `./toolchain`
+  - `docs/TOOLCHAIN.md` — comprehensive documentation
+  - 133 new tests covering all profile mappings, availability, execution, session integration, command integration, honesty/safety
+
 - **Phase 38** — Language Support Architecture and Repository Fingerprinting
   - New module: `src/fingerprint/` (7 files: `types.ts`, `detect.ts`, `profiles.ts`, `select.ts`, `enrichment.ts`, `session-integration.ts`, `index.ts`)
   - `RepoFingerprint` type — complete, typed fingerprint of a repository/workspace
