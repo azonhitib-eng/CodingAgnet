@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 44** — Context-Informed Agent Prompting
+  - New module: `src/agent-context/` (6 files)
+    - `types.ts` — `AgentPromptContext`, `AgentPromptContextSlice`, `AgentPromptAssemblyInput`, `AgentPromptAssemblyResult`, `AgentPromptReason`, `AgentPromptPriority`, `AgentPromptEvidence`, `AgentPromptBudget`, `AgentPromptSummary`
+    - `slice-builders.ts` — 9 deterministic slice builders (session, workspace, fingerprint, toolchain, diagnostics, language context, MCP, agents, GitHub MCP)
+    - `assembly.ts` — `assembleAgentContext()`, `inspectAssembly()`, `buildPromptSummary()`, `resolveBudget()`
+    - `prioritization.ts` — `applyBudget()`, `adjustPrioritiesForRole()`, `trimSlice()`, `priorityScore()`, role-based priority overrides for 6 agent kinds + 8 role hints
+    - `traceability.ts` — `getSliceReasons()`, `getSliceEvidence()`, `findSlice()`, `getSlicesBySource()`, `getContributingSources()`, `getAllInclusionReasons()`, `getAllExclusionReasons()`, `buildCompactExplanation()`, `buildOneLinerSummary()`
+    - `session-integration.ts` — 3 new event kinds (`agent_context_assembled`, `agent_context_refreshed`, `agent_context_failed`), `AgentContextSessionSummary`, event factories, event filtering
+  - 3 new commands: `inspect_agent_context`, `build_agent_prompt_context`, `refresh_agent_context`
+  - New command category: `agent_context`
+  - Subpath export: `./agent-context`
+  - `docs/AGENT-CONTEXT.md` — full documentation
+  - 110 new tests covering slice builders, prioritization, assembly per agent kind, traceability, session integration, command integration, determinism, profile-aware differences, budget control, and edge cases
+
 - **Phase 43** — Language Intelligence Expansion: Symbol and Context Layer
   - New module: `src/language-context/` (10 files)
     - `types.ts` — SymbolKind, FileSymbol, FileContextSummary, ModuleContextSummary, WorkspaceContextSummary, ContextEvidence, ContextCollectionStatus, ContextSummaryReason, ProfileContextSupport

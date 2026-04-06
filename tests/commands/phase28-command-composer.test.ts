@@ -240,16 +240,16 @@ function minimalSummary(overrides: Partial<SessionSummary> = {}): SessionSummary
 /* ================================================================== */
 
 describe("Command model (types.ts)", () => {
-  it("COMMAND_DEFINITIONS has exactly 23 entries", () => {
-    expect(COMMAND_DEFINITIONS).toHaveLength(23);
+  it("COMMAND_DEFINITIONS has exactly 26 entries", () => {
+    expect(COMMAND_DEFINITIONS).toHaveLength(26);
   });
 
-  it("ALL_COMMAND_IDS has exactly 23 entries", () => {
-    expect(ALL_COMMAND_IDS).toHaveLength(23);
+  it("ALL_COMMAND_IDS has exactly 26 entries", () => {
+    expect(ALL_COMMAND_IDS).toHaveLength(26);
   });
 
-  it("ALL_COMMAND_CATEGORIES has exactly 9 entries", () => {
-    expect(ALL_COMMAND_CATEGORIES).toHaveLength(9);
+  it("ALL_COMMAND_CATEGORIES has exactly 10 entries", () => {
+    expect(ALL_COMMAND_CATEGORIES).toHaveLength(10);
   });
 
   it("ALL_COMMAND_CATEGORIES contains workspace, host, mcp, agent, workflow, session", () => {
@@ -304,9 +304,9 @@ describe("Command model (types.ts)", () => {
     expect(def).toBeUndefined();
   });
 
-  it("groupByCategory creates a map with all 9 categories", () => {
+  it("groupByCategory creates a map with all 10 categories", () => {
     const map = groupByCategory();
-    expect(map.size).toBe(9);
+    expect(map.size).toBe(10);
     for (const cat of ALL_COMMAND_CATEGORIES) {
       expect(map.has(cat)).toBe(true);
     }
@@ -772,9 +772,9 @@ describe("Command availability (availability.ts)", () => {
 
   // --- Aggregate helpers ---
   describe("aggregate helpers", () => {
-    it("getAllCommandAvailability returns 23 entries", () => {
+    it("getAllCommandAvailability returns 26 entries", () => {
       const all = getAllCommandAvailability(NO_SESSION);
-      expect(all).toHaveLength(23);
+      expect(all).toHaveLength(26);
     });
 
     it("getAvailableCommandIds with no session returns only restore_session", () => {
