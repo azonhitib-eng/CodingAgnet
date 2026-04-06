@@ -11,6 +11,8 @@
  *
  * Phase 34: added first-run polish — packaged-mode loading/error wording,
  * runtime validation, environment summary, icon fallback, escapeHtml helper.
+ *
+ * Phase 35: added installer target metadata helper (getInstallerTargets).
  */
 
 "use strict";
@@ -554,6 +556,52 @@ function getIconPath() {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Installer target metadata (Phase 35)
+// ---------------------------------------------------------------------------
+
+/**
+ * Return the installable artifact target name for a given platform.
+ * This is used for documentation and smoke test validation only — it does
+ * not drive electron-builder itself (that config lives in electron-builder.config.js).
+ *
+ * @param {string} [platform] — defaults to process.platform
+ * @returns {{ platform: string; installerTarget: string; ext: string; description: string }}
+ */
+function getInstallerTargets(platform) {
+  const plat = platform || process.platform;
+  switch (plat) {
+    case "linux":
+      return {
+        platform: "linux",
+        installerTarget: "AppImage",
+        ext: "AppImage",
+        description: "Portable Linux application image — single executable, no installation required",
+      };
+    case "darwin":
+      return {
+        platform: "darwin",
+        installerTarget: "dmg",
+        ext: "dmg",
+        description: "macOS disk image — drag to Applications to install (unsigned)",
+      };
+    case "win32":
+      return {
+        platform: "win32",
+        installerTarget: "nsis",
+        ext: "exe",
+        description: "Windows installer (NSIS) — standard graphical setup wizard (unsigned)",
+      };
+    default:
+      return {
+        platform: plat,
+        installerTarget: "dir",
+        ext: "dir",
+        description: "Directory output — no native installer available for this platform",
+      };
+  }
+}
+
 module.exports = {
   DEFAULT_WIDTH,
   DEFAULT_HEIGHT,
@@ -582,4 +630,6 @@ module.exports = {
   validatePackagedRuntime,
   buildEnvironmentSummary,
   getIconPath,
+  // Phase 35: installer generation helpers
+  getInstallerTargets,
 };

@@ -1,4 +1,4 @@
-# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33 + Phase 34
+# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33 + Phase 34 + Phase 35
 
 ## Overview
 
@@ -296,7 +296,6 @@ electron-builder artifact and adjusts:
 
 - **Unsigned build** — the packaged app is not code-signed; users may see OS warnings
 - **No auto-update** — no `electron-updater` or update server
-- **No installer** — output is a directory/app bundle, not a DMG/MSI/AppImage
 - **No custom icon asset** — the icon fallback mechanism is wired, but no
   `assets/icon.png` is shipped yet; Electron default icon is used
 - **No tray/dock integration**
@@ -306,6 +305,91 @@ electron-builder artifact and adjusts:
 - **No crash reporting** — errors are shown in-window but not reported externally
 - **Server startup delay** — the loading page is always shown briefly while the
   server boots; this is inherent to the child-process architecture
+
+## Generating an Installable Desktop Artifact (Phase 35)
+
+Phase 35 adds the first real installable targets: **AppImage** (Linux),
+**dmg** (macOS), and **nsis** (Windows). These are configured in
+`electron-builder.config.js` alongside the existing `dir` targets.
+
+### Build the installer
+
+```bash
+npm run desktop:installer
+```
+
+This will:
+1. Compile TypeScript to `dist/` via `tsc`
+2. Run electron-builder with all configured targets (dir + installer)
+3. Output everything to `dist-electron/`
+
+### Build scripts comparison
+
+| Script                 | What it does                                    | Output |
+|------------------------|-------------------------------------------------|--------|
+| `npm run app-shell`    | Browser-based shell — no Electron               | Terminal URL |
+| `npm run desktop`      | Electron dev run — spawns source server          | Electron window |
+| `npm run desktop:dev`  | Same as desktop, verbose + DevTools              | Electron window |
+| `npm run desktop:pack` | Compile + electron-builder `--dir` (fastest)     | `dist-electron/` (unpacked dir) |
+| `npm run desktop:build`| Compile + electron-builder (all targets)         | `dist-electron/` (dir + installer) |
+| `npm run desktop:installer` | Compile + electron-builder `--publish never` | `dist-electron/` (dir + installer) |
+
+### Installer targets by platform
+
+| Platform | Installer target | Artifact                          | How to install |
+|----------|------------------|-----------------------------------|----------------|
+| Linux    | AppImage         | `CodingAgent-0.1.0-x86_64.AppImage` | `chmod +x` then run directly |
+| macOS    | dmg              | `CodingAgent-0.1.0-arm64.dmg` (or x64) | Open dmg, drag to Applications |
+| Windows  | nsis             | `CodingAgent-Setup-0.1.0-x64.exe` | Run the installer wizard |
+
+All three platforms also retain the `dir` target for fast local testing.
+
+### Where the output appears (Phase 35)
+
+```
+dist-electron/
+├── linux-unpacked/                       (dir target)
+├── CodingAgent-0.1.0-x86_64.AppImage    (AppImage installer)
+├── mac/                                  (dir target)
+│   └── CodingAgent.app/
+├── CodingAgent-0.1.0-arm64.dmg          (dmg installer)
+├── win-unpacked/                         (dir target)
+└── CodingAgent-Setup-0.1.0-x64.exe      (nsis installer)
+```
+
+Actual filenames depend on the host platform and architecture.
+
+### Platform support (Phase 35)
+
+| Platform | Dir target | Installer target | Status |
+|----------|------------|------------------|--------|
+| Linux    | ✅ dir     | ✅ AppImage      | Supported |
+| macOS    | ✅ dir     | ✅ dmg (unsigned)| Supported (users may see Gatekeeper warning) |
+| Windows  | ✅ dir     | ✅ nsis (unsigned)| Supported (users may see SmartScreen warning) |
+
+Cross-platform builds are NOT supported — build on each platform natively.
+
+### Known limitations (Phase 35)
+
+- **Unsigned installer** — no code signing; users will see OS security warnings
+  (Gatekeeper on macOS, SmartScreen on Windows)
+- **No auto-update** — no `electron-updater` or update server
+- **No custom icon asset** — uses Electron default icon
+- **No tray/dock integration**
+- **Production dependencies included** — no tree-shaking or bundling
+- **Local-platform-only** — cross-compilation is not supported
+- **No crash reporting**
+- **Server startup delay** — inherent to the child-process architecture
+
+### What is still missing before polished public desktop distribution
+
+1. **Code signing** — required for macOS notarization and Windows SmartScreen trust
+2. **Auto-update** — `electron-updater` with a release/update server
+3. **Custom application icon** — `assets/icon.png` (512×512 recommended)
+4. **CI/CD release pipeline** — automated builds per platform per release tag
+5. **Linux package variants** — `.deb`, `.rpm`, Snap, Flatpak
+6. **Offline asset bundling** — embed server instead of child process spawn
+7. **Tree-shaking / bundling** — reduce `node_modules` size in packaged app
 
 ## What This Phase Includes
 
@@ -366,12 +450,27 @@ electron-builder artifact and adjusts:
 - ✅ All previous behavior preserved (demo mode, real mode, sessions, MCP, agents, commands)
 - ✅ Phase 34 deterministic test suite (63 tests)
 
+### Phase 35 (Installer generation / first distributable installer)
+- ✅ Installable targets: AppImage (Linux), dmg (macOS), nsis (Windows)
+- ✅ `npm run desktop:installer` — compile + full installer build with `--publish never`
+- ✅ Installer-specific config sections (nsis, dmg, appImage) in `electron-builder.config.js`
+- ✅ Linux metadata (synopsis, description) for AppImage desktop integration
+- ✅ nsis config: oneClick, per-user install, artifact naming with "Setup" prefix
+- ✅ dmg config: artifact naming
+- ✅ AppImage config: artifact naming
+- ✅ `getInstallerTargets()` helper in `electron/config.cjs` — returns platform-specific installer metadata
+- ✅ Dir targets preserved alongside installer targets (all platforms have both)
+- ✅ Build path clarity: 5 distinct desktop scripts documented
+- ✅ No code signing, no auto-update, no publishing
+- ✅ Documentation: installer build instructions, platform support, known limitations, missing steps
+- ✅ Phase 35 deterministic test suite
+
 ## What Is Deferred (Future Phases)
 
 - Application icon asset (the path convention is defined)
 - Auto-update mechanism (`electron-updater`)
-- OS-level installer generation (DMG, MSI, AppImage, deb) — currently `dir` target only
-- Code signing for distribution
+- Code signing for distribution (macOS notarization, Windows Authenticode)
+- Additional Linux package formats (deb, rpm, Snap, Flatpak)
 - Tray / dock integration
 - Native file dialogs via IPC bridge
 - Menu bar customization
@@ -382,9 +481,10 @@ electron-builder artifact and adjusts:
 
 ## Limitations
 
-- **Requires Node.js and npm** — this is a development/power-user desktop mode,
-  not a standalone redistributable binary
-- **No installer** — users must clone the repo and run `npm install`
+- **Unsigned installer** — the installer is not code-signed; users will see OS
+  security warnings (Gatekeeper on macOS, SmartScreen on Windows)
+- **Requires Node.js and npm** for development builds; the installer bundles
+  its own runtime
 - **Server is a child process** — there is a brief startup delay while the
   server starts (now shown with a loading page)
 - **Port is ephemeral** — the port changes on each launch (by design, to avoid
@@ -393,3 +493,5 @@ electron-builder artifact and adjusts:
   devDependency only and is not included in the published npm package
 - **No custom icon yet** — uses default Electron icon; the path convention for
   a custom icon is defined at `assets/icon.png`
+- **Local-platform-only** — cross-compilation is not supported; build on each
+  platform natively

@@ -1,10 +1,11 @@
-# Packaging Decision — Phases 17, 31 & 33
+# Packaging Decision — Phases 17, 31, 33 & 35
 
 ## Decision
 
 **Phase 17: Enhanced local web shell + desktop launcher**
 **Phase 31: Electron desktop wrapper — first usable desktop slice**
 **Phase 33: First distributable desktop build via electron-builder**
+**Phase 35: First installable desktop artifact (AppImage, dmg, nsis)**
 
 Phase 17 established the browser-based desktop launcher. Phase 31 adds an
 actual Electron wrapper that opens the app in a native desktop window.
@@ -57,6 +58,18 @@ See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
 9. Supports Linux, macOS, Windows — `dir` target only (no installers)
 10. No code signing, no auto-update
 
+## Phase 35 additions (installer generation)
+
+1. Installable targets: AppImage (Linux), dmg (macOS), nsis (Windows)
+2. `npm run desktop:installer` — compile TypeScript + electron-builder with `--publish never`
+3. Installer-specific config sections: `nsis`, `dmg`, `appImage` in `electron-builder.config.js`
+4. Linux metadata: synopsis, description for AppImage desktop integration
+5. nsis config: oneClick, per-user install, "Setup" artifact naming
+6. `getInstallerTargets()` helper in `electron/config.cjs` — platform-specific installer metadata
+7. Dir targets preserved alongside installer targets (all platforms have both)
+8. Build path clarity: 5 distinct desktop scripts (desktop, desktop:dev, desktop:pack, desktop:build, desktop:installer)
+9. No code signing, no auto-update, no publishing
+
 ## Phase 34 additions (first-run polish)
 
 1. Loading page adapts wording for packaged mode (user-friendly, no developer terms)
@@ -77,14 +90,14 @@ See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
 | **Tauri** | Requires Rust toolchain and platform-specific build. Good future option for smaller binaries. |
 | **Compiled binary (pkg / nexe)** | Snapshot-based bundling is fragile with dynamic imports and `data/` directories. |
 | **Electron auto-update** | Requires a release/update server. Premature before the product is distributed. |
-| **Installer generation** | DMG/MSI/AppImage requires `electron-builder` or `electron-forge` config. Deferred until the product surface is stable. |
+| **Installer generation** | ~~DMG/MSI/AppImage requires `electron-builder` or `electron-forge` config. Deferred until the product surface is stable.~~ **Done in Phase 35.** |
 
 ## What is still missing before a polished desktop product
 
 - Application icon and metadata
 - Auto-update mechanism (`electron-updater`)
-- OS-level installer / DMG / MSI / AppImage packaging (currently `dir` only)
-- Code signing for distribution
+- Code signing for distribution (macOS notarization, Windows Authenticode)
+- Additional Linux package formats (deb, rpm, Snap, Flatpak)
 - Tray/dock integration
 - Offline-first asset bundling (embed server instead of spawning)
 - Native file dialogs via IPC

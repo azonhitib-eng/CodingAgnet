@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 35** — Installer Generation / First Distributable Installer Slice
+  - Installable targets added: AppImage (Linux), dmg (macOS), nsis (Windows) in `electron-builder.config.js`
+  - `npm run desktop:installer` — compile TypeScript + electron-builder with `--publish never`
+  - Installer-specific config sections: `nsis` (oneClick, per-user, "Setup" naming), `dmg` (artifact naming), `appImage` (artifact naming)
+  - Linux metadata: `synopsis` and `description` fields for AppImage desktop integration
+  - Dir targets preserved alongside installer targets — all three platforms have both `dir` and installer target
+  - `getInstallerTargets(platform?)` helper in `electron/config.cjs` — returns platform-specific installer metadata (target name, file extension, description)
+  - Build path clarity: 5 distinct desktop scripts documented (desktop, desktop:dev, desktop:pack, desktop:build, desktop:installer)
+  - Updated `docs/ELECTRON.md` with installer build instructions, platform support table, artifact layout, known limitations, missing steps
+  - Updated `docs/PACKAGING.md` with Phase 35 additions
+  - No code signing, no auto-update, no publishing
+  - Phase 35 deterministic test suite
+
 - **Phase 34** — Desktop First-Run Polish and Packaged UX Hardening
   - Loading page adapts wording for packaged mode ("Starting up — this may take a moment…" vs "Starting app shell server…")
   - Error page adapts hints for packaged mode (user-friendly, no npm/terminal commands) vs dev mode (developer-oriented)

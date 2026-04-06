@@ -2,10 +2,11 @@
  * electron-builder configuration for CodingAgent desktop distribution.
  *
  * Phase 33 — first distributable desktop build path.
+ * Phase 35 — first installable artifact targets (AppImage, dmg, nsis).
  *
- * This configuration produces a minimal packaged artifact for the primary
- * development platform. It wraps the existing Electron shell architecture
- * without changing the runtime model.
+ * This configuration produces packaged and installable artifacts for the
+ * primary development platform. It wraps the existing Electron shell
+ * architecture without changing the runtime model.
  *
  * What is included:
  *   - Compiled backend (dist/)
@@ -74,28 +75,55 @@ const config = {
     main: "electron/main.cjs",
   },
 
-  // --- Platform configurations (minimal) ---
+  // --- Platform configurations ---
+  // Each platform defines both a dir target (for fast local testing / Phase 33)
+  // and an installable target (Phase 35).
 
-  // Linux
+  // Linux — AppImage is a single portable binary, works on most distributions
   linux: {
-    target: [{ target: "dir" }],
+    target: [{ target: "dir" }, { target: "AppImage" }],
     category: "Development",
+    synopsis: "Portable local-first coding-agent platform",
+    description:
+      "CodingAgent — a portable, local-first coding-agent desktop application " +
+      "for catalog management, host detection, compatibility evaluation, " +
+      "install planning, and workflow orchestration.",
   },
 
-  // macOS
+  // AppImage-specific settings
+  appImage: {
+    // Include the system-level desktop integration prompt
+    artifactName: "${productName}-${version}-${arch}.${ext}",
+  },
+
+  // macOS — dmg is the standard distributable disk image
   mac: {
-    target: [{ target: "dir" }],
+    target: [{ target: "dir" }, { target: "dmg" }],
     category: "public.app-category.developer-tools",
     // No code signing in this phase
     identity: null,
   },
 
-  // Windows
-  win: {
-    target: [{ target: "dir" }],
+  // dmg-specific settings
+  dmg: {
+    // Keep defaults — drag-to-Applications layout
+    artifactName: "${productName}-${version}-${arch}.${ext}",
   },
 
-  // --- Artifact naming ---
+  // Windows — nsis is the standard graphical installer
+  win: {
+    target: [{ target: "dir" }, { target: "nsis" }],
+  },
+
+  // nsis-specific settings
+  nsis: {
+    oneClick: true,
+    perMachine: false,
+    allowToChangeInstallationDirectory: false,
+    artifactName: "${productName}-Setup-${version}-${arch}.${ext}",
+  },
+
+  // --- Artifact naming (for dir and other generic targets) ---
   artifactName: "${productName}-${version}-${os}-${arch}.${ext}",
 
   // Disable publishing (local builds only)

@@ -72,6 +72,7 @@
     "desktop:dev": "ELECTRON_DEV=1 electron electron/main.cjs",
     "desktop:build": "npm run build && npx electron-builder --config electron-builder.config.js",
     "desktop:pack": "npm run build && npx electron-builder --config electron-builder.config.js --dir",
+    "desktop:installer": "npm run build && npx electron-builder --config electron-builder.config.js --publish never",
     "generate-host-profile": "tsx src/cli/main.ts detect-host --json",
     "preflight": "tsx scripts/preflight.ts"
   },
