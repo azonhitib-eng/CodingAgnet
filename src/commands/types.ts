@@ -40,7 +40,9 @@ export type CommandId =
   | "build_agent_prompt_context"
   | "refresh_agent_context"
   | "run_agent_task"
-  | "inspect_agent_run";
+  | "inspect_agent_run"
+  | "inspect_agent_adapter"
+  | "refresh_agent_adapter_status";
 
 /** Logical category grouping for commands. */
 export type CommandCategory =
@@ -193,6 +195,10 @@ export interface InspectAgentRunPayload {
   readonly runId?: string;
 }
 
+export type InspectAgentAdapterPayload = Record<string, never>;
+
+export type RefreshAgentAdapterStatusPayload = Record<string, never>;
+
 /** Discriminated union of all command payloads. */
 export type CommandPayload =
   | { readonly commandId: "open_workspace"; readonly data: OpenWorkspacePayload }
@@ -222,7 +228,9 @@ export type CommandPayload =
   | { readonly commandId: "build_agent_prompt_context"; readonly data: BuildAgentPromptContextPayload }
   | { readonly commandId: "refresh_agent_context"; readonly data: RefreshAgentContextPayload }
   | { readonly commandId: "run_agent_task"; readonly data: RunAgentTaskPayload }
-  | { readonly commandId: "inspect_agent_run"; readonly data: InspectAgentRunPayload };
+  | { readonly commandId: "inspect_agent_run"; readonly data: InspectAgentRunPayload }
+  | { readonly commandId: "inspect_agent_adapter"; readonly data: InspectAgentAdapterPayload }
+  | { readonly commandId: "refresh_agent_adapter_status"; readonly data: RefreshAgentAdapterStatusPayload };
 
 /* ------------------------------------------------------------------ */
 /*  Validation                                                         */
@@ -461,6 +469,18 @@ export const COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
     category: "agent_run",
     label: "Inspect Agent Run",
     description: "Inspect the result of the last or a specific agent run, including selection, context, output, and errors.",
+  },
+  {
+    id: "inspect_agent_adapter",
+    category: "agent_run",
+    label: "Inspect Agent Adapter",
+    description: "Inspect the current execution adapter: kind, availability, model backend, and configuration state.",
+  },
+  {
+    id: "refresh_agent_adapter_status",
+    category: "agent_run",
+    label: "Refresh Agent Adapter Status",
+    description: "Re-check the execution adapter's availability and update its status.",
   },
 ] as const;
 

@@ -311,5 +311,9 @@ export function validateCommand(payload: CommandPayload): CommandValidationResul
       return validateRunAgentTask(payload.data);
     case "inspect_agent_run":
       return VALID_OK; // Optional runId, no required fields.
+    case "inspect_agent_adapter":
+      return VALID_OK; // No required fields.
+    case "refresh_agent_adapter_status":
+      return VALID_OK; // No required fields.
   }
 }

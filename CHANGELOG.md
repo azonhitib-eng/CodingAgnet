@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 46** — Model-Backed Execution Adapter
+  - New files in `src/agent-run/`:
+    - `adapter-config.ts` — `AdapterAvailability` (4 states), `AdapterKind` (3 kinds), `OpenAIAdapterConfig`, `AdapterStatus`, `AdapterConfigError`, `AdapterResolutionResult`, `validateOpenAIConfig()`, `buildAdapterStatus()`, `inspectAdapterStatus()`
+    - `openai-adapter.ts` — `OpenAIExecutionAdapter` (chat-completions-compatible API adapter), `checkOpenAIAvailability()`, injectable `FetchFn` for testing
+    - `adapter-manager.ts` — `EchoTestAdapter`, `resolveAdapter()`, `refreshAdapterStatus()`, explicit adapter resolution with structured errors
+  - Adapter availability states: `configured_available`, `configured_unavailable`, `not_configured`, `unsupported`
+  - OpenAI-compatible adapter works with OpenAI, Azure OpenAI, Ollama, LM Studio, vLLM
+  - 2 new session event kinds: `agent_adapter_resolved`, `agent_adapter_status_refreshed`
+  - 4 new `AgentRunSessionSummary` fields: `activeAdapterKind`, `activeAdapterAvailability`, `activeAdapterIsModelBacked`, `activeAdapterModelName`
+  - 2 new commands: `inspect_agent_adapter`, `refresh_agent_adapter_status` (always available)
+  - `docs/EXECUTION-ADAPTER.md` — full documentation
+  - 106 new tests covering adapter config, OpenAI adapter (mocked), echo adapter, adapter manager, session events, command integration, deterministic behavior, error handling, backward compatibility
+
 - **Phase 45** — Minimal Agent Execution & Task Dispatch
   - New module: `src/agent-run/` (5 files)
     - `types.ts` — `AgentRunId`, `AgentTaskKind`, `AgentRunStatus`, `AgentRunSelectionReason`, `AgentRunInput`, `AgentRunRequest`, `AgentRunOutput`, `AgentRunError`, `AgentRunErrorCode`, `AgentRunResult`, `AgentRunSummary`

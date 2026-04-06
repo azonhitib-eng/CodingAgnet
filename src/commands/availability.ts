@@ -281,6 +281,14 @@ function checkInspectAgentRun(ctx: CommandContextState): CommandAvailability {
   return { commandId: "inspect_agent_run", available: true };
 }
 
+function checkInspectAgentAdapter(_ctx: CommandContextState): CommandAvailability {
+  return { commandId: "inspect_agent_adapter", available: true };
+}
+
+function checkRefreshAgentAdapterStatus(_ctx: CommandContextState): CommandAvailability {
+  return { commandId: "refresh_agent_adapter_status", available: true };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Availability dispatcher                                            */
 /* ------------------------------------------------------------------ */
@@ -314,6 +322,8 @@ const CHECKERS: Record<CommandId, (ctx: CommandContextState) => CommandAvailabil
   refresh_agent_context: checkRefreshAgentContext,
   run_agent_task: checkRunAgentTask,
   inspect_agent_run: checkInspectAgentRun,
+  inspect_agent_adapter: checkInspectAgentAdapter,
+  refresh_agent_adapter_status: checkRefreshAgentAdapterStatus,
 };
 
 /** Get availability of a single command given the current state. */

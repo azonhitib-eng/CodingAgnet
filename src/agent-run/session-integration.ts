@@ -3,12 +3,14 @@
  *
  * Phase 45: Session events, event kinds, and summary builders for
  * the agent execution / task dispatch layer.
+ * Phase 46: Extended with adapter metadata in events and summaries.
  */
 
 import type { SessionEvent } from "../session/types.js";
 import { createEvent } from "../session/events.js";
 import type { AgentRunResult, AgentRunSummary } from "./types.js";
 import { buildAgentRunSummary } from "./types.js";
+import type { AdapterStatus } from "./adapter-config.js";
 
 /* ------------------------------------------------------------------ */
 /*  Event kinds                                                        */
@@ -19,7 +21,9 @@ export type AgentRunEventKind =
   | "agent_run_requested"
   | "agent_run_started"
   | "agent_run_completed"
-  | "agent_run_failed";
+  | "agent_run_failed"
+  | "agent_adapter_resolved"
+  | "agent_adapter_status_refreshed";
 
 /** All agent run event kinds. */
 export const AGENT_RUN_EVENT_KINDS: readonly AgentRunEventKind[] = [
@@ -27,6 +31,8 @@ export const AGENT_RUN_EVENT_KINDS: readonly AgentRunEventKind[] = [
   "agent_run_started",
   "agent_run_completed",
   "agent_run_failed",
+  "agent_adapter_resolved",
+  "agent_adapter_status_refreshed",
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -94,6 +100,41 @@ export function agentRunFailed(
   );
 }
 
+/** Create an "agent adapter resolved" event. */
+export function agentAdapterResolved(
+  status: AdapterStatus,
+): SessionEvent {
+  return createEvent(
+    "agent_adapter_resolved",
+    `Execution adapter resolved: ${status.kind} — ${status.availabilityMessage}`,
+    {
+      adapterKind: status.kind,
+      isModelBacked: status.isModelBacked,
+      availability: status.availability,
+      modelName: status.modelName,
+      label: status.label,
+    },
+  );
+}
+
+/** Create an "agent adapter status refreshed" event. */
+export function agentAdapterStatusRefreshed(
+  status: AdapterStatus,
+): SessionEvent {
+  return createEvent(
+    "agent_adapter_status_refreshed",
+    `Adapter status refreshed: ${status.kind} — ${status.availabilityMessage}`,
+    {
+      adapterKind: status.kind,
+      isModelBacked: status.isModelBacked,
+      availability: status.availability,
+      modelName: status.modelName,
+      lastCheckedAt: status.lastCheckedAt,
+      lastError: status.lastError,
+    },
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Event filtering                                                    */
 /* ------------------------------------------------------------------ */
@@ -139,12 +180,21 @@ export interface AgentRunSessionSummary {
   readonly lastAgentRunErrorCode: string | null;
   /** Total number of runs executed in this session. */
   readonly totalAgentRuns: number;
+  /** Current adapter kind (Phase 46). */
+  readonly activeAdapterKind: string | null;
+  /** Current adapter availability (Phase 46). */
+  readonly activeAdapterAvailability: string | null;
+  /** Whether the active adapter is model-backed (Phase 46). */
+  readonly activeAdapterIsModelBacked: boolean | null;
+  /** Active adapter model name (Phase 46). */
+  readonly activeAdapterModelName: string | null;
 }
 
 /** Build agent run session summary from a result and running count. */
 export function buildAgentRunSessionSummary(
   result: AgentRunResult | null,
   totalRuns: number,
+  adapterStatus?: AdapterStatus | null,
 ): AgentRunSessionSummary {
   if (!result) {
     return {
@@ -158,6 +208,10 @@ export function buildAgentRunSessionSummary(
       lastAgentRunDurationMs: null,
       lastAgentRunErrorCode: null,
       totalAgentRuns: totalRuns,
+      activeAdapterKind: adapterStatus?.kind ?? null,
+      activeAdapterAvailability: adapterStatus?.availability ?? null,
+      activeAdapterIsModelBacked: adapterStatus?.isModelBacked ?? null,
+      activeAdapterModelName: adapterStatus?.modelName ?? null,
     };
   }
 
@@ -173,6 +227,10 @@ export function buildAgentRunSessionSummary(
     lastAgentRunDurationMs: summary.durationMs,
     lastAgentRunErrorCode: summary.errorCode,
     totalAgentRuns: totalRuns,
+    activeAdapterKind: adapterStatus?.kind ?? summary.adapterKind ?? null,
+    activeAdapterAvailability: adapterStatus?.availability ?? null,
+    activeAdapterIsModelBacked: adapterStatus?.isModelBacked ?? null,
+    activeAdapterModelName: adapterStatus?.modelName ?? null,
   };
 }
 

@@ -191,7 +191,7 @@ describe("Phase 45 — Types and constants", () => {
   });
 
   it("AGENT_RUN_EVENT_KINDS has 4 kinds", () => {
-    expect(AGENT_RUN_EVENT_KINDS).toHaveLength(4);
+    expect(AGENT_RUN_EVENT_KINDS).toHaveLength(6);
     expect(AGENT_RUN_EVENT_KINDS).toContain("agent_run_requested");
     expect(AGENT_RUN_EVENT_KINDS).toContain("agent_run_started");
     expect(AGENT_RUN_EVENT_KINDS).toContain("agent_run_completed");
@@ -882,8 +882,8 @@ describe("Phase 45 — Command integration", () => {
     expect(inspect?.category).toBe("agent_run");
   });
 
-  it("total command definitions = 28", () => {
-    expect(COMMAND_DEFINITIONS).toHaveLength(28);
+  it("total command definitions = 30", () => {
+    expect(COMMAND_DEFINITIONS).toHaveLength(30);
   });
 
   describe("validation", () => {

@@ -223,6 +223,7 @@ For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **[docs/LANGUAGE-CONTEXT.md](docs/LANGUAGE-CONTEXT.md)** — Language context: symbol extraction and workspace intelligence
 - **[docs/AGENT-CONTEXT.md](docs/AGENT-CONTEXT.md)** — Agent context: deterministic prompt context assembly and prioritization
 - **[docs/AGENT-RUN.md](docs/AGENT-RUN.md)** — Agent run: bounded task dispatch, selection, and execution adapters
+- **[docs/EXECUTION-ADAPTER.md](docs/EXECUTION-ADAPTER.md)** — Model-backed execution adapter: OpenAI-compatible API, configuration, and availability
 - **[docs/ELECTRON.md](docs/ELECTRON.md)** — Electron desktop wrapper
 - **[docs/PACKAGING.md](docs/PACKAGING.md)** — Packaging and desktop launcher decisions
 - **[docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)** — Code-signing strategy and release readiness
