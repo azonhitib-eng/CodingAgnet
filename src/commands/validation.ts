@@ -21,6 +21,9 @@ import type {
   InspectMcpToolPayload,
   InvokeMcpToolPayload,
   InspectFileContextPayload,
+  InspectAgentContextPayload,
+  BuildAgentPromptContextPayload,
+  RunAgentTaskPayload,
 } from "./types.js";
 
 /* ------------------------------------------------------------------ */
@@ -192,6 +195,59 @@ export function validateInspectFileContext(data: InspectFileContextPayload): Com
   return errors.length > 0 ? invalid(errors) : VALID_OK;
 }
 
+const VALID_AGENT_KINDS = ["system", "coding", "review", "planning", "testing", "external"];
+
+export function validateInspectAgentContext(data: InspectAgentContextPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.agentKind)) {
+    errors.push(fieldError("agentKind", "Agent kind is required."));
+  } else if (!VALID_AGENT_KINDS.includes(data.agentKind)) {
+    errors.push(fieldError("agentKind", `Invalid agent kind. Must be one of: ${VALID_AGENT_KINDS.join(", ")}.`));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
+export function validateBuildAgentPromptContext(data: BuildAgentPromptContextPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.agentKind)) {
+    errors.push(fieldError("agentKind", "Agent kind is required."));
+  } else if (!VALID_AGENT_KINDS.includes(data.agentKind)) {
+    errors.push(fieldError("agentKind", `Invalid agent kind. Must be one of: ${VALID_AGENT_KINDS.join(", ")}.`));
+  }
+  if (data.maxTotalChars !== undefined && (typeof data.maxTotalChars !== "number" || data.maxTotalChars < 100)) {
+    errors.push(fieldError("maxTotalChars", "Max total chars must be a number >= 100."));
+  }
+  if (data.maxSlices !== undefined && (typeof data.maxSlices !== "number" || data.maxSlices < 1)) {
+    errors.push(fieldError("maxSlices", "Max slices must be a number >= 1."));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
+const VALID_TASK_KINDS = [
+  "summarize_workspace",
+  "review_diagnostics",
+  "explain_files",
+  "summarize_github",
+  "general_query",
+  "custom",
+];
+
+export function validateRunAgentTask(data: RunAgentTaskPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.taskKind)) {
+    errors.push(fieldError("taskKind", "Task kind is required."));
+  } else if (!VALID_TASK_KINDS.includes(data.taskKind)) {
+    errors.push(fieldError("taskKind", `Invalid task kind. Must be one of: ${VALID_TASK_KINDS.join(", ")}.`));
+  }
+  if ((data.taskKind === "custom" || data.taskKind === "general_query") && !isNonEmpty(data.taskDescription)) {
+    errors.push(fieldError("taskDescription", `Task description is required for "${data.taskKind}" tasks.`));
+  }
+  if (data.preferredAgentKind !== undefined && !VALID_AGENT_KINDS.includes(data.preferredAgentKind)) {
+    errors.push(fieldError("preferredAgentKind", `Invalid agent kind. Must be one of: ${VALID_AGENT_KINDS.join(", ")}.`));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Top-level dispatcher                                               */
 /* ------------------------------------------------------------------ */
@@ -245,5 +301,15 @@ export function validateCommand(payload: CommandPayload): CommandValidationResul
       return validateInspectFileContext(payload.data);
     case "refresh_context_summary":
       return VALID_OK; // No inputs required.
+    case "inspect_agent_context":
+      return validateInspectAgentContext(payload.data);
+    case "build_agent_prompt_context":
+      return validateBuildAgentPromptContext(payload.data);
+    case "refresh_agent_context":
+      return VALID_OK; // No inputs required.
+    case "run_agent_task":
+      return validateRunAgentTask(payload.data);
+    case "inspect_agent_run":
+      return VALID_OK; // Optional runId, no required fields.
   }
 }

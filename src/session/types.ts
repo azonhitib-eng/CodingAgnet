@@ -171,7 +171,20 @@ export type SessionEventKind =
   | "mcp_tool_invocation_failed"
   | "mcp_tool_list_refreshed"
   | "mcp_github_attached"
-  | "mcp_github_auth_missing";
+  | "mcp_github_auth_missing"
+  /* Language context events (Phase 43) */
+  | "workspace_context_collected"
+  | "workspace_context_refreshed"
+  | "workspace_context_failed"
+  /* Agent context / prompt assembly events (Phase 44) */
+  | "agent_context_assembled"
+  | "agent_context_refreshed"
+  | "agent_context_failed"
+  /* Agent run / task dispatch events (Phase 45) */
+  | "agent_run_requested"
+  | "agent_run_started"
+  | "agent_run_completed"
+  | "agent_run_failed";
 
 /** Structured session event. */
 export interface SessionEvent {

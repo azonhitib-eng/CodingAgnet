@@ -61,6 +61,14 @@
     "./language-context": {
       "import": "./dist/language-context/index.js",
       "types": "./dist/language-context/index.d.ts"
+    },
+    "./agent-context": {
+      "import": "./dist/agent-context/index.js",
+      "types": "./dist/agent-context/index.d.ts"
+    },
+    "./agent-run": {
+      "import": "./dist/agent-run/index.js",
+      "types": "./dist/agent-run/index.d.ts"
     }
   },
   "bin": {

@@ -239,6 +239,49 @@ function checkRefreshContextSummary(ctx: CommandContextState): CommandAvailabili
 }
 
 /* ------------------------------------------------------------------ */
+/*  Agent context commands (Phase 44)                                  */
+/* ------------------------------------------------------------------ */
+
+function checkInspectAgentContext(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "inspect_agent_context", available: false, reason: "No active session." };
+  }
+  return { commandId: "inspect_agent_context", available: true };
+}
+
+function checkBuildAgentPromptContext(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "build_agent_prompt_context", available: false, reason: "No active session." };
+  }
+  return { commandId: "build_agent_prompt_context", available: true };
+}
+
+function checkRefreshAgentContext(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "refresh_agent_context", available: false, reason: "No active session." };
+  }
+  return { commandId: "refresh_agent_context", available: true };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Agent run commands (Phase 45)                                      */
+/* ------------------------------------------------------------------ */
+
+function checkRunAgentTask(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "run_agent_task", available: false, reason: "No active session." };
+  }
+  return { commandId: "run_agent_task", available: true };
+}
+
+function checkInspectAgentRun(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "inspect_agent_run", available: false, reason: "No active session." };
+  }
+  return { commandId: "inspect_agent_run", available: true };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Availability dispatcher                                            */
 /* ------------------------------------------------------------------ */
 
@@ -266,6 +309,11 @@ const CHECKERS: Record<CommandId, (ctx: CommandContextState) => CommandAvailabil
   inspect_workspace_context: checkInspectWorkspaceContext,
   inspect_file_context: checkInspectFileContext,
   refresh_context_summary: checkRefreshContextSummary,
+  inspect_agent_context: checkInspectAgentContext,
+  build_agent_prompt_context: checkBuildAgentPromptContext,
+  refresh_agent_context: checkRefreshAgentContext,
+  run_agent_task: checkRunAgentTask,
+  inspect_agent_run: checkInspectAgentRun,
 };
 
 /** Get availability of a single command given the current state. */
