@@ -94,6 +94,16 @@ import {
   buildFingerprintSummary,
   getAllProfiles,
 } from "../fingerprint/index.js";
+import {
+  createServerAdapterState,
+  ensureAdapterResolved,
+  buildRunAgentTaskDep,
+  buildInspectAgentAdapterDep,
+  buildRefreshAgentAdapterStatusDep,
+  buildInspectAgentRunDep,
+  emitAdapterResolvedEvent,
+} from "../agent-run/index.js";
+import type { ServerAdapterState } from "../agent-run/index.js";
 
 // ---------------------------------------------------------------------------
 // Routing
@@ -634,6 +644,22 @@ export function setMcpManager(manager: McpManager | null): void {
 }
 
 // ---------------------------------------------------------------------------
+// Server Adapter State (Phase 48)
+// ---------------------------------------------------------------------------
+
+let _serverAdapterState: ServerAdapterState = createServerAdapterState();
+
+/** Get the server adapter state. */
+export function getServerAdapterState(): ServerAdapterState {
+  return _serverAdapterState;
+}
+
+/** Override the server adapter state (for testing). */
+export function setServerAdapterState(state: ServerAdapterState | null): void {
+  _serverAdapterState = state ?? createServerAdapterState();
+}
+
+// ---------------------------------------------------------------------------
 // POST /api/workspace/open
 // ---------------------------------------------------------------------------
 
@@ -1131,6 +1157,11 @@ function buildCommandExecutorDeps() {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };
       }
     },
+    /* Phase 48: Agent adapter wiring */
+    runAgentTask: buildRunAgentTaskDep(_serverAdapterState, _workspaceSessionManager),
+    inspectAgentAdapter: buildInspectAgentAdapterDep(_serverAdapterState),
+    refreshAgentAdapterStatus: buildRefreshAgentAdapterStatusDep(_serverAdapterState, _workspaceSessionManager),
+    inspectAgentRun: buildInspectAgentRunDep(_serverAdapterState),
   };
 }
 
