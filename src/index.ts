@@ -28,3 +28,4 @@ export * from "./mcp/index.js";
 export * from "./agents/index.js";
 export * from "./commands/index.js";
 export * from "./fingerprint/index.js";
+export * from "./toolchain/index.js";

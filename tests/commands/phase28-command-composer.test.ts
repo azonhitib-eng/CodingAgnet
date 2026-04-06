@@ -190,6 +190,20 @@ function minimalSummary(overrides: Partial<SessionSummary> = {}): SessionSummary
     mcpServers: [],
     agentCount: 0,
     agents: [],
+    detectedLanguages: null,
+    detectedFrameworks: null,
+    isMixedRepo: null,
+    profileId: null,
+    profileLabel: null,
+    primaryLanguage: null,
+    profileSelectionReason: null,
+    profileSelectionExplanation: null,
+    profileConfident: null,
+    toolchainAdapterId: null,
+    toolchainKind: null,
+    toolchainCommandCount: null,
+    toolchainRecommendedCount: null,
+    toolchainUnavailableCount: null,
     ...overrides,
   };
 }
@@ -199,16 +213,16 @@ function minimalSummary(overrides: Partial<SessionSummary> = {}): SessionSummary
 /* ================================================================== */
 
 describe("Command model (types.ts)", () => {
-  it("COMMAND_DEFINITIONS has exactly 10 entries", () => {
-    expect(COMMAND_DEFINITIONS).toHaveLength(10);
+  it("COMMAND_DEFINITIONS has exactly 13 entries", () => {
+    expect(COMMAND_DEFINITIONS).toHaveLength(13);
   });
 
-  it("ALL_COMMAND_IDS has exactly 10 entries", () => {
-    expect(ALL_COMMAND_IDS).toHaveLength(10);
+  it("ALL_COMMAND_IDS has exactly 13 entries", () => {
+    expect(ALL_COMMAND_IDS).toHaveLength(13);
   });
 
-  it("ALL_COMMAND_CATEGORIES has exactly 6 entries", () => {
-    expect(ALL_COMMAND_CATEGORIES).toHaveLength(6);
+  it("ALL_COMMAND_CATEGORIES has exactly 7 entries", () => {
+    expect(ALL_COMMAND_CATEGORIES).toHaveLength(7);
   });
 
   it("ALL_COMMAND_CATEGORIES contains workspace, host, mcp, agent, workflow, session", () => {
@@ -263,9 +277,9 @@ describe("Command model (types.ts)", () => {
     expect(def).toBeUndefined();
   });
 
-  it("groupByCategory creates a map with all 6 categories", () => {
+  it("groupByCategory creates a map with all 7 categories", () => {
     const map = groupByCategory();
-    expect(map.size).toBe(6);
+    expect(map.size).toBe(7);
     for (const cat of ALL_COMMAND_CATEGORIES) {
       expect(map.has(cat)).toBe(true);
     }
@@ -634,6 +648,7 @@ describe("Command availability (availability.ts)", () => {
     sessionSummary: minimalSummary({
       mcpServerCount: 1,
       mcpServers: [{ id: "mcp-1", label: "MCP 1", ready: true }],
+      workspacePath: "/test/workspace",
     }),
   };
 
@@ -730,9 +745,9 @@ describe("Command availability (availability.ts)", () => {
 
   // --- Aggregate helpers ---
   describe("aggregate helpers", () => {
-    it("getAllCommandAvailability returns 10 entries", () => {
+    it("getAllCommandAvailability returns 13 entries", () => {
       const all = getAllCommandAvailability(NO_SESSION);
-      expect(all).toHaveLength(10);
+      expect(all).toHaveLength(13);
     });
 
     it("getAvailableCommandIds with no session returns only restore_session", () => {
@@ -740,9 +755,9 @@ describe("Command availability (availability.ts)", () => {
       expect(ids).toEqual(["restore_session"]);
     });
 
-    it("getAvailableCommandIds with full session returns all 10", () => {
+    it("getAvailableCommandIds with full session returns all 13", () => {
       const ids = getAvailableCommandIds(SESSION_WITH_MCP);
-      expect(ids).toHaveLength(10);
+      expect(ids).toHaveLength(13);
     });
 
     it("getAvailableCommandIds with session but no MCP returns 8", () => {
@@ -1186,7 +1201,7 @@ describe("Server endpoints (server.ts)", () => {
     const { statusCode, json } = await apiRequest("GET", "/api/commands");
     expect(statusCode).toBe(200);
     expect(Array.isArray(json)).toBe(true);
-    expect(json).toHaveLength(10);
+    expect(json).toHaveLength(13);
     expect(json[0]).toHaveProperty("id");
     expect(json[0]).toHaveProperty("category");
     expect(json[0]).toHaveProperty("label");
@@ -1197,7 +1212,7 @@ describe("Server endpoints (server.ts)", () => {
     const { statusCode, json } = await apiRequest("GET", "/api/commands/availability");
     expect(statusCode).toBe(200);
     expect(Array.isArray(json)).toBe(true);
-    expect(json).toHaveLength(10);
+    expect(json).toHaveLength(13);
     for (const entry of json) {
       expect(entry).toHaveProperty("commandId");
       expect(entry).toHaveProperty("available");

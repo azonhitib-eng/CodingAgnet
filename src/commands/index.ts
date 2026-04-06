@@ -19,6 +19,9 @@ export type {
   RunWorkflowPayload,
   SaveSessionPayload,
   RestoreSessionPayload,
+  InspectToolchainPayload,
+  RunWorkspaceCheckPayload,
+  RefreshToolchainSummaryPayload,
   CommandPayload,
   CommandFieldError,
   CommandValidationResult,
@@ -47,6 +50,7 @@ export {
   validateAttachAgent,
   validateRunWorkflow,
   validateRestoreSession,
+  validateRunWorkspaceCheck,
 } from "./validation.js";
 
 /* availability */

@@ -17,6 +17,7 @@ import type {
   AttachAgentPayload,
   RunWorkflowPayload,
   RestoreSessionPayload,
+  RunWorkspaceCheckPayload,
 } from "./types.js";
 
 /* ------------------------------------------------------------------ */
@@ -147,6 +148,14 @@ export function validateRestoreSession(data: RestoreSessionPayload): CommandVali
   return errors.length > 0 ? invalid(errors) : VALID_OK;
 }
 
+export function validateRunWorkspaceCheck(data: RunWorkspaceCheckPayload): CommandValidationResult {
+  const errors: CommandFieldError[] = [];
+  if (!isNonEmpty(data.commandType)) {
+    errors.push(fieldError("commandType", "Command type is required (e.g. lint, test, build)."));
+  }
+  return errors.length > 0 ? invalid(errors) : VALID_OK;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Top-level dispatcher                                               */
 /* ------------------------------------------------------------------ */
@@ -174,5 +183,11 @@ export function validateCommand(payload: CommandPayload): CommandValidationResul
       return VALID_OK; // No inputs required.
     case "restore_session":
       return validateRestoreSession(payload.data);
+    case "inspect_toolchain":
+      return VALID_OK; // No inputs required.
+    case "run_workspace_check":
+      return validateRunWorkspaceCheck(payload.data);
+    case "refresh_toolchain_summary":
+      return VALID_OK; // No inputs required.
   }
 }

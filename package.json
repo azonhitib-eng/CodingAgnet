@@ -49,6 +49,10 @@
     "./fingerprint": {
       "import": "./dist/fingerprint/index.js",
       "types": "./dist/fingerprint/index.d.ts"
+    },
+    "./toolchain": {
+      "import": "./dist/toolchain/index.js",
+      "types": "./dist/toolchain/index.d.ts"
     }
   },
   "bin": {

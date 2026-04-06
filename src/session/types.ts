@@ -156,7 +156,11 @@ export type SessionEventKind =
   | "agent_selected_for_stage"
   /* Repository fingerprinting / language profile events (Phase 38) */
   | "repo_fingerprinted"
-  | "profile_selected";
+  | "profile_selected"
+  /* Toolchain adapter events (Phase 39) */
+  | "toolchain_summary_generated"
+  | "toolchain_check_started"
+  | "toolchain_check_completed";
 
 /** Structured session event. */
 export interface SessionEvent {

@@ -22,7 +22,10 @@ export type CommandId =
   | "attach_agent"
   | "run_workflow"
   | "save_session"
-  | "restore_session";
+  | "restore_session"
+  | "inspect_toolchain"
+  | "run_workspace_check"
+  | "refresh_toolchain_summary";
 
 /** Logical category grouping for commands. */
 export type CommandCategory =
@@ -31,7 +34,8 @@ export type CommandCategory =
   | "mcp"
   | "agent"
   | "workflow"
-  | "session";
+  | "session"
+  | "toolchain";
 
 /* ------------------------------------------------------------------ */
 /*  Command definition (static metadata)                               */
@@ -102,6 +106,14 @@ export interface RestoreSessionPayload {
   readonly sessionId: string;
 }
 
+export type InspectToolchainPayload = Record<string, never>;
+
+export interface RunWorkspaceCheckPayload {
+  readonly commandType: string;
+}
+
+export type RefreshToolchainSummaryPayload = Record<string, never>;
+
 /** Discriminated union of all command payloads. */
 export type CommandPayload =
   | { readonly commandId: "open_workspace"; readonly data: OpenWorkspacePayload }
@@ -113,7 +125,10 @@ export type CommandPayload =
   | { readonly commandId: "attach_agent"; readonly data: AttachAgentPayload }
   | { readonly commandId: "run_workflow"; readonly data: RunWorkflowPayload }
   | { readonly commandId: "save_session"; readonly data: SaveSessionPayload }
-  | { readonly commandId: "restore_session"; readonly data: RestoreSessionPayload };
+  | { readonly commandId: "restore_session"; readonly data: RestoreSessionPayload }
+  | { readonly commandId: "inspect_toolchain"; readonly data: InspectToolchainPayload }
+  | { readonly commandId: "run_workspace_check"; readonly data: RunWorkspaceCheckPayload }
+  | { readonly commandId: "refresh_toolchain_summary"; readonly data: RefreshToolchainSummaryPayload };
 
 /* ------------------------------------------------------------------ */
 /*  Validation                                                         */
@@ -245,6 +260,24 @@ export const COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
     label: "Restore Session",
     description: "Restore a previously saved session.",
   },
+  {
+    id: "inspect_toolchain",
+    category: "toolchain",
+    label: "Inspect Toolchain",
+    description: "Inspect available toolchain commands and checks for the current workspace.",
+  },
+  {
+    id: "run_workspace_check",
+    category: "toolchain",
+    label: "Run Workspace Check",
+    description: "Run a specific toolchain check (lint, test, build, etc.) explicitly.",
+  },
+  {
+    id: "refresh_toolchain_summary",
+    category: "toolchain",
+    label: "Refresh Toolchain Summary",
+    description: "Re-generate the workspace toolchain summary based on current state.",
+  },
 ] as const;
 
 /** Lookup a command definition by id. */
@@ -263,6 +296,7 @@ export const ALL_COMMAND_CATEGORIES: readonly CommandCategory[] = [
   "agent",
   "workflow",
   "session",
+  "toolchain",
 ] as const;
 
 /** Group command definitions by category. */

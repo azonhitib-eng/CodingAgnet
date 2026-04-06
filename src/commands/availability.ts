@@ -103,6 +103,39 @@ function checkRestoreSession(_ctx: CommandContextState): CommandAvailability {
   return { commandId: "restore_session", available: true };
 }
 
+function checkInspectToolchain(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "inspect_toolchain", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "inspect_toolchain", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "inspect_toolchain", available: true };
+}
+
+function checkRunWorkspaceCheck(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "run_workspace_check", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "run_workspace_check", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "run_workspace_check", available: true };
+}
+
+function checkRefreshToolchainSummary(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "refresh_toolchain_summary", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "refresh_toolchain_summary", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "refresh_toolchain_summary", available: true };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Availability dispatcher                                            */
 /* ------------------------------------------------------------------ */
@@ -118,6 +151,9 @@ const CHECKERS: Record<CommandId, (ctx: CommandContextState) => CommandAvailabil
   run_workflow: checkRunWorkflow,
   save_session: checkSaveSession,
   restore_session: checkRestoreSession,
+  inspect_toolchain: checkInspectToolchain,
+  run_workspace_check: checkRunWorkspaceCheck,
+  refresh_toolchain_summary: checkRefreshToolchainSummary,
 };
 
 /** Get availability of a single command given the current state. */
