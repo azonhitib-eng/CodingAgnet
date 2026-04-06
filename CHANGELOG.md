@@ -6,6 +6,26 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 43** — Language Intelligence Expansion: Symbol and Context Layer
+  - New module: `src/language-context/` (10 files)
+    - `types.ts` — SymbolKind, FileSymbol, FileContextSummary, ModuleContextSummary, WorkspaceContextSummary, ContextEvidence, ContextCollectionStatus, ContextSummaryReason, ProfileContextSupport
+    - `profile-support.ts` — profile context support descriptors for all 8 profiles
+    - `analyzer-ts-js.ts` — TypeScript/JavaScript file context analyzer (symbols, imports, exports, roles)
+    - `analyzer-python.ts` — Python file context analyzer (symbols, imports, exports, roles)
+    - `analyzer-php.ts` — PHP/WordPress file context analyzer (symbols, hooks, imports, exports, roles)
+    - `analyzer-rust.ts` — Rust file context analyzer (symbols, imports, exports, roles)
+    - `analyzer-go.ts` — Go file context analyzer (symbols, imports, exports, roles)
+    - `analyzer-generic.ts` — Generic/unknown fallback analyzer (path-only role detection)
+    - `aggregation.ts` — workspace context collection, module aggregation, file prioritization
+    - `session-integration.ts` — 3 event kinds, event factories, session summary builder
+  - 3 new event kinds: `workspace_context_collected`, `workspace_context_refreshed`, `workspace_context_failed`
+  - 11 new SessionSummary fields for context intelligence
+  - 3 new commands: `inspect_workspace_context`, `inspect_file_context`, `refresh_context_summary`
+  - New command category: `language_context`
+  - Subpath export: `./language-context`
+  - `docs/LANGUAGE-CONTEXT.md` — full documentation
+  - 123 new tests across all analyzers, aggregation, session integration, and command integration
+
 - **Phase 42** — V1 Release Hardening
   - V1 audit: structured review of all surfaces (shell, desktop, packaging, session, MCP, agents, commands, toolchain, language-service, GitHub MCP, CLI, docs)
   - `electron/config.cjs`: V1 release helpers — `RELEASE_STAGE`, `V1_KNOWN_LIMITATIONS`, `getReleaseLabel()`, `getReleaseVersion()`, `getReleaseMetadata()`

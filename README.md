@@ -136,6 +136,7 @@ import { ... } from "codingagent-backend/commands";           // Commands: defin
 import { ... } from "codingagent-backend/fingerprint";        // Fingerprint: repo detection, language profiles, agent enrichment
 import { ... } from "codingagent-backend/toolchain";          // Toolchain: profile-aware adapters, workspace checks, availability
 import { ... } from "codingagent-backend/language-service";   // Language service: diagnostics layer, LSP bridge, availability
+import { ... } from "codingagent-backend/language-context";   // Language context: symbol extraction, file/module/workspace intelligence
 ```
 
 ## CLI exit codes
@@ -217,6 +218,7 @@ For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **[docs/FINGERPRINTING.md](docs/FINGERPRINTING.md)** — Repository fingerprinting and language detection
 - **[docs/TOOLCHAIN.md](docs/TOOLCHAIN.md)** — Profile-aware toolchain adapters and workspace checks
 - **[docs/LANGUAGE-SERVICE.md](docs/LANGUAGE-SERVICE.md)** — Minimal language service and diagnostics layer
+- **[docs/LANGUAGE-CONTEXT.md](docs/LANGUAGE-CONTEXT.md)** — Language context: symbol extraction and workspace intelligence
 - **[docs/ELECTRON.md](docs/ELECTRON.md)** — Electron desktop wrapper
 - **[docs/PACKAGING.md](docs/PACKAGING.md)** — Packaging and desktop launcher decisions
 - **[docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)** — Code-signing strategy and release readiness

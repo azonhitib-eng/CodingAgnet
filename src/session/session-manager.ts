@@ -165,6 +165,31 @@ export interface SessionSummary {
   readonly githubAuthConfigured: boolean;
   /** GitHub MCP readiness message. */
   readonly githubMcpReadinessMessage: string | null;
+
+  /* Language context (Phase 43) */
+
+  /** Whether workspace context has been collected. */
+  readonly contextCollected: boolean;
+  /** Profile used for context analysis. */
+  readonly contextProfileId: string | null;
+  /** Context collection status. */
+  readonly contextCollectionStatus: string | null;
+  /** Total files analyzed for context. */
+  readonly contextTotalFiles: number | null;
+  /** Files analyzed with content for context. */
+  readonly contextFilesWithContent: number | null;
+  /** Number of entrypoints found. */
+  readonly contextEntrypointCount: number | null;
+  /** Number of config files found. */
+  readonly contextConfigFileCount: number | null;
+  /** Number of test files found. */
+  readonly contextTestFileCount: number | null;
+  /** Number of notable symbols found. */
+  readonly contextNotableSymbolCount: number | null;
+  /** Number of modules found. */
+  readonly contextModuleCount: number | null;
+  /** Overall context confidence. */
+  readonly contextConfidence: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -370,6 +395,19 @@ export class SessionManager {
       readonly authConfigured?: boolean;
       readonly readinessMessage?: string;
     } | null,
+    languageContextSummary?: {
+      readonly contextCollected?: boolean;
+      readonly contextProfileId?: string | null;
+      readonly contextCollectionStatus?: string | null;
+      readonly contextTotalFiles?: number | null;
+      readonly contextFilesWithContent?: number | null;
+      readonly contextEntrypointCount?: number | null;
+      readonly contextConfigFileCount?: number | null;
+      readonly contextTestFileCount?: number | null;
+      readonly contextNotableSymbolCount?: number | null;
+      readonly contextModuleCount?: number | null;
+      readonly contextConfidence?: string | null;
+    } | null,
   ): SessionSummary {
     const session = this.requireSession(id);
     const lastEvent =
@@ -463,6 +501,18 @@ export class SessionManager {
       githubMcpAttached: githubMcpSummary?.attached ?? false,
       githubAuthConfigured: githubMcpSummary?.authConfigured ?? false,
       githubMcpReadinessMessage: githubMcpSummary?.readinessMessage ?? null,
+      /* Language context (Phase 43) */
+      contextCollected: languageContextSummary?.contextCollected ?? false,
+      contextProfileId: languageContextSummary?.contextProfileId ?? null,
+      contextCollectionStatus: languageContextSummary?.contextCollectionStatus ?? null,
+      contextTotalFiles: languageContextSummary?.contextTotalFiles ?? null,
+      contextFilesWithContent: languageContextSummary?.contextFilesWithContent ?? null,
+      contextEntrypointCount: languageContextSummary?.contextEntrypointCount ?? null,
+      contextConfigFileCount: languageContextSummary?.contextConfigFileCount ?? null,
+      contextTestFileCount: languageContextSummary?.contextTestFileCount ?? null,
+      contextNotableSymbolCount: languageContextSummary?.contextNotableSymbolCount ?? null,
+      contextModuleCount: languageContextSummary?.contextModuleCount ?? null,
+      contextConfidence: languageContextSummary?.contextConfidence ?? null,
     };
   }
 

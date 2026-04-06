@@ -57,6 +57,10 @@
     "./language-service": {
       "import": "./dist/language-service/index.js",
       "types": "./dist/language-service/index.d.ts"
+    },
+    "./language-context": {
+      "import": "./dist/language-context/index.js",
+      "types": "./dist/language-context/index.d.ts"
     }
   },
   "bin": {
