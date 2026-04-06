@@ -153,7 +153,10 @@ export type SessionEventKind =
   | "agent_routing_evaluated"
   | "agent_stage_participation_updated"
   | "agent_skipped_for_stage"
-  | "agent_selected_for_stage";
+  | "agent_selected_for_stage"
+  /* Repository fingerprinting / language profile events (Phase 38) */
+  | "repo_fingerprinted"
+  | "profile_selected";
 
 /** Structured session event. */
 export interface SessionEvent {

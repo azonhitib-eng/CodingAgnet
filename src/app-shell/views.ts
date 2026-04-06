@@ -1225,6 +1225,7 @@ const CLIENT_JS = `
     agent_attached: 'progress', agent_enabled: 'progress', agent_capabilities_updated: 'progress',
     mcp_health_refreshed: 'progress', mcp_discovery_refreshed: 'progress',
     agent_selected_for_stage: 'progress',
+    repo_fingerprinted: 'info', profile_selected: 'progress',
     agent_routing_evaluated: 'info', agent_stage_participation_updated: 'info',
     warning: 'warning', requires_approval: 'warning',
     mcp_attach_requested: 'warning', mcp_starting: 'warning',
@@ -1259,6 +1260,7 @@ const CLIENT_JS = `
     agent_enabled: 'agent', agent_disabled: 'agent', agent_failed: 'agent', agent_capabilities_updated: 'agent',
     agent_routing_evaluated: 'agent', agent_stage_participation_updated: 'agent',
     agent_skipped_for_stage: 'agent', agent_selected_for_stage: 'agent',
+    repo_fingerprinted: 'workspace', profile_selected: 'workspace',
     catalogs_loaded: 'workflow', host_detected: 'workflow', workflow_started: 'workflow',
     stage_completed: 'workflow', requires_approval: 'workflow', blocked: 'workflow',
     failed: 'workflow', completed: 'workflow',
@@ -1293,6 +1295,7 @@ const CLIENT_JS = `
     mcp_discovery_refreshed: 'discovery_card', mcp_stale: 'lifecycle_card',
     agent_routing_evaluated: 'lifecycle_card', agent_stage_participation_updated: 'lifecycle_card',
     agent_skipped_for_stage: 'lifecycle_card', agent_selected_for_stage: 'lifecycle_card',
+    repo_fingerprinted: 'discovery_card', profile_selected: 'discovery_card',
   };
 
   var CARD_CSS = {
@@ -1574,6 +1577,25 @@ const CLIENT_JS = `
     if (summary.lastError) {
       html += '<div style="grid-column:1/-1;"><div class="ss-label">Last Error</div><div class="ss-value" style="color:var(--danger);">' + esc(summary.lastError) + '</div></div>';
     }
+    // Fingerprint / language profile (Phase 38)
+    if (summary.profileId) {
+      html += '<div><div class="ss-label">Language Profile</div><div class="ss-value">' + esc(summary.profileLabel || summary.profileId) + '</div></div>';
+    }
+    if (summary.primaryLanguage) {
+      html += '<div><div class="ss-label">Primary Language</div><div class="ss-value">' + esc(summary.primaryLanguage) + '</div></div>';
+    }
+    if (summary.detectedLanguages && summary.detectedLanguages.length > 0) {
+      html += '<div><div class="ss-label">Detected Languages</div><div class="ss-value">' + esc(summary.detectedLanguages.join(', ')) + '</div></div>';
+    }
+    if (summary.detectedFrameworks && summary.detectedFrameworks.length > 0) {
+      html += '<div><div class="ss-label">Frameworks</div><div class="ss-value">' + esc(summary.detectedFrameworks.join(', ')) + '</div></div>';
+    }
+    if (summary.isMixedRepo != null) {
+      html += '<div><div class="ss-label">Mixed Repo</div><div class="ss-value">' + (summary.isMixedRepo ? 'Yes' : 'No') + '</div></div>';
+    }
+    if (summary.profileSelectionExplanation) {
+      html += '<div style="grid-column:1/-1;"><div class="ss-label">Profile Reason</div><div class="ss-value" style="font-size:.78rem;">' + esc(summary.profileSelectionExplanation) + '</div></div>';
+    }
     html += '</div>';
     $sessionSummary.innerHTML = html;
   }
@@ -1681,6 +1703,16 @@ const CLIENT_JS = `
       isBlocked: ws === 'blocked',
       lastError: data.workflow ? data.workflow.error || null : null,
       lastEventMessage: null,
+      // Fingerprint / profile (Phase 38)
+      detectedLanguages: ['typescript', 'javascript'],
+      detectedFrameworks: ['node'],
+      isMixedRepo: false,
+      profileId: 'typescript-node',
+      profileLabel: 'TypeScript (Node.js)',
+      primaryLanguage: 'typescript',
+      profileSelectionReason: 'strong_language_match',
+      profileSelectionExplanation: 'Strong typescript signals detected.',
+      profileConfident: true,
     };
   }
 

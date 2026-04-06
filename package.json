@@ -45,6 +45,10 @@
     "./commands": {
       "import": "./dist/commands/index.js",
       "types": "./dist/commands/index.d.ts"
+    },
+    "./fingerprint": {
+      "import": "./dist/fingerprint/index.js",
+      "types": "./dist/fingerprint/index.d.ts"
     }
   },
   "bin": {

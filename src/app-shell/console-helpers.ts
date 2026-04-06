@@ -72,6 +72,10 @@ const KIND_TO_ACTOR: Record<string, ConsoleActor> = {
   agent_skipped_for_stage: "agent",
   agent_selected_for_stage: "agent",
 
+  // Fingerprinting / profile (Phase 38)
+  repo_fingerprinted: "workspace",
+  profile_selected: "workspace",
+
   // Workflow
   catalogs_loaded: "workflow",
   host_detected: "workflow",
@@ -172,6 +176,8 @@ const KIND_TO_CARD: Record<string, ConsoleCardType> = {
   agent_stage_participation_updated: "lifecycle_card",
   agent_skipped_for_stage: "lifecycle_card",
   agent_selected_for_stage: "lifecycle_card",
+  repo_fingerprinted: "discovery_card",
+  profile_selected: "discovery_card",
 };
 
 /** Classify an event kind to its card type. */

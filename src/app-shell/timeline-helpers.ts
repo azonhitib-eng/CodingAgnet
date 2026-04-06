@@ -55,6 +55,10 @@ const KIND_TO_CATEGORY: Record<string, TimelineEventCategory> = {
   agent_selected_for_stage: "progress",
   agent_stage_participation_updated: "info",
 
+  // fingerprinting / profile (Phase 38)
+  repo_fingerprinted: "info",
+  profile_selected: "progress",
+
   // warning — needs attention / pending approval
   warning: "warning",
   requires_approval: "warning",
