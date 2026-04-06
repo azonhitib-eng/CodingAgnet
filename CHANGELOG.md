@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 29** — Final Architecture Consistency Audit
+  - Full architecture audit across all 12 modules (94 source files, 2386 tests)
+  - New documentation: `docs/ARCHITECTURE.md` — structured audit report with 7 sections
+  - Added `./agents` and `./commands` re-exports to `src/index.ts` (previously missing despite being in package.json exports)
+  - Added 8 missing event kinds to `views.ts` inline classification maps:
+    - EVENT_CATEGORIES: `mcp_health_refreshed`, `mcp_discovery_refreshed`, `agent_routing_evaluated`, `agent_selected_for_stage`, `agent_stage_participation_updated`, `mcp_health_degraded`, `mcp_stale`, `agent_skipped_for_stage`
+    - KIND_TO_ACTOR: same 8 event kinds mapped to correct actors (`mcp` or `agent`)
+    - KIND_TO_CARD: same 8 event kinds mapped to correct card types (`lifecycle_card`, `failure_card`, `discovery_card`)
+  - Updated README.md documentation section: 3 → 14 doc references (all docs now discoverable)
+  - New tests for export consistency and views.ts classification completeness
+  - Documented remaining known inconsistencies for future phases
+
 - **Phase 28** — Structured Command Composer / Session Input Layer
   - New module: `src/commands/` with 6 files: types.ts, validation.ts, availability.ts, executor.ts, session-integration.ts, index.ts
   - 10 structured command types: open_workspace, clone_repository, detect_host, attach_mcp, refresh_mcp_health, refresh_mcp_discovery, attach_agent, run_workflow, save_session, restore_session

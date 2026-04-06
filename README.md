@@ -181,6 +181,16 @@ For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **[docs/QUICKSTART.md](docs/QUICKSTART.md)** — Quick start guide (demo + real mode)
 - **[docs/APP-SHELL.md](docs/APP-SHELL.md)** — App shell architecture and API reference
 - **[docs/USAGE.md](docs/USAGE.md)** — Full usage guide with library, CLI, and workflow documentation
+- **[docs/SESSION-WORKSPACE.md](docs/SESSION-WORKSPACE.md)** — Session and workspace domain model
+- **[docs/SESSION-TIMELINE.md](docs/SESSION-TIMELINE.md)** — Session timeline UI and event categories
+- **[docs/SESSION-CONSOLE.md](docs/SESSION-CONSOLE.md)** — Chat-like session console
+- **[docs/SESSION-PERSISTENCE.md](docs/SESSION-PERSISTENCE.md)** — Session save/restore and recent sessions
+- **[docs/MCP-SERVERS.md](docs/MCP-SERVERS.md)** — MCP server integration and lifecycle
+- **[docs/MCP-HEALTH.md](docs/MCP-HEALTH.md)** — MCP health monitoring and discovery
+- **[docs/AGENTS.md](docs/AGENTS.md)** — Agent registry and attachment model
+- **[docs/AGENT-ROUTING.md](docs/AGENT-ROUTING.md)** — Agent routing and stage participation
+- **[docs/COMMANDS.md](docs/COMMANDS.md)** — Structured command composer
+- **[docs/PACKAGING.md](docs/PACKAGING.md)** — Packaging and desktop launcher decisions
 - **[CHANGELOG.md](CHANGELOG.md)** — Release notes
 
 ## Development

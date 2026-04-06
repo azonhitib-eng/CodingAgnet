@@ -25,3 +25,5 @@ export { validateHostProfile } from "./cli/host-loader.js";
 export * from "./frontend-contracts/index.js";
 export * from "./session/index.js";
 export * from "./mcp/index.js";
+export * from "./agents/index.js";
+export * from "./commands/index.js";
