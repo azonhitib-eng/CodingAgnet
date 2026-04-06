@@ -882,7 +882,7 @@ describe("Phase 45 — Command integration", () => {
     expect(inspect?.category).toBe("agent_run");
   });
 
-  it("total command definitions = 28", () => {
+  it("total command definitions = 30", () => {
     expect(COMMAND_DEFINITIONS).toHaveLength(30);
   });
 
