@@ -90,7 +90,7 @@ describe("CLI — --version flag", () => {
     const code = await main(["--version"], (msg) => lines.push(msg));
 
     expect(code).toBe(0);
-    expect(lines[0]).toBe("0.1.0");
+    expect(lines[0]).toBe("1.0.0");
   });
 });
 
