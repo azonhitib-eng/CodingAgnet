@@ -2,6 +2,7 @@
  * Agent run module — barrel exports.
  *
  * Phase 45: Minimal agent execution and task dispatch layer.
+ * Phase 46: Model-backed execution adapter boundary.
  */
 
 /* types */
@@ -47,6 +48,46 @@ export {
   StubExecutionAdapter,
 } from "./adapter.js";
 
+/* adapter config (Phase 46) */
+export type {
+  AdapterAvailability,
+  AdapterKind,
+  OpenAIAdapterConfig,
+  AdapterStatus,
+  AdapterConfigError,
+  AdapterResolutionResult,
+} from "./adapter-config.js";
+
+export {
+  ADAPTER_AVAILABILITY_LABELS,
+  ALL_ADAPTER_KINDS,
+  ADAPTER_KIND_LABELS,
+  validateOpenAIConfig,
+  buildAdapterStatus,
+  inspectAdapterStatus,
+} from "./adapter-config.js";
+
+/* openai adapter (Phase 46) */
+export type {
+  FetchFn,
+} from "./openai-adapter.js";
+
+export {
+  OpenAIExecutionAdapter,
+  checkOpenAIAvailability,
+} from "./openai-adapter.js";
+
+/* adapter manager (Phase 46) */
+export type {
+  ResolveAdapterOptions,
+} from "./adapter-manager.js";
+
+export {
+  EchoTestAdapter,
+  resolveAdapter,
+  refreshAdapterStatus,
+} from "./adapter-manager.js";
+
 /* dispatch */
 export type {
   AgentRunDispatchDeps,
@@ -69,6 +110,8 @@ export {
   agentRunStarted,
   agentRunCompleted,
   agentRunFailed,
+  agentAdapterResolved,
+  agentAdapterStatusRefreshed,
   isAgentRunEvent,
   filterAgentRunEvents,
   buildAgentRunSessionSummary,

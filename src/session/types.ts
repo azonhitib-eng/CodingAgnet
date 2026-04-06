@@ -184,7 +184,10 @@ export type SessionEventKind =
   | "agent_run_requested"
   | "agent_run_started"
   | "agent_run_completed"
-  | "agent_run_failed";
+  | "agent_run_failed"
+  /* Execution adapter events (Phase 46) */
+  | "agent_adapter_resolved"
+  | "agent_adapter_status_refreshed";
 
 /** Structured session event. */
 export interface SessionEvent {

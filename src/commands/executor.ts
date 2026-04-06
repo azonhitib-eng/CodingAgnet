@@ -250,6 +250,18 @@ export interface CommandExecutorDeps {
     error?: string;
     detail?: Record<string, unknown>;
   }>;
+  /** Inspect the current agent execution adapter. Returns {ok, error?, detail?}. */
+  readonly inspectAgentAdapter?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Refresh the agent execution adapter status. Returns {ok, error?, detail?}. */
+  readonly refreshAgentAdapterStatus?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -646,6 +658,26 @@ async function dispatchCommand(
       return res.ok
         ? makeResult(payload.commandId, "completed", "Agent run inspected.", res.detail)
         : makeResult(payload.commandId, "failed", res.error ?? "Agent run inspection failed.");
+    }
+
+    case "inspect_agent_adapter": {
+      if (!deps.inspectAgentAdapter) {
+        return makeResult(payload.commandId, "failed", "Agent adapter inspection not available.");
+      }
+      const res = await deps.inspectAgentAdapter();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Agent adapter inspected.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Agent adapter inspection failed.");
+    }
+
+    case "refresh_agent_adapter_status": {
+      if (!deps.refreshAgentAdapterStatus) {
+        return makeResult(payload.commandId, "failed", "Agent adapter status refresh not available.");
+      }
+      const res = await deps.refreshAgentAdapterStatus();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Agent adapter status refreshed.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Agent adapter status refresh failed.");
     }
   }
 }
