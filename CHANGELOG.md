@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file.
   - `package.json`: version updated from `0.1.0` to `1.0.0`
   - `docs/BETA-TESTING.md`: added V1 release section alongside beta content
   - V1 smoke-style validation tests for release-critical flows
-  - 71 new tests covering V1 coherence, docs accuracy, cross-surface consistency, and release metadata
+  - 101 new tests covering V1 coherence, docs accuracy, cross-surface consistency, and release metadata
 
 ## [Unreleased]
 
