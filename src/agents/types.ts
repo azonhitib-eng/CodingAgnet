@@ -112,6 +112,8 @@ export interface AgentDefinition {
   readonly allowedStages: readonly AgentStageAffinity[];
   /** Whether this agent depends on an MCP server (by MCP server id). */
   readonly mcpDependency?: string;
+  /** Optional routing metadata (Phase 27). */
+  readonly routing?: AgentRoutingMeta;
 }
 
 /* ------------------------------------------------------------------ */
@@ -155,6 +157,85 @@ export interface AgentAttachment {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Role Hint                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * High-level role hint for an agent.
+ *
+ * Hints which broad role the agent is best suited for.
+ * A single agent may have multiple capabilities but typically
+ * one dominant role.
+ */
+export type AgentRoleHint =
+  | "planner"
+  | "reviewer"
+  | "tester"
+  | "editor"
+  | "explorer"
+  | "mcp_bridge"
+  | "narrator"
+  | "general";
+
+/* ------------------------------------------------------------------ */
+/*  Extended Agent Definition (Phase 27)                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Optional routing metadata for an agent definition.
+ *
+ * Extends the base definition with routing-relevant hints.
+ * All fields are optional — agents without routing metadata
+ * fall back to capability-based inference.
+ */
+export interface AgentRoutingMeta {
+  /** High-level role hint for this agent. */
+  readonly roleHint?: AgentRoleHint;
+  /** Preferred stages — subset of allowedStages where this agent excels. */
+  readonly preferredStages?: readonly AgentStageAffinity[];
+  /** Routing priority (0–100, higher = preferred). Default is 50. */
+  readonly routingPriority?: number;
+  /** Whether this agent participates in routing by default. */
+  readonly participationEnabled?: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Stage Participation (Phase 27)                                    */
+/* ------------------------------------------------------------------ */
+
+/** Why an agent was considered eligible or ineligible for a stage. */
+export type ParticipationReason =
+  | "allowed_stage"           // stage is in allowedStages
+  | "preferred_stage"         // stage is in preferredStages
+  | "capability_match"        // agent has a capability mapped to this stage
+  | "not_allowed"             // stage is not in allowedStages
+  | "disabled"                // attachment is disabled
+  | "unavailable"             // attachment status is not active
+  | "failed"                  // attachment failed
+  | "detached"                // agent is detached
+  | "participation_disabled"; // routing participation explicitly disabled
+
+/** Participation evaluation for one agent at one stage. */
+export interface StageParticipation {
+  readonly agentId: AgentId;
+  readonly stage: AgentStageAffinity;
+  readonly eligible: boolean;
+  readonly preferred: boolean;
+  readonly reasons: readonly ParticipationReason[];
+  readonly priority: number;
+  /** Capabilities that contributed to eligibility. */
+  readonly matchingCapabilities: readonly AgentCapability[];
+}
+
+/** Summary of all agent participation for a single stage. */
+export interface StageParticipationSummary {
+  readonly stage: AgentStageAffinity;
+  readonly eligible: readonly StageParticipation[];
+  readonly preferred: readonly StageParticipation[];
+  readonly skipped: readonly StageParticipation[];
+}
+
+/* ------------------------------------------------------------------ */
 /*  Runtime Summary                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -173,4 +254,10 @@ export interface AgentSummary {
   readonly allowedStages: readonly AgentStageAffinity[];
   readonly failureReason: string | null;
   readonly disabledReason: string | null;
+  /** Role hint from routing metadata (Phase 27). */
+  readonly roleHint?: AgentRoleHint;
+  /** Routing priority (Phase 27). */
+  readonly routingPriority?: number;
+  /** Whether routing participation is enabled (Phase 27). */
+  readonly participationEnabled?: boolean;
 }

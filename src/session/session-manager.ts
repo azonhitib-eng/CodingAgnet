@@ -79,11 +79,19 @@ export interface SessionSummary {
   }>;
   /** Number of agents currently attached. */
   readonly agentCount: number;
-  /** Attached agents with their ready status. */
+  /** Attached agents with their ready status and routing metadata (Phase 27). */
   readonly agents: ReadonlyArray<{
     readonly id: string;
     readonly label: string;
     readonly ready: boolean;
+    /** Role hint from routing metadata (Phase 27). */
+    readonly roleHint?: string;
+    /** Routing priority (Phase 27). */
+    readonly routingPriority?: number;
+    /** Whether routing participation is enabled (Phase 27). */
+    readonly participationEnabled?: boolean;
+    /** Allowed stages (Phase 27). */
+    readonly allowedStages?: readonly string[];
   }>;
 }
 
@@ -241,7 +249,16 @@ export class SessionManager {
   /* ---------- summary ---------- */
 
   /** Derive a lightweight read-only summary for frontend consumption. */
-  getSessionSummary(id: SessionId): SessionSummary {
+  getSessionSummary(
+    id: SessionId,
+    agentSummaries?: ReadonlyArray<{
+      readonly id: string;
+      readonly roleHint?: string;
+      readonly routingPriority?: number;
+      readonly participationEnabled?: boolean;
+      readonly allowedStages?: readonly string[];
+    }>,
+  ): SessionSummary {
     const session = this.requireSession(id);
     const lastEvent =
       session.events.length > 0
@@ -280,11 +297,26 @@ export class SessionManager {
         ready: r.ready,
       })),
       agentCount: agentResources.length,
-      agents: agentResources.map((r) => ({
-        id: r.id,
-        label: r.label,
-        ready: r.ready,
-      })),
+      agents: agentResources.map((r) => {
+        const agentMeta = agentSummaries?.find((a) => a.id === r.id);
+        return {
+          id: r.id,
+          label: r.label,
+          ready: r.ready,
+          ...(agentMeta?.roleHint !== undefined
+            ? { roleHint: agentMeta.roleHint }
+            : {}),
+          ...(agentMeta?.routingPriority !== undefined
+            ? { routingPriority: agentMeta.routingPriority }
+            : {}),
+          ...(agentMeta?.participationEnabled !== undefined
+            ? { participationEnabled: agentMeta.participationEnabled }
+            : {}),
+          ...(agentMeta?.allowedStages !== undefined
+            ? { allowedStages: agentMeta.allowedStages }
+            : {}),
+        };
+      }),
     };
   }
 

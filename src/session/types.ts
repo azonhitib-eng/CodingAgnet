@@ -148,7 +148,12 @@ export type SessionEventKind =
   | "agent_enabled"
   | "agent_disabled"
   | "agent_failed"
-  | "agent_capabilities_updated";
+  | "agent_capabilities_updated"
+  /* Agent routing / participation events (Phase 27) */
+  | "agent_routing_evaluated"
+  | "agent_stage_participation_updated"
+  | "agent_skipped_for_stage"
+  | "agent_selected_for_stage";
 
 /** Structured session event. */
 export interface SessionEvent {
