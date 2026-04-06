@@ -13,16 +13,22 @@ Portable, local-first coding-agent platform backend — catalog management, host
 - **Install planning** — generate deterministic, reviewable plans describing what steps would be needed
 - **Safety evaluation** — classify every plan step by risk and produce an approval decision
 - **Workflow orchestration** — run the full pipeline as a staged, deterministic workflow with typed outputs
-- **CLI** — developer-facing command interface for all of the above
+- **Session management** — first-class sessions with lifecycle stages, event timelines, save/restore, and recent-session tracking
+- **Workspace lifecycle** — open existing directories or clone repositories as session workspaces with git metadata detection
+- **MCP server integration** — attach, manage, and monitor Model Context Protocol servers with health and discovery tracking
+- **Agent registry** — register, attach, and route coding agents with capability-based stage participation
+- **Structured commands** — typed, validated command layer for all session actions (open workspace, attach MCP, run workflow, etc.)
+- **App shell** — zero-dependency local web UI with demo and real modes, session timeline, console, and command composer
+- **CLI** — developer-facing command interface for detection, compatibility, planning, and workflow execution
 
 ## What this package does NOT do
 
-- **Execute commands** — plans are informational only; the backend never runs shell commands
+- **Execute install commands** — plans are informational only; the backend never runs shell commands
 - **Support YAML manifests** — only JSON manifests are supported
-- **Connect to cloud/remote services** — all operations are local
+- **Connect to cloud/remote services** — all operations are local-first
 - **Provide a plugin marketplace** — catalogs are loaded from local directories
-- **Run background tasks** — no daemon, server, or background mode
-- **Provide a frontend/UI** — backend only
+- **Run autonomous agents** — agent routing is declarative; there is no autonomous execution loop
+- **Provide an LLM chat interface** — the command layer is structured and deterministic, not free-form
 
 ## Quick start (library)
 
@@ -117,10 +123,16 @@ const result = runWorkflow({ bundle, host });
 ## Subpath exports
 
 ```typescript
-import { ... } from "codingagent-backend";          // Root: types, schemas, catalog, detection, compatibility, planning, safety, workflow, API
-import { ... } from "codingagent-backend/cli";       // CLI: main, errors, commands, host-loader
-import { ... } from "codingagent-backend/workflow";  // Workflow: runWorkflow, types, stage order
-import { ... } from "codingagent-backend/schemas";   // Schemas: all Zod schemas
+import { ... } from "codingagent-backend";                    // Root: types, schemas, catalog, detection, compatibility, planning, safety, workflow, session, MCP, agents, commands
+import { ... } from "codingagent-backend/cli";                // CLI: main, errors, commands, host-loader
+import { ... } from "codingagent-backend/workflow";           // Workflow: runWorkflow, types, stage order
+import { ... } from "codingagent-backend/schemas";            // Schemas: all Zod schemas
+import { ... } from "codingagent-backend/frontend-contracts"; // Frontend contracts: mappers, status labels, view-model types
+import { ... } from "codingagent-backend/app-shell";          // App shell: server, views, data provider, timeline/console helpers
+import { ... } from "codingagent-backend/session";            // Session: manager, persistence, recent sessions, workspace lifecycle
+import { ... } from "codingagent-backend/mcp";                // MCP: manager, process manager, capability discovery, health
+import { ... } from "codingagent-backend/agents";             // Agents: registry, routing, participation, session integration
+import { ... } from "codingagent-backend/commands";           // Commands: definitions, validation, availability, executor
 ```
 
 ## CLI exit codes
@@ -165,7 +177,7 @@ All CLI commands support `--json` for structured, machine-readable output. JSON 
 
 ## App shell (local web UI)
 
-The app shell provides a browser-based UI for viewing model compatibility, recommendations, install plans, and workflow summaries.
+The app shell provides a zero-dependency browser-based UI for exploring model compatibility, recommendations, install plans, workflow summaries, session timelines, and the structured command composer.
 
 ```bash
 npm run app-shell          # Start on port 3000 (demo mode by default)
@@ -173,6 +185,14 @@ npm run preflight          # Check environment readiness
 ```
 
 Open http://localhost:3000 — demo mode works out of the box with no setup.
+
+Capabilities:
+- **Demo mode** — 6 pre-built scenarios covering supported, unsupported, blocked, and partial workflows
+- **Real mode** — run the actual backend workflow against your own data and host profile
+- **Session timeline** — chronological event feed with category classification
+- **Session console** — chat-like console with actor/card grouping and presence indicators
+- **Command composer** — structured command UI for workspace, MCP, agent, workflow, and session operations
+- **Session persistence** — save, restore, and browse recent sessions
 
 For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)**.
 
@@ -191,7 +211,18 @@ For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **[docs/AGENT-ROUTING.md](docs/AGENT-ROUTING.md)** — Agent routing and stage participation
 - **[docs/COMMANDS.md](docs/COMMANDS.md)** — Structured command composer
 - **[docs/PACKAGING.md](docs/PACKAGING.md)** — Packaging and desktop launcher decisions
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Architecture consistency audit and module map
 - **[CHANGELOG.md](CHANGELOG.md)** — Release notes
+
+## Known limitations (release candidate)
+
+- **No install execution** — plans describe what steps would be needed but are never executed
+- **MCP transport** — only `stdio` transport is implemented; `sse` and `streamable_http` are modeled but deferred
+- **Agent execution** — agent routing and participation are declarative; autonomous agent execution is not implemented
+- **Session persistence** — MCP server processes and agent runtime state are not preserved across save/restore; only metadata and events are persisted
+- **Real-time updates** — the app shell uses request/response; there is no WebSocket or SSE push for live event streaming
+- **Naming drift** — a few agent types (`ParticipationReason`, `StageParticipation`) lack the `Agent` prefix (breaking change deferred)
+- **views.ts duplication** — client-side JS in the app shell duplicates some server-side constants (unavoidable without a shared module system)
 
 ## Development
 

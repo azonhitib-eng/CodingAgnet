@@ -144,19 +144,25 @@ When you start the server, you'll see:
 
 ```
 ────────────────────────────────────────────────────────
-  CodingAgent App Shell
+  CodingAgent App Shell  v0.1.0
 ────────────────────────────────────────────────────────
 
   ➜  Local:   http://localhost:3000
 
   Modes:
     • Demo  — pre-built scenarios, no setup required
-    • Real  — connect your own data-dir + host profile
+    • Real  — connect your own data-dir + host profile or detect live
+
+  Features:
+    • Session timeline and console with event tracking
+    • Command composer for workspace, MCP, agent, and workflow actions
+    • Session save/restore with recent-session browsing
 
   Quick tips:
     - Open the URL above in your browser
     - Demo mode is selected by default
     - For real mode, prepare a data directory and host profile
+    - Or use the "Detect Host" button to detect your host live
     - See docs/QUICKSTART.md for detailed instructions
 
   Press Ctrl+C to stop the server
@@ -242,6 +248,51 @@ The repository includes a ready-to-use `data/` directory at the project root.
 | Real mode: "Data directory does not exist" | Use absolute path or path relative to where server was started |
 | Real mode: "Invalid host file" | Regenerate with `npm run generate-host-profile > host.json` |
 | Real mode: validation errors | Click "Validate Inputs" first to check each field |
+
+---
+
+## Beyond Workflows — Session, MCP, Agents, and Commands
+
+The app shell supports capabilities beyond running workflows:
+
+### Session management
+
+Sessions track lifecycle events, workspace bindings, attached resources, and workflow runs. You can:
+- **Save** the current session to disk (`POST /api/sessions/save`)
+- **Restore** a previously saved session (`GET /api/sessions/:id/restore`)
+- **Browse** recent sessions (`GET /api/sessions/recent`)
+- **View timeline** of events in the session console
+
+Saved sessions preserve metadata, events, and workspace info. MCP server processes and agent runtime state are **not** preserved — they must be reattached after restore.
+
+### Structured command composer
+
+The shell includes a command composer for session operations:
+- **Workspace**: Open Workspace, Clone Repository
+- **Host**: Detect Host
+- **MCP**: Attach MCP Server, Refresh Health, Refresh Discovery
+- **Agent**: Attach Agent
+- **Workflow**: Run Workflow
+- **Session**: Save Session, Restore Session
+
+Commands are validated before execution and emit session events for timeline tracking.
+
+### MCP server integration
+
+Attach and manage Model Context Protocol servers:
+- Register servers with `stdio` transport configuration
+- Track health (healthy / degraded / unhealthy) and discovery state
+- Refresh health and capability discovery on demand
+- View server status per session
+
+### Agent registry
+
+Register and attach coding agents with capability-based stage participation:
+- Define agents with kind, capabilities, and stage affinity
+- Evaluate which agents should participate in each workflow stage
+- Track agent lifecycle events in the session timeline
+
+For full details, see [docs/SESSION-PERSISTENCE.md](SESSION-PERSISTENCE.md), [docs/COMMANDS.md](COMMANDS.md), [docs/MCP-SERVERS.md](MCP-SERVERS.md), [docs/MCP-HEALTH.md](MCP-HEALTH.md), [docs/AGENTS.md](AGENTS.md), and [docs/AGENT-ROUTING.md](AGENT-ROUTING.md).
 
 ---
 
