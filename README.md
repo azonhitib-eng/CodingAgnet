@@ -130,9 +130,12 @@ import { ... } from "codingagent-backend/schemas";            // Schemas: all Zo
 import { ... } from "codingagent-backend/frontend-contracts"; // Frontend contracts: mappers, status labels, view-model types
 import { ... } from "codingagent-backend/app-shell";          // App shell: server, views, data provider, timeline/console helpers
 import { ... } from "codingagent-backend/session";            // Session: manager, persistence, recent sessions, workspace lifecycle
-import { ... } from "codingagent-backend/mcp";                // MCP: manager, process manager, capability discovery, health
+import { ... } from "codingagent-backend/mcp";                // MCP: manager, process manager, capability discovery, health, tool invocation
 import { ... } from "codingagent-backend/agents";             // Agents: registry, routing, participation, session integration
 import { ... } from "codingagent-backend/commands";           // Commands: definitions, validation, availability, executor
+import { ... } from "codingagent-backend/fingerprint";        // Fingerprint: repo detection, language profiles, agent enrichment
+import { ... } from "codingagent-backend/toolchain";          // Toolchain: profile-aware adapters, workspace checks, availability
+import { ... } from "codingagent-backend/language-service";   // Language service: diagnostics layer, LSP bridge, availability
 ```
 
 ## CLI exit codes
@@ -207,23 +210,34 @@ For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **[docs/SESSION-PERSISTENCE.md](docs/SESSION-PERSISTENCE.md)** — Session save/restore and recent sessions
 - **[docs/MCP-SERVERS.md](docs/MCP-SERVERS.md)** — MCP server integration and lifecycle
 - **[docs/MCP-HEALTH.md](docs/MCP-HEALTH.md)** — MCP health monitoring and discovery
+- **[docs/GITHUB-MCP.md](docs/GITHUB-MCP.md)** — GitHub MCP read-only integration and tool invocation
 - **[docs/AGENTS.md](docs/AGENTS.md)** — Agent registry and attachment model
 - **[docs/AGENT-ROUTING.md](docs/AGENT-ROUTING.md)** — Agent routing and stage participation
 - **[docs/COMMANDS.md](docs/COMMANDS.md)** — Structured command composer
-- **[docs/ELECTRON.md](docs/ELECTRON.md)** — Electron desktop wrapper (Phase 31)
+- **[docs/FINGERPRINTING.md](docs/FINGERPRINTING.md)** — Repository fingerprinting and language detection
+- **[docs/TOOLCHAIN.md](docs/TOOLCHAIN.md)** — Profile-aware toolchain adapters and workspace checks
+- **[docs/LANGUAGE-SERVICE.md](docs/LANGUAGE-SERVICE.md)** — Minimal language service and diagnostics layer
+- **[docs/ELECTRON.md](docs/ELECTRON.md)** — Electron desktop wrapper
 - **[docs/PACKAGING.md](docs/PACKAGING.md)** — Packaging and desktop launcher decisions
+- **[docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)** — Code-signing strategy and release readiness
+- **[docs/BETA-TESTING.md](docs/BETA-TESTING.md)** — Beta testing and V1 release guide
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Architecture consistency audit and module map
 - **[CHANGELOG.md](CHANGELOG.md)** — Release notes
 
-## Known limitations (release candidate)
+## Known limitations (V1)
 
 - **No install execution** — plans describe what steps would be needed but are never executed
 - **MCP transport** — only `stdio` transport is implemented; `sse` and `streamable_http` are modeled but deferred
 - **Agent execution** — agent routing and participation are declarative; autonomous agent execution is not implemented
 - **Session persistence** — MCP server processes and agent runtime state are not preserved across save/restore; only metadata and events are persisted
 - **Real-time updates** — the app shell uses request/response; there is no WebSocket or SSE push for live event streaming
+- **GitHub MCP** — read-only tools only; manual discovery (no live MCP protocol handshake); token presence is checked but not validated; no rate limiting
+- **Language service** — minimal diagnostics layer; no persistent LSP daemon management, real-time diagnostics streaming, or editor embedding
+- **Toolchain adapters** — profile-to-command mapping is deterministic but basic; no custom user-defined adapters
+- **Repository fingerprinting** — file-based detection only; no deep AST analysis or dynamic probing
 - **Naming drift** — a few agent types (`ParticipationReason`, `StageParticipation`) lack the `Agent` prefix (breaking change deferred)
 - **views.ts duplication** — client-side JS in the app shell duplicates some server-side constants (unavoidable without a shared module system)
+- **Desktop builds are unsigned** — users will see OS security warnings on first launch; code signing is environment-driven but not yet active
 
 ## Development
 

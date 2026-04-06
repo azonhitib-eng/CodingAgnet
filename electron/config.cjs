@@ -21,6 +21,10 @@
  * (getProductIdentity, getBetaLabel, getBetaVersion, getBetaMetadata,
  * validateDesktopMetadata, validateArtifactNaming, getIconConfig,
  * BETA_KNOWN_LIMITATIONS, SUPPORTED_ICON_FORMATS).
+ *
+ * Phase 42: V1 release hardening — added V1 constants and helpers
+ * (V1_KNOWN_LIMITATIONS, getReleaseLabel, getReleaseVersion, getReleaseMetadata,
+ * RELEASE_STAGE).
  */
 
 "use strict";
@@ -873,6 +877,100 @@ function getBetaMetadata(opts) {
 }
 
 /**
+ * Release stage — indicates the current product release stage.
+ * Transitions: "beta" → "v1" → future stages.
+ */
+const RELEASE_STAGE = "v1";
+
+/**
+ * Known limitations for V1 release.
+ * This list is the canonical reference for V1 — docs and release notes
+ * should mirror it.
+ */
+const V1_KNOWN_LIMITATIONS = [
+  "No install execution — plans are informational only and are never executed",
+  "MCP transport — only stdio transport is implemented; sse and streamable_http are deferred",
+  "Agent execution — declarative routing only; no autonomous agent execution loop",
+  "Session persistence — MCP processes and agent runtime state are not preserved across save/restore",
+  "Real-time updates — request/response only; no WebSocket or SSE push",
+  "GitHub MCP — read-only tools only; manual discovery; no token validation or rate limiting",
+  "Language service — minimal diagnostics layer; no persistent LSP daemon or real-time streaming",
+  "Unsigned builds — users will see OS security warnings; code signing is env-driven but not yet active",
+  "No auto-update — users must manually download new builds",
+  "No custom application icon — uses Electron default icon",
+  "No crash reporting — errors shown in-window only",
+];
+
+/**
+ * Return a release label string for display / artifact purposes.
+ * Format: "v1" for the V1 release, "beta" or "beta.N" for beta releases.
+ *
+ * @returns {string}
+ */
+function getReleaseLabel() {
+  return RELEASE_STAGE;
+}
+
+/**
+ * Return a release version string for V1.
+ * Returns the base version from package.json (e.g. "1.0.0").
+ *
+ * @returns {string}
+ */
+function getReleaseVersion() {
+  return getDesktopVersion();
+}
+
+/**
+ * Return comprehensive V1 release metadata for release notes, docs, and tests.
+ *
+ * @returns {{
+ *   version: string;
+ *   releaseStage: string;
+ *   releaseLabel: string;
+ *   productIdentity: ReturnType<typeof getProductIdentity>;
+ *   signing: { configured: boolean; active: boolean; summary: string };
+ *   icon: { present: boolean; path: string | null; placeholderPath: string; supportedFormats: string[] };
+ *   knownLimitations: string[];
+ *   artifactNaming: { generic: string; appImage: string; dmg: string; nsis: string };
+ *   platforms: { linux: string; darwin: string; win32: string };
+ * }}
+ */
+function getReleaseMetadata() {
+  const signing = getSigningConfig();
+  const iconPath = getIconPath();
+  return {
+    version: getDesktopVersion(),
+    releaseStage: RELEASE_STAGE,
+    releaseLabel: getReleaseLabel(),
+    productIdentity: getProductIdentity(),
+    signing: {
+      configured: signing.configured,
+      active: signing.active,
+      summary: signing.summary,
+    },
+    icon: {
+      present: !!iconPath,
+      path: iconPath,
+      placeholderPath: getIconPlaceholderPath(),
+      supportedFormats: SUPPORTED_ICON_FORMATS,
+    },
+    knownLimitations: V1_KNOWN_LIMITATIONS,
+    artifactNaming: {
+      generic: "${productName}-${version}-${os}-${arch}.${ext}",
+      appImage: "${productName}-${version}-${arch}.${ext}",
+      dmg: "${productName}-${version}-${arch}.${ext}",
+      nsis: "${productName}-Setup-${version}-${arch}.${ext}",
+    },
+    platforms: {
+      linux: "AppImage",
+      darwin: "dmg",
+      win32: "nsis",
+    },
+  };
+}
+
+/**
  * Return the icon configuration status.
  * Reports whether an icon exists, where it's expected, and what formats
  * are supported.
@@ -1049,4 +1147,10 @@ module.exports = {
   getIconConfig,
   validateDesktopMetadata,
   validateArtifactNaming,
+  // Phase 42: V1 release hardening helpers
+  RELEASE_STAGE,
+  V1_KNOWN_LIMITATIONS,
+  getReleaseLabel,
+  getReleaseVersion,
+  getReleaseMetadata,
 };
