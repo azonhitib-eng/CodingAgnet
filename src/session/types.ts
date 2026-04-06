@@ -127,6 +127,11 @@ export type SessionEventKind =
   | "mcp_discovered_tools"
   | "mcp_discovered_resources"
   | "mcp_discovered_prompts"
+  /* MCP health/discovery events (Phase 26) */
+  | "mcp_health_refreshed"
+  | "mcp_health_degraded"
+  | "mcp_discovery_refreshed"
+  | "mcp_stale"
   /* Workspace / repository lifecycle events (Phase 21) */
   | "workspace_open_requested"
   | "workspace_opened"

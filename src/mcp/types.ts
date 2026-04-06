@@ -8,6 +8,12 @@
  * - Small, explicit types — no giant framework
  * - Process lifecycle is separate from protocol/capability modeling
  * - Session integration is separate from both
+ *
+ * Phase 26 additions:
+ * - Richer runtime status (discovery_pending, discovery_complete, degraded, stale)
+ * - Explicit health model with timestamps (McpHealthReport)
+ * - Discovery state tracking (McpDiscoveryState)
+ * - Discovery source/confidence metadata
  */
 
 /* ------------------------------------------------------------------ */
@@ -63,14 +69,22 @@ export interface McpServerConfig {
 /*  Server Status & Health                                            */
 /* ------------------------------------------------------------------ */
 
-/** Runtime status of an MCP server process. */
+/**
+ * Runtime status of an MCP server process.
+ *
+ * Phase 26 additions: discovery_pending, discovery_complete, degraded, stale.
+ */
 export type McpServerStatus =
-  | "registered"     // config known, not yet started
-  | "starting"       // process launch in progress
-  | "running"        // process is alive
-  | "stopping"       // shutdown requested
-  | "stopped"        // cleanly stopped
-  | "failed";        // crashed or failed to start
+  | "registered"           // config known, not yet started
+  | "starting"             // process launch in progress
+  | "running"              // process is alive
+  | "discovery_pending"    // running, discovery in progress (Phase 26)
+  | "discovery_complete"   // running, discovery finished successfully (Phase 26)
+  | "degraded"             // running, but partial capability loss (Phase 26)
+  | "stopping"             // shutdown requested
+  | "stopped"              // cleanly stopped
+  | "failed"               // crashed or failed to start
+  | "stale";               // restored from history, not verified live (Phase 26)
 
 /** Health assessment of a running MCP server. */
 export type McpServerHealth =
@@ -78,6 +92,77 @@ export type McpServerHealth =
   | "healthy"        // responding normally
   | "degraded"       // partially working
   | "unhealthy";     // not responding / erroring
+
+/* ------------------------------------------------------------------ */
+/*  Health Report (Phase 26)                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Structured health report for an MCP server.
+ *
+ * Captures timestamps and failure reasons so the system can clearly
+ * communicate what it knows vs what is stale or never-checked.
+ */
+export interface McpHealthReport {
+  /** Current health status. */
+  readonly status: McpServerHealth;
+  /** Whether the runtime process appears alive right now. */
+  readonly processAlive: boolean;
+  /** ISO-8601 timestamp of the last known healthy state (null if never healthy). */
+  readonly lastKnownHealthyAt: string | null;
+  /** ISO-8601 timestamp of the last health check (null if never checked). */
+  readonly lastCheckedAt: string | null;
+  /** Last error or failure reason (null if none). */
+  readonly lastError: string | null;
+  /** ISO-8601 timestamp of the last failure (null if never failed). */
+  readonly lastFailureAt: string | null;
+  /** Whether the current health data is considered stale. */
+  readonly isStale: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Discovery State (Phase 26)                                        */
+/* ------------------------------------------------------------------ */
+
+/** How discovery data was obtained. */
+export type McpDiscoverySource =
+  | "manual"            // registered manually or via fixture
+  | "runtime"           // obtained from live protocol interaction
+  | "restored"          // loaded from persistence, not re-verified
+  | "placeholder";      // synthetic/demo data, not protocol-confirmed
+
+/** Explicit discovery lifecycle state. */
+export type McpDiscoveryStatus =
+  | "never_discovered"  // no discovery attempted
+  | "discovering"       // discovery in progress
+  | "discovered"        // discovery completed successfully at least once
+  | "stale"             // previously discovered, not re-verified
+  | "failed";           // last discovery attempt failed
+
+/**
+ * Tracks discovery state and metadata for an MCP server's capabilities.
+ *
+ * Distinguishes manual/placeholder from runtime-confirmed discovery
+ * and tracks timestamps so the system can be honest about freshness.
+ */
+export interface McpDiscoveryState {
+  /** Current discovery lifecycle status. */
+  readonly status: McpDiscoveryStatus;
+  /** How the current discovery data was obtained. */
+  readonly source: McpDiscoverySource;
+  /** ISO-8601 timestamp of the last successful discovery (null if never). */
+  readonly lastDiscoveryAt: string | null;
+  /** ISO-8601 timestamp of the last discovery attempt (null if never). */
+  readonly lastAttemptAt: string | null;
+  /** Error from the last failed discovery attempt (null if none). */
+  readonly lastError: string | null;
+  /** Whether discovered capabilities are considered current vs stale. */
+  readonly isCurrent: boolean;
+  /** Counts of discovered capabilities. */
+  readonly toolCount: number;
+  readonly resourceCount: number;
+  readonly promptCount: number;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Attachment                                                        */
@@ -151,11 +236,17 @@ export interface McpDiscoveredPrompt {
  *
  * Combines config, process status, health, and discovered capabilities
  * into one summary view.
+ *
+ * Phase 26: now includes healthReport and discoveryState.
  */
 export interface McpRuntimeInfo {
   readonly config: McpServerConfig;
   readonly status: McpServerStatus;
   readonly health: McpServerHealth;
+  /** Detailed health report (Phase 26). */
+  readonly healthReport: McpHealthReport;
+  /** Discovery lifecycle state (Phase 26). */
+  readonly discoveryState: McpDiscoveryState;
   /** Process ID if the server is a local stdio process. */
   readonly pid: number | null;
   /** ISO-8601 timestamp when the server was started. */

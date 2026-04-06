@@ -305,7 +305,7 @@ describe("buildRestoreWarnings", () => {
     });
     const warnings = buildRestoreWarnings(session);
     expect(warnings.some((w) => w.includes("MCP server"))).toBe(true);
-    expect(warnings.some((w) => w.includes("reattach or restart"))).toBe(true);
+    expect(warnings.some((w) => w.includes("stale"))).toBe(true);
   });
 
   it("warns about agents that need re-establishment", () => {

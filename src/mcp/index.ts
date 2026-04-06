@@ -4,6 +4,7 @@
  * MCP server attachment lifecycle for the coding-agent platform.
  * Phase 20: local-first MCP management, session integration,
  * and capability discovery modeling.
+ * Phase 26: health hardening, discovery state tracking, refresh/recheck.
  */
 
 /* types */
@@ -13,6 +14,10 @@ export type {
   McpTransport,
   McpServerStatus,
   McpServerHealth,
+  McpHealthReport,
+  McpDiscoverySource,
+  McpDiscoveryStatus,
+  McpDiscoveryState,
   McpAttachment,
   McpAttachmentStatus,
   McpDiscoveredTool,
@@ -22,12 +27,20 @@ export type {
 } from "./types.js";
 
 /* process manager */
-export { McpProcessManager } from "./process-manager.js";
+export {
+  McpProcessManager,
+  createDefaultHealthReport,
+  createDefaultDiscoveryState,
+  createStaleHealthReport,
+  createStaleDiscoveryState,
+} from "./process-manager.js";
 export type { McpProcessRecord } from "./process-manager.js";
 
 /* capability discovery */
 export {
   applyDiscovery,
+  markDiscovering,
+  markDiscoveryStale,
   registerTool,
   registerResource,
   registerPrompt,
@@ -50,6 +63,10 @@ export {
   mcpDiscoveredTools,
   mcpDiscoveredResources,
   mcpDiscoveredPrompts,
+  mcpHealthRefreshed,
+  mcpHealthDegraded,
+  mcpDiscoveryRefreshed,
+  mcpStale,
   MCP_EVENT_KINDS,
   isMcpEvent,
   filterMcpEvents,

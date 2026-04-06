@@ -18,7 +18,75 @@ import type {
   McpDiscoveredTool,
   McpDiscoveredResource,
   McpDiscoveredPrompt,
+  McpHealthReport,
+  McpDiscoveryState,
+  McpDiscoverySource,
+  McpDiscoveryStatus,
 } from "./types.js";
+
+/* ------------------------------------------------------------------ */
+/*  Factories for health and discovery state                          */
+/* ------------------------------------------------------------------ */
+
+/** Create a default (unknown/never-checked) health report. */
+export function createDefaultHealthReport(): McpHealthReport {
+  return {
+    status: "unknown",
+    processAlive: false,
+    lastKnownHealthyAt: null,
+    lastCheckedAt: null,
+    lastError: null,
+    lastFailureAt: null,
+    isStale: false,
+  };
+}
+
+/** Create a default (never-discovered) discovery state. */
+export function createDefaultDiscoveryState(): McpDiscoveryState {
+  return {
+    status: "never_discovered",
+    source: "manual",
+    lastDiscoveryAt: null,
+    lastAttemptAt: null,
+    lastError: null,
+    isCurrent: false,
+    toolCount: 0,
+    resourceCount: 0,
+    promptCount: 0,
+  };
+}
+
+/** Create a stale/restored health report (for persistence restore). */
+export function createStaleHealthReport(
+  previous?: Partial<McpHealthReport>,
+): McpHealthReport {
+  return {
+    status: "unknown",
+    processAlive: false,
+    lastKnownHealthyAt: previous?.lastKnownHealthyAt ?? null,
+    lastCheckedAt: previous?.lastCheckedAt ?? null,
+    lastError: previous?.lastError ?? null,
+    lastFailureAt: previous?.lastFailureAt ?? null,
+    isStale: true,
+  };
+}
+
+/** Create a stale/restored discovery state (for persistence restore). */
+export function createStaleDiscoveryState(
+  previous?: Partial<McpDiscoveryState>,
+): McpDiscoveryState {
+  return {
+    status: previous?.lastDiscoveryAt ? "stale" : "never_discovered",
+    source: "restored",
+    lastDiscoveryAt: previous?.lastDiscoveryAt ?? null,
+    lastAttemptAt: previous?.lastAttemptAt ?? null,
+    lastError: previous?.lastError ?? null,
+    isCurrent: false,
+    toolCount: previous?.toolCount ?? 0,
+    resourceCount: previous?.resourceCount ?? 0,
+    promptCount: previous?.promptCount ?? 0,
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /*  Internal process record                                           */
@@ -39,6 +107,10 @@ export interface McpProcessRecord {
   prompts: McpDiscoveredPrompt[];
   /** Reference to the child process handle (opaque). */
   processHandle: unknown | null;
+  /** Structured health report (Phase 26). */
+  healthReport: McpHealthReport;
+  /** Discovery lifecycle state (Phase 26). */
+  discoveryState: McpDiscoveryState;
 }
 
 /* ------------------------------------------------------------------ */
@@ -76,6 +148,8 @@ export class McpProcessManager {
       resources: [],
       prompts: [],
       processHandle: null,
+      healthReport: createDefaultHealthReport(),
+      discoveryState: createDefaultDiscoveryState(),
     };
     this.records.set(config.id, record);
     return record;
@@ -117,12 +191,26 @@ export class McpProcessManager {
       record.health = "unknown";
       record.startedAt = new Date().toISOString();
       record.lastError = null;
+      record.healthReport = {
+        ...record.healthReport,
+        processAlive: true,
+        isStale: false,
+      };
       return record;
     }
 
     if (!record.config.command) {
       record.status = "failed";
       record.lastError = "No command specified for stdio transport";
+      const now = new Date().toISOString();
+      record.healthReport = {
+        ...record.healthReport,
+        status: "unhealthy",
+        processAlive: false,
+        lastError: record.lastError,
+        lastFailureAt: now,
+        lastCheckedAt: now,
+      };
       return record;
     }
 
@@ -149,6 +237,12 @@ export class McpProcessManager {
       record.status = "running";
       record.health = "unknown";
       record.startedAt = new Date().toISOString();
+      record.healthReport = {
+        ...record.healthReport,
+        processAlive: true,
+        isStale: false,
+        lastCheckedAt: record.startedAt,
+      };
 
       // Track unexpected exits
       child.on("error", (err: Error) => {
@@ -156,6 +250,14 @@ export class McpProcessManager {
         record.health = "unhealthy";
         record.lastError = err.message;
         record.stoppedAt = new Date().toISOString();
+        record.healthReport = {
+          ...record.healthReport,
+          status: "unhealthy",
+          processAlive: false,
+          lastError: err.message,
+          lastFailureAt: record.stoppedAt,
+          lastCheckedAt: record.stoppedAt,
+        };
       });
 
       child.on("exit", (code: number | null) => {
@@ -164,6 +266,14 @@ export class McpProcessManager {
           record.health = "unhealthy";
           record.lastError = `Process exited unexpectedly with code ${code}`;
           record.stoppedAt = new Date().toISOString();
+          record.healthReport = {
+            ...record.healthReport,
+            status: "unhealthy",
+            processAlive: false,
+            lastError: record.lastError,
+            lastFailureAt: record.stoppedAt,
+            lastCheckedAt: record.stoppedAt,
+          };
         }
       });
 
@@ -173,6 +283,15 @@ export class McpProcessManager {
       record.health = "unhealthy";
       record.lastError =
         err instanceof Error ? err.message : "Unknown spawn error";
+      const now = new Date().toISOString();
+      record.healthReport = {
+        ...record.healthReport,
+        status: "unhealthy",
+        processAlive: false,
+        lastError: record.lastError,
+        lastFailureAt: now,
+        lastCheckedAt: now,
+      };
       return record;
     }
   }
@@ -207,12 +326,26 @@ export class McpProcessManager {
       record.health = "unknown";
       record.stoppedAt = new Date().toISOString();
       record.processHandle = null;
+      record.healthReport = {
+        ...record.healthReport,
+        status: "unknown",
+        processAlive: false,
+        lastCheckedAt: record.stoppedAt,
+      };
       return record;
     } catch (err: unknown) {
       record.status = "failed";
       record.lastError =
         err instanceof Error ? err.message : "Unknown stop error";
       record.stoppedAt = new Date().toISOString();
+      record.healthReport = {
+        ...record.healthReport,
+        status: "unhealthy",
+        processAlive: false,
+        lastError: record.lastError,
+        lastFailureAt: record.stoppedAt,
+        lastCheckedAt: record.stoppedAt,
+      };
       return record;
     }
   }
@@ -223,6 +356,16 @@ export class McpProcessManager {
   updateHealth(id: McpServerId, health: McpServerHealth): McpProcessRecord {
     const record = this.requireRecord(id);
     record.health = health;
+    const now = new Date().toISOString();
+    record.healthReport = {
+      ...record.healthReport,
+      status: health,
+      lastCheckedAt: now,
+      ...(health === "healthy" ? { lastKnownHealthyAt: now, lastError: null } : {}),
+      ...(health === "unhealthy" || health === "degraded"
+        ? { lastFailureAt: now }
+        : {}),
+    };
     return record;
   }
 
@@ -233,6 +376,76 @@ export class McpProcessManager {
     record.health = "unhealthy";
     record.lastError = error;
     record.stoppedAt = new Date().toISOString();
+    record.healthReport = {
+      ...record.healthReport,
+      status: "unhealthy",
+      processAlive: false,
+      lastError: error,
+      lastFailureAt: record.stoppedAt,
+      lastCheckedAt: record.stoppedAt,
+    };
+    return record;
+  }
+
+  /**
+   * Refresh health by checking if the process is still alive.
+   * Returns the updated health report.
+   */
+  refreshHealth(id: McpServerId): McpHealthReport {
+    const record = this.requireRecord(id);
+    const now = new Date().toISOString();
+
+    // Determine if process appears alive
+    let processAlive = false;
+    if (record.status === "running" || record.status === "discovery_pending" ||
+        record.status === "discovery_complete" || record.status === "degraded") {
+      if (record.processHandle && typeof record.processHandle === "object") {
+        const child = record.processHandle as { killed?: boolean };
+        processAlive = !child.killed;
+      } else if (record.config.transport !== "stdio") {
+        // Network transports: assume alive if status is running
+        processAlive = true;
+      }
+    }
+
+    let health: McpServerHealth;
+    if (record.status === "stopped" || record.status === "registered" || record.status === "stale") {
+      health = "unknown";
+    } else if (record.status === "failed") {
+      health = "unhealthy";
+    } else if (!processAlive && record.status === "running") {
+      health = "unhealthy";
+      record.status = "failed";
+      record.lastError = "Process no longer alive on health refresh";
+      record.stoppedAt = now;
+    } else if (record.status === "degraded") {
+      health = "degraded";
+    } else {
+      health = processAlive ? "healthy" : "unknown";
+    }
+
+    record.health = health;
+    record.healthReport = {
+      status: health,
+      processAlive,
+      lastKnownHealthyAt: health === "healthy" ? now : record.healthReport.lastKnownHealthyAt,
+      lastCheckedAt: now,
+      lastError: health === "unhealthy" ? (record.lastError ?? "Process not alive") : record.healthReport.lastError,
+      lastFailureAt: health === "unhealthy" ? now : record.healthReport.lastFailureAt,
+      isStale: false,
+    };
+    return record.healthReport;
+  }
+
+  /** Mark a server as stale (restored from persistence, not verified). */
+  markStale(id: McpServerId): McpProcessRecord {
+    const record = this.requireRecord(id);
+    record.status = "stale";
+    record.health = "unknown";
+    record.processHandle = null;
+    record.pid = null;
+    record.healthReport = createStaleHealthReport(record.healthReport);
+    record.discoveryState = createStaleDiscoveryState(record.discoveryState);
     return record;
   }
 

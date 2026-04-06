@@ -54,6 +54,10 @@ const KIND_TO_ACTOR: Record<string, ConsoleActor> = {
   mcp_discovered_tools: "mcp",
   mcp_discovered_resources: "mcp",
   mcp_discovered_prompts: "mcp",
+  mcp_health_refreshed: "mcp",
+  mcp_health_degraded: "mcp",
+  mcp_discovery_refreshed: "mcp",
+  mcp_stale: "mcp",
 
   // Agent
   agent_attach_requested: "agent",
@@ -148,6 +152,10 @@ const KIND_TO_CARD: Record<string, ConsoleCardType> = {
   mcp_attached: "lifecycle_card",
   mcp_started: "lifecycle_card",
   mcp_stopped: "lifecycle_card",
+  mcp_health_refreshed: "lifecycle_card",
+  mcp_health_degraded: "failure_card",
+  mcp_discovery_refreshed: "discovery_card",
+  mcp_stale: "lifecycle_card",
   agent_attached: "lifecycle_card",
   agent_enabled: "lifecycle_card",
   agent_detached: "lifecycle_card",
