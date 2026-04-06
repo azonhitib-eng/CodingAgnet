@@ -238,9 +238,9 @@ describe("QUICKSTART — advanced features", () => {
     expect(content).toContain("Restore");
   });
 
-  it("warns about MCP/agent state not being preserved", () => {
-    expect(content).toContain("not");
-    expect(content).toContain("reattach");
+  it("warns about MCP/agent state not being preserved after restore", () => {
+    expect(content).toContain("MCP server processes and agent runtime state are **not** preserved");
+    expect(content).toContain("reattached after restore");
   });
 });
 
@@ -453,10 +453,15 @@ describe("Session event kind documentation coverage", () => {
     "utf-8",
   );
 
-  // Extract all event kinds from the SessionEventKind type
+  // Extract all event kinds from the SessionEventKind type union
   const kindMatches = sessionTypesSrc.match(/\|\s*"([^"]+)"/g) ?? [];
-  const allKinds = kindMatches.map((m) => m.replace(/\|\s*"/, "").replace(/"/, ""));
+  const allKinds = kindMatches.map((m) => {
+    const match = /\|\s*"([^"]+)"/.exec(m);
+    return match ? match[1] : "";
+  }).filter(Boolean);
 
+  // As of Phase 29 there are 51 event kinds across MCP, agent, workspace, and session domains.
+  // We check for at least 40 to allow minor reorganization without breaking the test.
   it("has at least 40 event kinds defined", () => {
     expect(allKinds.length).toBeGreaterThanOrEqual(40);
   });
