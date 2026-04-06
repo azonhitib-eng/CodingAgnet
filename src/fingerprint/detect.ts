@@ -124,7 +124,6 @@ export function detectSignals(
 
 /** Normalize file path for matching (trim leading/trailing slashes). */
 function normalizeFilePath(p: string): string {
-  // Trim at most one leading slash and one trailing slash to avoid ReDoS
   let result = p;
   while (result.startsWith("/")) result = result.slice(1);
   while (result.endsWith("/")) result = result.slice(0, -1);
@@ -140,6 +139,13 @@ const STRENGTH_WEIGHT: Record<SignalStrength, number> = {
   moderate: 2,
   weak: 1,
 };
+
+/**
+ * When both TypeScript and JavaScript are detected and TS has strong signals,
+ * boost TS above JS by this margin. TypeScript projects often have both
+ * tsconfig.json AND package.json, so JS signals are evidence of the TS ecosystem.
+ */
+const TS_OVER_JS_BOOST = 1;
 
 /**
  * Rank detected languages by cumulative signal weight.
@@ -159,13 +165,11 @@ export function rankLanguages(
   const tsWeight = weights.get("typescript") ?? 0;
   const jsWeight = weights.get("javascript") ?? 0;
   if (tsWeight > 0 && jsWeight > 0) {
-    // TypeScript projects often have both tsconfig.json AND package.json,
-    // so the JS signals are actually evidence of the TS ecosystem
     const tsHasStrong = signals.some(
       (s) => s.language === "typescript" && s.strength === "strong",
     );
     if (tsHasStrong && tsWeight <= jsWeight) {
-      weights.set("typescript", jsWeight + 1);
+      weights.set("typescript", jsWeight + TS_OVER_JS_BOOST);
     }
   }
 
