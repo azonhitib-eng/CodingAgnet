@@ -6,6 +6,27 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 47** — Shell/Console Adapter Status Display & Agent Output Rendering
+  - Adapter events now classified in timeline and console:
+    - `agent_adapter_resolved` → progress / lifecycle_card / agent actor
+    - `agent_adapter_status_refreshed` → info / lifecycle_card / agent actor
+  - Agent context events classified in console-helpers:
+    - `agent_context_assembled`, `agent_context_refreshed`, `agent_context_failed` → agent actor
+  - Agent run events classified in console-helpers:
+    - `agent_run_requested`, `agent_run_started`, `agent_run_completed`, `agent_run_failed` → agent actor
+  - Console presence bar shows adapter status (kind, availability, model-backed, model name)
+  - New `AdapterPresence` type in console-helpers for adapter display
+  - Specialized rendering in shell for agent events:
+    - `agent_run_completed` → Agent output card with output preview, adapter label, stub/model/echo badge
+    - `agent_run_failed` → Agent error card with error code and message
+    - `agent_adapter_resolved` → Adapter status bar with kind, availability, model-backed label
+  - Honest UI labeling: "Model Output" (green), "Stub Output" (yellow), "Echo Test Output" (blue)
+  - Availability wording: "Available" (green), "Unavailable" (red), "Not Configured" (gray)
+  - CSS: `.adapter-status-bar`, `.agent-output-card`, `.asb-badge-*`, `.aoc-*` styles
+  - Demo console feed includes adapter resolution and agent run lifecycle events
+  - `docs/ADAPTER-DISPLAY.md` — full documentation
+  - 81 new tests covering adapter status rendering, stub vs real labeling, run success/failure cards, configured/unavailable wording, demo feed integrity, no regressions
+
 - **Phase 46** — Model-Backed Execution Adapter
   - New files in `src/agent-run/`:
     - `adapter-config.ts` — `AdapterAvailability` (4 states), `AdapterKind` (3 kinds), `OpenAIAdapterConfig`, `AdapterStatus`, `AdapterConfigError`, `AdapterResolutionResult`, `validateOpenAIConfig()`, `buildAdapterStatus()`, `inspectAdapterStatus()`

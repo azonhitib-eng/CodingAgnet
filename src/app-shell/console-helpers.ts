@@ -72,6 +72,21 @@ const KIND_TO_ACTOR: Record<string, ConsoleActor> = {
   agent_skipped_for_stage: "agent",
   agent_selected_for_stage: "agent",
 
+  // Agent context (Phase 44)
+  agent_context_assembled: "agent",
+  agent_context_refreshed: "agent",
+  agent_context_failed: "agent",
+
+  // Agent run (Phase 45)
+  agent_run_requested: "agent",
+  agent_run_started: "agent",
+  agent_run_completed: "agent",
+  agent_run_failed: "agent",
+
+  // Execution adapter (Phase 46–47)
+  agent_adapter_resolved: "agent",
+  agent_adapter_status_refreshed: "agent",
+
   // Fingerprinting / profile (Phase 38)
   repo_fingerprinted: "workspace",
   profile_selected: "workspace",
@@ -178,6 +193,21 @@ const KIND_TO_CARD: Record<string, ConsoleCardType> = {
   agent_selected_for_stage: "lifecycle_card",
   repo_fingerprinted: "discovery_card",
   profile_selected: "discovery_card",
+
+  // Agent context (Phase 44)
+  agent_context_assembled: "discovery_card",
+  agent_context_refreshed: "discovery_card",
+  agent_context_failed: "failure_card",
+
+  // Agent run (Phase 45)
+  agent_run_requested: "lifecycle_card",
+  agent_run_started: "lifecycle_card",
+  agent_run_completed: "success_card",
+  agent_run_failed: "failure_card",
+
+  // Execution adapter (Phase 46–47)
+  agent_adapter_resolved: "lifecycle_card",
+  agent_adapter_status_refreshed: "lifecycle_card",
 };
 
 /** Classify an event kind to its card type. */
@@ -316,6 +346,17 @@ export interface ConsoleFeedPresence {
   readonly approvalRequired: boolean;
   readonly isBlocked: boolean;
   readonly lastSignificantAction: string | null;
+  /** Active adapter status for display (Phase 47). */
+  readonly adapterStatus: AdapterPresence | null;
+}
+
+/** Adapter presence info for display in the console (Phase 47). */
+export interface AdapterPresence {
+  readonly kind: string;
+  readonly availability: string;
+  readonly isModelBacked: boolean;
+  readonly modelName: string | null;
+  readonly label: string | null;
 }
 
 /**
@@ -331,7 +372,22 @@ export function buildPresence(summary: {
   approvalRequired?: boolean;
   isBlocked?: boolean;
   lastEventMessage?: string | null;
+  activeAdapterKind?: string | null;
+  activeAdapterAvailability?: string | null;
+  activeAdapterIsModelBacked?: boolean | null;
+  activeAdapterModelName?: string | null;
 }): ConsoleFeedPresence {
+  const adapterStatus: AdapterPresence | null =
+    summary.activeAdapterKind != null
+      ? {
+          kind: summary.activeAdapterKind,
+          availability: summary.activeAdapterAvailability ?? "not_configured",
+          isModelBacked: summary.activeAdapterIsModelBacked ?? false,
+          modelName: summary.activeAdapterModelName ?? null,
+          label: null,
+        }
+      : null;
+
   return {
     sessionStage: summary.stage ?? "initializing",
     sessionStatus: summary.status ?? "idle",
@@ -352,6 +408,7 @@ export function buildPresence(summary: {
     approvalRequired: summary.approvalRequired ?? false,
     isBlocked: summary.isBlocked ?? false,
     lastSignificantAction: summary.lastEventMessage ?? null,
+    adapterStatus,
   };
 }
 
@@ -446,6 +503,39 @@ export function buildDemoConsoleFeed(
     agentId: "copilot-agent",
   });
 
+  // Adapter resolution (Phase 47 demo)
+  add("agent_adapter_resolved", "Execution adapter resolved: stub — Configured & Available", 520, {
+    adapterKind: "stub",
+    isModelBacked: false,
+    availability: "configured_available",
+    modelName: null,
+    label: "Stub (Deterministic / Demo)",
+  });
+
+  // Agent run lifecycle (Phase 47 demo)
+  add("agent_run_requested", "Agent run requested: summarize_workspace — Summarize workspace", 550, {
+    runId: "demo-run-001",
+    taskKind: "summarize_workspace",
+    taskDescription: "Summarize workspace",
+  });
+  add("agent_run_started", "Agent run started: copilot-agent (general) selected via best_fit", 560, {
+    runId: "demo-run-001",
+    agentName: "copilot-agent",
+    agentKind: "general",
+    selectionMethod: "best_fit",
+  });
+  add("agent_run_completed", "Agent run completed: copilot-agent (summarize_workspace) — 42ms", 580, {
+    runId: "demo-run-001",
+    agentId: "copilot-agent",
+    agentName: "copilot-agent",
+    agentKind: "general",
+    taskKind: "summarize_workspace",
+    adapterKind: "stub",
+    isModelGenerated: false,
+    durationMs: 42,
+    outputPreview: "[Stub] Workspace summary for demo project: This is a deterministic demo response. The workspace contains a typical project structure with source code, tests, and documentation.",
+  });
+
   // Workflow
   add("catalogs_loaded", "Catalog entries loaded", 600);
   add("host_detected", "Host profile loaded from demo scenario", 700);
@@ -505,6 +595,10 @@ export function buildDemoConsoleFeed(
     approvalRequired: workflowStatus === "completed_requires_approval",
     isBlocked: workflowStatus === "blocked",
     lastEventMessage: events[events.length - 1]?.message ?? null,
+    activeAdapterKind: "stub",
+    activeAdapterAvailability: "configured_available",
+    activeAdapterIsModelBacked: false,
+    activeAdapterModelName: null,
   };
 
   return buildConsoleFeed(`demo-${scenarioLabel}`, events, summary);
