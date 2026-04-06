@@ -1170,7 +1170,7 @@ describe("Phase 44 — Command integration", () => {
     expect(refresh?.category).toBe("agent_context");
   });
 
-  it("total command definitions = 26", () => {
+  it("total command definitions = 30", () => {
     expect(COMMAND_DEFINITIONS).toHaveLength(30);
   });
 

@@ -114,6 +114,19 @@ export type FetchFn = (
 ) => Promise<{ ok: boolean; status: number; statusText: string; json: () => Promise<unknown> }>;
 
 /* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Strip trailing slashes from a URL string (avoids regex ReDoS). */
+function stripTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === "/") {
+    end--;
+  }
+  return url.substring(0, end);
+}
+
+/* ------------------------------------------------------------------ */
 /*  OpenAI-compatible adapter                                          */
 /* ------------------------------------------------------------------ */
 
@@ -170,7 +183,7 @@ export class OpenAIExecutionAdapter implements AgentExecutionAdapter {
       temperature,
     };
 
-    const url = `${this.config.baseUrl.replace(/\/+$/, "")}/chat/completions`;
+    const url = `${stripTrailingSlashes(this.config.baseUrl)}/chat/completions`;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -261,7 +274,7 @@ export async function checkOpenAIAvailability(
   fetchFn?: FetchFn,
 ): Promise<{ available: boolean; error?: string }> {
   const fetch = fetchFn ?? (globalThis.fetch as unknown as FetchFn);
-  const baseUrl = config.baseUrl.replace(/\/+$/, "");
+  const baseUrl = stripTrailingSlashes(config.baseUrl);
   const url = `${baseUrl}/models`;
   const headers: Record<string, string> = {};
   if (config.apiKey) {
