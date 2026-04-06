@@ -37,6 +37,17 @@ const CONFIG_PATTERNS = [
   /\.nvmrc$/,
   /license/i,
   /changelog/i,
+  /package\.json$/,
+  /package-lock\.json$/,
+  /tsconfig.*\.json$/,
+  /composer\.json$/,
+  /Cargo\.toml$/,
+  /go\.mod$/,
+  /go\.sum$/,
+  /pyproject\.toml$/,
+  /setup\.cfg$/,
+  /setup\.py$/,
+  /requirements.*\.txt$/,
 ];
 
 const DOC_PATTERNS = [

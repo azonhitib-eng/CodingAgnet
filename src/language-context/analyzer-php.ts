@@ -21,7 +21,6 @@ const TEST_PATTERNS = [
   /Test\.php$/,
   /\.test\.php$/,
   /\/tests?\//,
-  /phpunit/i,
 ];
 
 const CONFIG_PATTERNS = [
