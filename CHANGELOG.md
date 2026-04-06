@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 30** — Final Debug / RC Hardening
+  - README: updated "What this package does" to include session, MCP, agent, command, workspace, and app shell capabilities
+  - README: fixed "What this package does NOT do" — removed inaccurate claims about no frontend/UI and no background mode
+  - README: expanded subpath exports section from 4 to 10 entries matching actual package.json exports
+  - README: added "Known limitations (release candidate)" section with 7 honest RC-level limitations
+  - README: added app shell feature list (demo, real, timeline, console, command composer, persistence)
+  - README: added `docs/ARCHITECTURE.md` to documentation links (15 total)
+  - QUICKSTART: added "Beyond Workflows" section covering session management, structured commands, MCP, and agents
+  - QUICKSTART: updated startup output example to match current banner with version and feature list
+  - Startup banner: now displays package version (e.g. `v0.1.0`)
+  - Startup banner: added "Features" section listing session timeline, command composer, and save/restore
+  - RC-level tests for docs accuracy, startup banner wording, subpath export alignment, and known limitations
+
 - **Phase 29** — Final Architecture Consistency Audit
   - Full architecture audit across all 12 modules (94 source files, 2386 tests)
   - New documentation: `docs/ARCHITECTURE.md` — structured audit report with 7 sections

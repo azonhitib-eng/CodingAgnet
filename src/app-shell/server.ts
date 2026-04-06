@@ -39,6 +39,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { execFile } from "node:child_process";
 import { URL } from "node:url";
 
+import { getVersion } from "../cli/version.js";
+
 import {
   listDemoScenarios,
   loadDemoScenario,
@@ -1194,10 +1196,11 @@ export function startServer(
   const server = createServer(handleRequest);
   server.listen(port, () => {
     const localUrl = `http://localhost:${port}`;
+    const version = getVersion();
     const line = "─".repeat(56);
     console.log();
     console.log(line);
-    console.log("  CodingAgent App Shell");
+    console.log(`  CodingAgent App Shell  v${version}`);
     console.log(line);
     console.log();
     console.log(`  ➜  Local:   ${localUrl}`);
@@ -1205,6 +1208,11 @@ export function startServer(
     console.log("  Modes:");
     console.log("    • Demo  — pre-built scenarios, no setup required");
     console.log("    • Real  — connect your own data-dir + host profile or detect live");
+    console.log();
+    console.log("  Features:");
+    console.log("    • Session timeline and console with event tracking");
+    console.log("    • Command composer for workspace, MCP, agent, and workflow actions");
+    console.log("    • Session save/restore with recent-session browsing");
     console.log();
     console.log("  Quick tips:");
     console.log("    - Open the URL above in your browser");
