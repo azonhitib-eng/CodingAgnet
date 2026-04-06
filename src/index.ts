@@ -32,3 +32,4 @@ export * from "./toolchain/index.js";
 export * from "./language-service/index.js";
 export * from "./language-context/index.js";
 export * from "./agent-context/index.js";
+export * from "./agent-run/index.js";

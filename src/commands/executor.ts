@@ -230,6 +230,26 @@ export interface CommandExecutorDeps {
     error?: string;
     detail?: Record<string, unknown>;
   }>;
+  /** Run an agent task. Returns {ok, error?, detail?}. */
+  readonly runAgentTask?: (
+    taskKind: string,
+    taskDescription?: string,
+    targetAgentId?: string,
+    preferredAgentKind?: string,
+    preferredRoleHint?: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Inspect an agent run. Returns {ok, error?, detail?}. */
+  readonly inspectAgentRun?: (
+    runId?: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -600,6 +620,32 @@ async function dispatchCommand(
       return res.ok
         ? makeResult(payload.commandId, "completed", "Agent context refreshed.", res.detail)
         : makeResult(payload.commandId, "failed", res.error ?? "Agent context refresh failed.");
+    }
+
+    case "run_agent_task": {
+      if (!deps.runAgentTask) {
+        return makeResult(payload.commandId, "failed", "Agent task execution not available.");
+      }
+      const res = await deps.runAgentTask(
+        payload.data.taskKind,
+        payload.data.taskDescription,
+        payload.data.targetAgentId,
+        payload.data.preferredAgentKind,
+        payload.data.preferredRoleHint,
+      );
+      return res.ok
+        ? makeResult(payload.commandId, "completed", `Agent task completed: ${payload.data.taskKind}.`, res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Agent task execution failed.");
+    }
+
+    case "inspect_agent_run": {
+      if (!deps.inspectAgentRun) {
+        return makeResult(payload.commandId, "failed", "Agent run inspection not available.");
+      }
+      const res = await deps.inspectAgentRun(payload.data.runId);
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Agent run inspected.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Agent run inspection failed.");
     }
   }
 }

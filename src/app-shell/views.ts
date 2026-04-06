@@ -1242,6 +1242,8 @@ const CLIENT_JS = `
     mcp_tool_invocation_failed: 'failure',
     agent_failed: 'failure', agent_disabled: 'failure', agent_detached: 'failure',
     agent_context_assembled: 'progress', agent_context_refreshed: 'progress',
+    agent_run_requested: 'info', agent_run_started: 'progress',
+    agent_run_completed: 'progress', agent_run_failed: 'failure',
   };
 
   var CATEGORY_ICONS = {
@@ -1270,6 +1272,8 @@ const CLIENT_JS = `
     agent_routing_evaluated: 'agent', agent_stage_participation_updated: 'agent',
     agent_skipped_for_stage: 'agent', agent_selected_for_stage: 'agent',
     agent_context_assembled: 'agent', agent_context_refreshed: 'agent', agent_context_failed: 'agent',
+    agent_run_requested: 'agent', agent_run_started: 'agent',
+    agent_run_completed: 'agent', agent_run_failed: 'agent',
     repo_fingerprinted: 'workspace', profile_selected: 'workspace',
     catalogs_loaded: 'workflow', host_detected: 'workflow', workflow_started: 'workflow',
     stage_completed: 'workflow', requires_approval: 'workflow', blocked: 'workflow',
@@ -1311,6 +1315,8 @@ const CLIENT_JS = `
     repo_fingerprinted: 'discovery_card', profile_selected: 'discovery_card',
     agent_context_assembled: 'discovery_card', agent_context_refreshed: 'discovery_card',
     agent_context_failed: 'failure_card',
+    agent_run_requested: 'lifecycle_card', agent_run_started: 'lifecycle_card',
+    agent_run_completed: 'success_card', agent_run_failed: 'failure_card',
   };
 
   var CARD_CSS = {

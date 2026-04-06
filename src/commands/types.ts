@@ -38,7 +38,9 @@ export type CommandId =
   | "refresh_context_summary"
   | "inspect_agent_context"
   | "build_agent_prompt_context"
-  | "refresh_agent_context";
+  | "refresh_agent_context"
+  | "run_agent_task"
+  | "inspect_agent_run";
 
 /** Logical category grouping for commands. */
 export type CommandCategory =
@@ -51,7 +53,8 @@ export type CommandCategory =
   | "toolchain"
   | "language_service"
   | "language_context"
-  | "agent_context";
+  | "agent_context"
+  | "agent_run";
 
 /* ------------------------------------------------------------------ */
 /*  Command definition (static metadata)                               */
@@ -178,6 +181,18 @@ export interface BuildAgentPromptContextPayload {
 
 export type RefreshAgentContextPayload = Record<string, never>;
 
+export interface RunAgentTaskPayload {
+  readonly taskKind: string;
+  readonly taskDescription?: string;
+  readonly targetAgentId?: string;
+  readonly preferredAgentKind?: string;
+  readonly preferredRoleHint?: string;
+}
+
+export interface InspectAgentRunPayload {
+  readonly runId?: string;
+}
+
 /** Discriminated union of all command payloads. */
 export type CommandPayload =
   | { readonly commandId: "open_workspace"; readonly data: OpenWorkspacePayload }
@@ -205,7 +220,9 @@ export type CommandPayload =
   | { readonly commandId: "refresh_context_summary"; readonly data: RefreshContextSummaryPayload }
   | { readonly commandId: "inspect_agent_context"; readonly data: InspectAgentContextPayload }
   | { readonly commandId: "build_agent_prompt_context"; readonly data: BuildAgentPromptContextPayload }
-  | { readonly commandId: "refresh_agent_context"; readonly data: RefreshAgentContextPayload };
+  | { readonly commandId: "refresh_agent_context"; readonly data: RefreshAgentContextPayload }
+  | { readonly commandId: "run_agent_task"; readonly data: RunAgentTaskPayload }
+  | { readonly commandId: "inspect_agent_run"; readonly data: InspectAgentRunPayload };
 
 /* ------------------------------------------------------------------ */
 /*  Validation                                                         */
@@ -433,6 +450,18 @@ export const COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
     label: "Refresh Agent Context",
     description: "Re-assemble agent context using latest session/workspace/profile data.",
   },
+  {
+    id: "run_agent_task",
+    category: "agent_run",
+    label: "Run Agent Task",
+    description: "Execute a bounded agent task: select an agent, assemble context, dispatch, and capture the result.",
+  },
+  {
+    id: "inspect_agent_run",
+    category: "agent_run",
+    label: "Inspect Agent Run",
+    description: "Inspect the result of the last or a specific agent run, including selection, context, output, and errors.",
+  },
 ] as const;
 
 /** Lookup a command definition by id. */
@@ -455,6 +484,7 @@ export const ALL_COMMAND_CATEGORIES: readonly CommandCategory[] = [
   "language_service",
   "language_context",
   "agent_context",
+  "agent_run",
 ] as const;
 
 /** Group command definitions by category. */

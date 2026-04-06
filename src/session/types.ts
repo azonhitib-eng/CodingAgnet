@@ -179,7 +179,12 @@ export type SessionEventKind =
   /* Agent context / prompt assembly events (Phase 44) */
   | "agent_context_assembled"
   | "agent_context_refreshed"
-  | "agent_context_failed";
+  | "agent_context_failed"
+  /* Agent run / task dispatch events (Phase 45) */
+  | "agent_run_requested"
+  | "agent_run_started"
+  | "agent_run_completed"
+  | "agent_run_failed";
 
 /** Structured session event. */
 export interface SessionEvent {
