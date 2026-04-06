@@ -114,6 +114,19 @@ export interface SessionSummary {
   readonly profileSelectionExplanation: string | null;
   /** Whether the profile selection is confident. */
   readonly profileConfident: boolean | null;
+
+  /* Toolchain adapter (Phase 39) */
+
+  /** Toolchain adapter id, if toolchain summary generated. */
+  readonly toolchainAdapterId: string | null;
+  /** Toolchain kind (npm, cargo, go, etc.). */
+  readonly toolchainKind: string | null;
+  /** Total toolchain commands mapped. */
+  readonly toolchainCommandCount: number | null;
+  /** Number of recommended checks. */
+  readonly toolchainRecommendedCount: number | null;
+  /** Number of unavailable checks. */
+  readonly toolchainUnavailableCount: number | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -290,6 +303,13 @@ export class SessionManager {
       readonly selectionExplanation?: string;
       readonly selectionConfident?: boolean;
     } | null,
+    toolchainSummary?: {
+      readonly adapterId?: string;
+      readonly toolchainKind?: string;
+      readonly commandCount?: number;
+      readonly recommendedCount?: number;
+      readonly unavailableCount?: number;
+    } | null,
   ): SessionSummary {
     const session = this.requireSession(id);
     const lastEvent =
@@ -359,6 +379,12 @@ export class SessionManager {
       profileSelectionReason: fingerprintSummary?.selectionReason ?? null,
       profileSelectionExplanation: fingerprintSummary?.selectionExplanation ?? null,
       profileConfident: fingerprintSummary?.selectionConfident ?? null,
+      /* Toolchain adapter (Phase 39) */
+      toolchainAdapterId: toolchainSummary?.adapterId ?? null,
+      toolchainKind: toolchainSummary?.toolchainKind ?? null,
+      toolchainCommandCount: toolchainSummary?.commandCount ?? null,
+      toolchainRecommendedCount: toolchainSummary?.recommendedCount ?? null,
+      toolchainUnavailableCount: toolchainSummary?.unavailableCount ?? null,
     };
   }
 

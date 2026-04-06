@@ -110,6 +110,26 @@ export interface CommandExecutorDeps {
   readonly restoreSession?: (
     sessionId: string,
   ) => Promise<{ ok: boolean; error?: string }>;
+  /** Inspect toolchain. Returns {ok, error?, detail?}. */
+  readonly inspectToolchain?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Run workspace check. Returns {ok, error?, detail?}. */
+  readonly runWorkspaceCheck?: (
+    commandType: string,
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
+  /** Refresh toolchain summary. Returns {ok, error?, detail?}. */
+  readonly refreshToolchainSummary?: () => Promise<{
+    ok: boolean;
+    error?: string;
+    detail?: Record<string, unknown>;
+  }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -310,6 +330,36 @@ async function dispatchCommand(
       return res.ok
         ? makeResult(payload.commandId, "completed", `Session restored: ${payload.data.sessionId}`)
         : makeResult(payload.commandId, "failed", res.error ?? "Session restore failed.");
+    }
+
+    case "inspect_toolchain": {
+      if (!deps.inspectToolchain) {
+        return makeResult(payload.commandId, "failed", "Toolchain inspection not available.");
+      }
+      const res = await deps.inspectToolchain();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Toolchain inspected.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Toolchain inspection failed.");
+    }
+
+    case "run_workspace_check": {
+      if (!deps.runWorkspaceCheck) {
+        return makeResult(payload.commandId, "failed", "Workspace check execution not available.");
+      }
+      const res = await deps.runWorkspaceCheck(payload.data.commandType);
+      return res.ok
+        ? makeResult(payload.commandId, "completed", `Workspace check completed: ${payload.data.commandType}`, res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Workspace check failed.");
+    }
+
+    case "refresh_toolchain_summary": {
+      if (!deps.refreshToolchainSummary) {
+        return makeResult(payload.commandId, "failed", "Toolchain summary refresh not available.");
+      }
+      const res = await deps.refreshToolchainSummary();
+      return res.ok
+        ? makeResult(payload.commandId, "completed", "Toolchain summary refreshed.", res.detail)
+        : makeResult(payload.commandId, "failed", res.error ?? "Toolchain summary refresh failed.");
     }
   }
 }
