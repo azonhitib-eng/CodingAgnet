@@ -16,6 +16,11 @@
  *
  * Phase 36: added code-signing readiness helpers (getSigningConfig,
  * isSigningConfigured, getReleaseReadiness) and SIGNING_ENV_VARS map.
+ *
+ * Phase 37: added desktop release polish / public beta readiness helpers
+ * (getProductIdentity, getBetaLabel, getBetaVersion, getBetaMetadata,
+ * validateDesktopMetadata, validateArtifactNaming, getIconConfig,
+ * BETA_KNOWN_LIMITATIONS, SUPPORTED_ICON_FORMATS).
  */
 
 "use strict";
@@ -726,6 +731,276 @@ function getInstallerTargets(platform) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Desktop release polish / public beta readiness (Phase 37)
+// ---------------------------------------------------------------------------
+
+/**
+ * Product identity constants.
+ * These are the canonical product strings for artifact names, display,
+ * and metadata consistency.
+ */
+const PRODUCT_APP_ID = "com.codingagent.desktop";
+const PRODUCT_NAME = "CodingAgent";
+const PRODUCT_DESCRIPTION =
+  "Portable, local-first coding-agent desktop application for catalog management, " +
+  "host detection, compatibility evaluation, install planning, and workflow orchestration.";
+
+/**
+ * Supported icon file formats and expected paths.
+ * electron-builder expects specific formats per platform:
+ *   - .png  — Linux (256×256 or 512×512), also base for other formats
+ *   - .icns — macOS (auto-generated from png by electron-builder)
+ *   - .ico  — Windows (auto-generated from png by electron-builder)
+ *
+ * In practice, shipping a 512×512 PNG is sufficient — electron-builder
+ * converts it for each platform.
+ */
+const SUPPORTED_ICON_FORMATS = ["png", "icns", "ico"];
+
+/**
+ * Known limitations to communicate to beta testers.
+ * This list is the canonical reference — docs and release notes should
+ * mirror it.
+ */
+const BETA_KNOWN_LIMITATIONS = [
+  "Unsigned build — users will see OS security warnings (Gatekeeper on macOS, SmartScreen on Windows)",
+  "No auto-update — testers must manually download new builds",
+  "No custom application icon — uses Electron default icon",
+  "No tray or dock integration",
+  "Server startup delay — a loading screen is shown briefly while the backend starts",
+  "Local-platform-only builds — cross-compilation is not supported",
+  "No crash reporting — errors are shown in-window but not reported externally",
+  "Production dependencies included — no tree-shaking or bundling applied",
+];
+
+/**
+ * Return canonical product identity metadata.
+ * Used for consistency validation between package.json, electron-builder
+ * config, and the desktop wrapper.
+ *
+ * @returns {{
+ *   appId: string;
+ *   productName: string;
+ *   appTitle: string;
+ *   description: string;
+ * }}
+ */
+function getProductIdentity() {
+  return {
+    appId: PRODUCT_APP_ID,
+    productName: PRODUCT_NAME,
+    appTitle: APP_TITLE,
+    description: PRODUCT_DESCRIPTION,
+  };
+}
+
+/**
+ * Return a beta label string for display / artifact purposes.
+ * Format: "beta" or "beta.N" if a beta number is provided.
+ *
+ * @param {{ betaNumber?: number }} [opts]
+ * @returns {string}
+ */
+function getBetaLabel(opts) {
+  if (opts && typeof opts.betaNumber === "number" && opts.betaNumber > 0) {
+    return `beta.${opts.betaNumber}`;
+  }
+  return "beta";
+}
+
+/**
+ * Return a beta-decorated version string.
+ * e.g. "0.1.0-beta" or "0.1.0-beta.3"
+ *
+ * @param {{ betaNumber?: number }} [opts]
+ * @returns {string}
+ */
+function getBetaVersion(opts) {
+  const base = getDesktopVersion();
+  const label = getBetaLabel(opts);
+  return `${base}-${label}`;
+}
+
+/**
+ * Return comprehensive beta metadata for release notes, docs, and tests.
+ *
+ * @param {{ betaNumber?: number; forcePackaged?: boolean }} [opts]
+ * @returns {{
+ *   version: string;
+ *   betaVersion: string;
+ *   betaLabel: string;
+ *   productIdentity: ReturnType<typeof getProductIdentity>;
+ *   signing: { configured: boolean; active: boolean; summary: string };
+ *   icon: { present: boolean; path: string | null; placeholderPath: string; supportedFormats: string[] };
+ *   knownLimitations: string[];
+ *   artifactNaming: { generic: string; appImage: string; dmg: string; nsis: string };
+ *   platforms: { linux: string; darwin: string; win32: string };
+ * }}
+ */
+function getBetaMetadata(opts) {
+  const signing = getSigningConfig();
+  const iconPath = getIconPath();
+  return {
+    version: getDesktopVersion(),
+    betaVersion: getBetaVersion(opts),
+    betaLabel: getBetaLabel(opts),
+    productIdentity: getProductIdentity(),
+    signing: {
+      configured: signing.configured,
+      active: signing.active,
+      summary: signing.summary,
+    },
+    icon: {
+      present: !!iconPath,
+      path: iconPath,
+      placeholderPath: getIconPlaceholderPath(),
+      supportedFormats: SUPPORTED_ICON_FORMATS,
+    },
+    knownLimitations: BETA_KNOWN_LIMITATIONS,
+    artifactNaming: {
+      generic: "${productName}-${version}-${os}-${arch}.${ext}",
+      appImage: "${productName}-${version}-${arch}.${ext}",
+      dmg: "${productName}-${version}-${arch}.${ext}",
+      nsis: "${productName}-Setup-${version}-${arch}.${ext}",
+    },
+    platforms: {
+      linux: "AppImage",
+      darwin: "dmg",
+      win32: "nsis",
+    },
+  };
+}
+
+/**
+ * Return the icon configuration status.
+ * Reports whether an icon exists, where it's expected, and what formats
+ * are supported.
+ *
+ * @returns {{
+ *   present: boolean;
+ *   path: string | null;
+ *   placeholderPath: string;
+ *   supportedFormats: string[];
+ *   recommendation: string;
+ * }}
+ */
+function getIconConfig() {
+  const iconPath = getIconPath();
+  const placeholderPath = getIconPlaceholderPath();
+  const present = !!iconPath;
+
+  const recommendation = present
+    ? "Icon found — electron-builder will use it for all platforms"
+    : `No icon found at ${placeholderPath}. Place a 512×512 PNG there for custom branding.`;
+
+  return {
+    present,
+    path: iconPath,
+    placeholderPath,
+    supportedFormats: SUPPORTED_ICON_FORMATS,
+    recommendation,
+  };
+}
+
+/**
+ * Validate that desktop metadata is internally consistent between
+ * package.json, electron-builder.config.js values, and config.cjs constants.
+ *
+ * This is a structural check only — it does NOT read electron-builder.config.js
+ * directly (that file may not be available at runtime in packaged mode).
+ * Instead, it validates config.cjs's own constants against package.json.
+ *
+ * @returns {{ ok: boolean; issues: string[]; checked: string[] }}
+ */
+function validateDesktopMetadata() {
+  const issues = [];
+  const checked = [];
+
+  // Check product name consistency
+  checked.push("APP_TITLE matches PRODUCT_NAME");
+  if (APP_TITLE !== PRODUCT_NAME) {
+    issues.push(`APP_TITLE ("${APP_TITLE}") does not match PRODUCT_NAME ("${PRODUCT_NAME}")`);
+  }
+
+  // Check version is valid semver-like
+  const version = getDesktopVersion();
+  checked.push("version is semver-like");
+  if (!/^\d+\.\d+\.\d+/.test(version)) {
+    issues.push(`Version "${version}" does not look like a valid semver string`);
+  }
+
+  // Check appId format (reverse-domain)
+  checked.push("appId is reverse-domain format");
+  if (!/^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)+$/.test(PRODUCT_APP_ID)) {
+    issues.push(`appId "${PRODUCT_APP_ID}" is not in reverse-domain format`);
+  }
+
+  // Check icon placeholder path is under assets/
+  const iconPlaceholder = getIconPlaceholderPath();
+  checked.push("icon placeholder path is under assets/");
+  if (!iconPlaceholder.includes("assets")) {
+    issues.push(`Icon placeholder path "${iconPlaceholder}" is not under assets/`);
+  }
+
+  // Check product description is non-empty
+  checked.push("product description is non-empty");
+  if (!PRODUCT_DESCRIPTION || PRODUCT_DESCRIPTION.length < 10) {
+    issues.push("Product description is missing or too short");
+  }
+
+  // Check known limitations list is non-empty
+  checked.push("known limitations list is non-empty");
+  if (!BETA_KNOWN_LIMITATIONS || BETA_KNOWN_LIMITATIONS.length === 0) {
+    issues.push("Beta known limitations list is empty");
+  }
+
+  return { ok: issues.length === 0, issues, checked };
+}
+
+/**
+ * Validate that artifact naming patterns are self-consistent and include
+ * the expected template variables.
+ *
+ * @returns {{ ok: boolean; issues: string[]; checked: string[] }}
+ */
+function validateArtifactNaming() {
+  const issues = [];
+  const checked = [];
+
+  const patterns = {
+    generic: "${productName}-${version}-${os}-${arch}.${ext}",
+    appImage: "${productName}-${version}-${arch}.${ext}",
+    dmg: "${productName}-${version}-${arch}.${ext}",
+    nsis: "${productName}-Setup-${version}-${arch}.${ext}",
+  };
+
+  const requiredVars = ["${productName}", "${version}", "${arch}", "${ext}"];
+
+  for (const [name, pattern] of Object.entries(patterns)) {
+    checked.push(`${name} pattern is a non-empty string`);
+    if (typeof pattern !== "string" || pattern.length === 0) {
+      issues.push(`${name} artifact naming pattern is empty`);
+      continue;
+    }
+
+    for (const v of requiredVars) {
+      checked.push(`${name} contains ${v}`);
+      if (!pattern.includes(v)) {
+        issues.push(`${name} pattern "${pattern}" is missing required variable ${v}`);
+      }
+    }
+  }
+
+  // nsis should include "Setup" in the name
+  checked.push("nsis pattern includes 'Setup'");
+  if (!patterns.nsis.includes("Setup")) {
+    issues.push("nsis pattern should include 'Setup' for clarity");
+  }
+
+  return { ok: issues.length === 0, issues, checked };
+}
+
 module.exports = {
   DEFAULT_WIDTH,
   DEFAULT_HEIGHT,
@@ -761,4 +1036,17 @@ module.exports = {
   getSigningConfig,
   isSigningConfigured,
   getReleaseReadiness,
+  // Phase 37: desktop release polish / public beta readiness helpers
+  PRODUCT_APP_ID,
+  PRODUCT_NAME,
+  PRODUCT_DESCRIPTION,
+  SUPPORTED_ICON_FORMATS,
+  BETA_KNOWN_LIMITATIONS,
+  getProductIdentity,
+  getBetaLabel,
+  getBetaVersion,
+  getBetaMetadata,
+  getIconConfig,
+  validateDesktopMetadata,
+  validateArtifactNaming,
 };

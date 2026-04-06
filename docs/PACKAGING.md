@@ -86,6 +86,21 @@ See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
 8. No fake signing — builds are honest about signing status
 9. No auto-update, no backend changes
 
+## Phase 37 additions (desktop release polish / public beta readiness)
+
+1. Product identity constants: `PRODUCT_APP_ID`, `PRODUCT_NAME`, `PRODUCT_DESCRIPTION`
+2. `getProductIdentity()` — canonical product metadata for validation
+3. `getBetaLabel()` / `getBetaVersion()` — beta-decorated version strings
+4. `getBetaMetadata()` — comprehensive beta release metadata snapshot
+5. `getIconConfig()` — icon status, expected path, supported formats, recommendation
+6. `validateDesktopMetadata()` — structural consistency checks for product identity
+7. `validateArtifactNaming()` — artifact naming pattern validation
+8. `BETA_KNOWN_LIMITATIONS` — canonical known limitations list for beta testers
+9. `SUPPORTED_ICON_FORMATS` — supported icon file formats
+10. `docs/BETA-TESTING.md` — full tester-facing beta guide with per-platform install/run guidance, unsigned build bypass instructions, first-run expectations, what-to-test checklist, known limitations, issue reporting guidance, and beta release checklist
+11. Updated `docs/ELECTRON.md` with Phase 37 beta readiness section
+12. No auto-update, no code signing implementation, no new major features
+
 ## Phase 34 additions (first-run polish)
 
 1. Loading page adapts wording for packaged mode (user-friendly, no developer terms)
