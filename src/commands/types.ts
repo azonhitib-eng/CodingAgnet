@@ -65,9 +65,7 @@ export interface CloneRepositoryPayload {
   readonly branch?: string;
 }
 
-export interface DetectHostPayload {
-  // No required inputs — uses system detection.
-}
+export type DetectHostPayload = Record<string, never>;
 
 export interface AttachMcpPayload {
   readonly serverId: string;
@@ -98,9 +96,7 @@ export interface RunWorkflowPayload {
   readonly stopAfter?: string;
 }
 
-export interface SaveSessionPayload {
-  // No required inputs — saves the current session.
-}
+export type SaveSessionPayload = Record<string, never>;
 
 export interface RestoreSessionPayload {
   readonly sessionId: string;
