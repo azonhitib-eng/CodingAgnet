@@ -138,6 +138,7 @@ import { ... } from "codingagent-backend/toolchain";          // Toolchain: prof
 import { ... } from "codingagent-backend/language-service";   // Language service: diagnostics layer, LSP bridge, availability
 import { ... } from "codingagent-backend/language-context";   // Language context: symbol extraction, file/module/workspace intelligence
 import { ... } from "codingagent-backend/agent-context";     // Agent context: deterministic prompt context assembly, prioritization, traceability
+import { ... } from "codingagent-backend/agent-run";         // Agent run: bounded task dispatch, agent selection, execution adapters
 ```
 
 ## CLI exit codes
@@ -221,6 +222,7 @@ For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **[docs/LANGUAGE-SERVICE.md](docs/LANGUAGE-SERVICE.md)** — Minimal language service and diagnostics layer
 - **[docs/LANGUAGE-CONTEXT.md](docs/LANGUAGE-CONTEXT.md)** — Language context: symbol extraction and workspace intelligence
 - **[docs/AGENT-CONTEXT.md](docs/AGENT-CONTEXT.md)** — Agent context: deterministic prompt context assembly and prioritization
+- **[docs/AGENT-RUN.md](docs/AGENT-RUN.md)** — Agent run: bounded task dispatch, selection, and execution adapters
 - **[docs/ELECTRON.md](docs/ELECTRON.md)** — Electron desktop wrapper
 - **[docs/PACKAGING.md](docs/PACKAGING.md)** — Packaging and desktop launcher decisions
 - **[docs/CODE-SIGNING.md](docs/CODE-SIGNING.md)** — Code-signing strategy and release readiness

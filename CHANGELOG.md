@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 45** — Minimal Agent Execution & Task Dispatch
+  - New module: `src/agent-run/` (5 files)
+    - `types.ts` — `AgentRunId`, `AgentTaskKind`, `AgentRunStatus`, `AgentRunSelectionReason`, `AgentRunInput`, `AgentRunRequest`, `AgentRunOutput`, `AgentRunError`, `AgentRunErrorCode`, `AgentRunResult`, `AgentRunSummary`
+    - `selection.ts` — `selectAgent()`, `getDefaultTaskDescription()`, deterministic scoring (base + kind + role + stage), tie-breaking by ID
+    - `adapter.ts` — `AgentExecutionAdapter` interface, `StubExecutionAdapter` (deterministic, non-model responses)
+    - `dispatch.ts` — `dispatchAgentTask()`, `inspectAgentRun()`, full lifecycle: validate → select → assemble context → execute → capture result
+    - `session-integration.ts` — 4 event kinds (`agent_run_requested`, `agent_run_started`, `agent_run_completed`, `agent_run_failed`), `AgentRunSessionSummary`, event factories/filtering
+  - 6 bounded task kinds: `summarize_workspace`, `review_diagnostics`, `explain_files`, `summarize_github`, `general_query`, `custom`
+  - 2 new commands: `run_agent_task`, `inspect_agent_run`
+  - New command category: `agent_run`
+  - Subpath export: `./agent-run`
+  - `docs/AGENT-RUN.md` — full documentation
+  - 88 new tests covering selection, dispatch, adapter, session integration, command integration, determinism, and edge cases
+
 - **Phase 44** — Context-Informed Agent Prompting
   - New module: `src/agent-context/` (6 files)
     - `types.ts` — `AgentPromptContext`, `AgentPromptContextSlice`, `AgentPromptAssemblyInput`, `AgentPromptAssemblyResult`, `AgentPromptReason`, `AgentPromptPriority`, `AgentPromptEvidence`, `AgentPromptBudget`, `AgentPromptSummary`
