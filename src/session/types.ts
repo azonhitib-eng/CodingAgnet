@@ -160,7 +160,11 @@ export type SessionEventKind =
   /* Toolchain adapter events (Phase 39) */
   | "toolchain_summary_generated"
   | "toolchain_check_started"
-  | "toolchain_check_completed";
+  | "toolchain_check_completed"
+  /* Language-service / diagnostics events (Phase 40) */
+  | "language_service_assessed"
+  | "diagnostics_collected"
+  | "diagnostics_collection_failed";
 
 /** Structured session event. */
 export interface SessionEvent {

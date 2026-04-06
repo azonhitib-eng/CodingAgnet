@@ -213,16 +213,16 @@ function minimalSummary(overrides: Partial<SessionSummary> = {}): SessionSummary
 /* ================================================================== */
 
 describe("Command model (types.ts)", () => {
-  it("COMMAND_DEFINITIONS has exactly 13 entries", () => {
-    expect(COMMAND_DEFINITIONS).toHaveLength(13);
+  it("COMMAND_DEFINITIONS has exactly 16 entries", () => {
+    expect(COMMAND_DEFINITIONS).toHaveLength(16);
   });
 
-  it("ALL_COMMAND_IDS has exactly 13 entries", () => {
-    expect(ALL_COMMAND_IDS).toHaveLength(13);
+  it("ALL_COMMAND_IDS has exactly 16 entries", () => {
+    expect(ALL_COMMAND_IDS).toHaveLength(16);
   });
 
-  it("ALL_COMMAND_CATEGORIES has exactly 7 entries", () => {
-    expect(ALL_COMMAND_CATEGORIES).toHaveLength(7);
+  it("ALL_COMMAND_CATEGORIES has exactly 8 entries", () => {
+    expect(ALL_COMMAND_CATEGORIES).toHaveLength(8);
   });
 
   it("ALL_COMMAND_CATEGORIES contains workspace, host, mcp, agent, workflow, session", () => {
@@ -277,9 +277,9 @@ describe("Command model (types.ts)", () => {
     expect(def).toBeUndefined();
   });
 
-  it("groupByCategory creates a map with all 7 categories", () => {
+  it("groupByCategory creates a map with all 8 categories", () => {
     const map = groupByCategory();
-    expect(map.size).toBe(7);
+    expect(map.size).toBe(8);
     for (const cat of ALL_COMMAND_CATEGORIES) {
       expect(map.has(cat)).toBe(true);
     }
@@ -745,9 +745,9 @@ describe("Command availability (availability.ts)", () => {
 
   // --- Aggregate helpers ---
   describe("aggregate helpers", () => {
-    it("getAllCommandAvailability returns 13 entries", () => {
+    it("getAllCommandAvailability returns 16 entries", () => {
       const all = getAllCommandAvailability(NO_SESSION);
-      expect(all).toHaveLength(13);
+      expect(all).toHaveLength(16);
     });
 
     it("getAvailableCommandIds with no session returns only restore_session", () => {
@@ -755,9 +755,9 @@ describe("Command availability (availability.ts)", () => {
       expect(ids).toEqual(["restore_session"]);
     });
 
-    it("getAvailableCommandIds with full session returns all 13", () => {
+    it("getAvailableCommandIds with full session returns all 16", () => {
       const ids = getAvailableCommandIds(SESSION_WITH_MCP);
-      expect(ids).toHaveLength(13);
+      expect(ids).toHaveLength(16);
     });
 
     it("getAvailableCommandIds with session but no MCP returns 8", () => {
@@ -1201,7 +1201,7 @@ describe("Server endpoints (server.ts)", () => {
     const { statusCode, json } = await apiRequest("GET", "/api/commands");
     expect(statusCode).toBe(200);
     expect(Array.isArray(json)).toBe(true);
-    expect(json).toHaveLength(13);
+    expect(json).toHaveLength(16);
     expect(json[0]).toHaveProperty("id");
     expect(json[0]).toHaveProperty("category");
     expect(json[0]).toHaveProperty("label");
@@ -1212,7 +1212,7 @@ describe("Server endpoints (server.ts)", () => {
     const { statusCode, json } = await apiRequest("GET", "/api/commands/availability");
     expect(statusCode).toBe(200);
     expect(Array.isArray(json)).toBe(true);
-    expect(json).toHaveLength(13);
+    expect(json).toHaveLength(16);
     for (const entry of json) {
       expect(entry).toHaveProperty("commandId");
       expect(entry).toHaveProperty("available");

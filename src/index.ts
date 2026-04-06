@@ -29,3 +29,4 @@ export * from "./agents/index.js";
 export * from "./commands/index.js";
 export * from "./fingerprint/index.js";
 export * from "./toolchain/index.js";
+export * from "./language-service/index.js";

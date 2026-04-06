@@ -25,7 +25,10 @@ export type CommandId =
   | "restore_session"
   | "inspect_toolchain"
   | "run_workspace_check"
-  | "refresh_toolchain_summary";
+  | "refresh_toolchain_summary"
+  | "inspect_language_service"
+  | "collect_diagnostics"
+  | "refresh_diagnostics_summary";
 
 /** Logical category grouping for commands. */
 export type CommandCategory =
@@ -35,7 +38,8 @@ export type CommandCategory =
   | "agent"
   | "workflow"
   | "session"
-  | "toolchain";
+  | "toolchain"
+  | "language_service";
 
 /* ------------------------------------------------------------------ */
 /*  Command definition (static metadata)                               */
@@ -114,6 +118,12 @@ export interface RunWorkspaceCheckPayload {
 
 export type RefreshToolchainSummaryPayload = Record<string, never>;
 
+export type InspectLanguageServicePayload = Record<string, never>;
+
+export type CollectDiagnosticsPayload = Record<string, never>;
+
+export type RefreshDiagnosticsSummaryPayload = Record<string, never>;
+
 /** Discriminated union of all command payloads. */
 export type CommandPayload =
   | { readonly commandId: "open_workspace"; readonly data: OpenWorkspacePayload }
@@ -128,7 +138,10 @@ export type CommandPayload =
   | { readonly commandId: "restore_session"; readonly data: RestoreSessionPayload }
   | { readonly commandId: "inspect_toolchain"; readonly data: InspectToolchainPayload }
   | { readonly commandId: "run_workspace_check"; readonly data: RunWorkspaceCheckPayload }
-  | { readonly commandId: "refresh_toolchain_summary"; readonly data: RefreshToolchainSummaryPayload };
+  | { readonly commandId: "refresh_toolchain_summary"; readonly data: RefreshToolchainSummaryPayload }
+  | { readonly commandId: "inspect_language_service"; readonly data: InspectLanguageServicePayload }
+  | { readonly commandId: "collect_diagnostics"; readonly data: CollectDiagnosticsPayload }
+  | { readonly commandId: "refresh_diagnostics_summary"; readonly data: RefreshDiagnosticsSummaryPayload };
 
 /* ------------------------------------------------------------------ */
 /*  Validation                                                         */
@@ -278,6 +291,24 @@ export const COMMAND_DEFINITIONS: readonly CommandDefinition[] = [
     label: "Refresh Toolchain Summary",
     description: "Re-generate the workspace toolchain summary based on current state.",
   },
+  {
+    id: "inspect_language_service",
+    category: "language_service",
+    label: "Inspect Language Service",
+    description: "Inspect language-service availability and diagnostics support for the current workspace.",
+  },
+  {
+    id: "collect_diagnostics",
+    category: "language_service",
+    label: "Collect Diagnostics",
+    description: "Run an explicit diagnostics collection for the current workspace.",
+  },
+  {
+    id: "refresh_diagnostics_summary",
+    category: "language_service",
+    label: "Refresh Diagnostics Summary",
+    description: "Re-assess language-service availability and refresh diagnostics summary.",
+  },
 ] as const;
 
 /** Lookup a command definition by id. */
@@ -297,6 +328,7 @@ export const ALL_COMMAND_CATEGORIES: readonly CommandCategory[] = [
   "workflow",
   "session",
   "toolchain",
+  "language_service",
 ] as const;
 
 /** Group command definitions by category. */

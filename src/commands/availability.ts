@@ -136,6 +136,39 @@ function checkRefreshToolchainSummary(ctx: CommandContextState): CommandAvailabi
   return { commandId: "refresh_toolchain_summary", available: true };
 }
 
+function checkInspectLanguageService(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "inspect_language_service", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "inspect_language_service", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "inspect_language_service", available: true };
+}
+
+function checkCollectDiagnostics(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "collect_diagnostics", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "collect_diagnostics", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "collect_diagnostics", available: true };
+}
+
+function checkRefreshDiagnosticsSummary(ctx: CommandContextState): CommandAvailability {
+  if (!ctx.hasActiveSession) {
+    return { commandId: "refresh_diagnostics_summary", available: false, reason: "No active session." };
+  }
+  const s = ctx.sessionSummary;
+  if (!s || !s.workspacePath) {
+    return { commandId: "refresh_diagnostics_summary", available: false, reason: "No workspace bound to session." };
+  }
+  return { commandId: "refresh_diagnostics_summary", available: true };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Availability dispatcher                                            */
 /* ------------------------------------------------------------------ */
@@ -154,6 +187,9 @@ const CHECKERS: Record<CommandId, (ctx: CommandContextState) => CommandAvailabil
   inspect_toolchain: checkInspectToolchain,
   run_workspace_check: checkRunWorkspaceCheck,
   refresh_toolchain_summary: checkRefreshToolchainSummary,
+  inspect_language_service: checkInspectLanguageService,
+  collect_diagnostics: checkCollectDiagnostics,
+  refresh_diagnostics_summary: checkRefreshDiagnosticsSummary,
 };
 
 /** Get availability of a single command given the current state. */
