@@ -87,3 +87,36 @@ export type {
   ConsoleFeedPresence,
   ConsoleFeed,
 } from "./console-helpers.js";
+
+// Command composer helpers (Phase 28) — re-exported from commands module
+export {
+  COMMAND_DEFINITIONS,
+  ALL_COMMAND_IDS,
+  ALL_COMMAND_CATEGORIES,
+  getCommandDefinition,
+  groupByCategory,
+  validateCommand,
+  getAllCommandAvailability,
+  getAvailableCommandIds,
+  executeCommand,
+  commandSubmitted,
+  commandCompleted,
+  commandFailed,
+  commandValidationFailed,
+  resultToSessionEvent,
+} from "../commands/index.js";
+
+export type {
+  CommandId,
+  CommandCategory,
+  CommandDefinition,
+  CommandPayload,
+  CommandFieldError,
+  CommandValidationResult,
+  CommandExecutionStatus,
+  CommandExecutionResult,
+  CommandSubmission,
+  CommandAvailability,
+  CommandContextState,
+  CommandExecutorDeps,
+} from "../commands/index.js";

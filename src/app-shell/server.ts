@@ -26,6 +26,10 @@
  *   GET  /api/mcp/:id/info          — runtime info for a specific MCP server
  *   POST /api/mcp/:id/refresh-health — refresh health for an MCP server
  *   POST /api/mcp/:id/refresh-discovery — refresh discovery for an MCP server
+ *   GET  /api/commands              — list all command definitions
+ *   GET  /api/commands/availability — get command availability for current state
+ *   POST /api/commands/validate     — validate a command payload
+ *   POST /api/commands/execute      — execute a command
  *
  * Usage:
  *   npx tsx src/app-shell/server.ts [--port 3000]
@@ -70,6 +74,16 @@ import type { GitExecutor } from "../session/index.js";
 import { McpManager } from "../mcp/index.js";
 import { classifyEvent } from "./timeline-helpers.js";
 import { buildConsoleFeed } from "./console-helpers.js";
+import {
+  COMMAND_DEFINITIONS,
+  validateCommand,
+  getAllCommandAvailability,
+  executeCommand,
+} from "../commands/index.js";
+import type {
+  CommandPayload,
+  CommandContextState,
+} from "../commands/index.js";
 
 // ---------------------------------------------------------------------------
 // Routing
@@ -360,6 +374,31 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
   const mcpRefreshDiscoveryMatch = path.match(/^\/api\/mcp\/([^/]+)\/refresh-discovery$/);
   if (mcpRefreshDiscoveryMatch && method === "POST") {
     handleMcpRefreshDiscovery(req, decodeURIComponent(mcpRefreshDiscoveryMatch[1]), res);
+    return;
+  }
+
+  // --- Command Composer endpoints (Phase 28) ---
+
+  // API: list command definitions (GET)
+  if (path === "/api/commands" && method === "GET") {
+    return json(res, COMMAND_DEFINITIONS);
+  }
+
+  // API: get command availability (GET)
+  if (path === "/api/commands/availability" && method === "GET") {
+    const ctx = buildCommandContext();
+    return json(res, getAllCommandAvailability(ctx));
+  }
+
+  // API: validate a command payload (POST)
+  if (path === "/api/commands/validate" && method === "POST") {
+    handleCommandValidate(req, res);
+    return;
+  }
+
+  // API: execute a command (POST)
+  if (path === "/api/commands/execute" && method === "POST") {
+    handleCommandExecute(req, res);
     return;
   }
 
@@ -920,6 +959,157 @@ async function handleMcpRefreshDiscovery(
     const message = err instanceof Error ? err.message : String(err);
     return json(res, { ok: false, error: message }, 400);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Command Composer helpers (Phase 28)
+// ---------------------------------------------------------------------------
+
+/** Build the command context state from the current session manager. */
+function buildCommandContext(): CommandContextState {
+  const sessions = _workspaceSessionManager.listSessions();
+  if (sessions.length === 0) {
+    return { hasActiveSession: false, sessionSummary: null };
+  }
+  const latest = sessions[sessions.length - 1];
+  const summary = _workspaceSessionManager.getSessionSummary(latest.id);
+  return { hasActiveSession: true, sessionSummary: summary };
+}
+
+/** POST /api/commands/validate */
+async function handleCommandValidate(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  if (typeof input.commandId !== "string" || !input.data || typeof input.data !== "object") {
+    return badRequest(res, "Missing required fields: commandId, data");
+  }
+
+  const payload: CommandPayload = {
+    commandId: input.commandId,
+    data: input.data,
+  } as CommandPayload;
+
+  const result = validateCommand(payload);
+  return json(res, result);
+}
+
+/** POST /api/commands/execute */
+async function handleCommandExecute(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await parseJsonBody(req, res);
+  if (body === null) return;
+
+  const input = body as Record<string, unknown>;
+  if (typeof input.commandId !== "string" || !input.data || typeof input.data !== "object") {
+    return badRequest(res, "Missing required fields: commandId, data");
+  }
+
+  // Resolve session id: explicit or from latest session
+  let sessionId = typeof input.sessionId === "string" ? input.sessionId : null;
+  if (!sessionId) {
+    const sessions = _workspaceSessionManager.listSessions();
+    if (sessions.length > 0) {
+      sessionId = sessions[sessions.length - 1].id;
+    }
+  }
+
+  if (!sessionId && input.commandId !== "restore_session") {
+    return badRequest(res, "No active session. Create a session first or provide sessionId.");
+  }
+
+  const payload: CommandPayload = {
+    commandId: input.commandId,
+    data: input.data,
+  } as CommandPayload;
+
+  const deps = buildCommandExecutorDeps();
+  const result = await executeCommand(sessionId ?? "", payload, deps);
+  const status = result.status === "completed" ? 200 : result.status === "validation_failed" ? 422 : 500;
+  return json(res, result, status);
+}
+
+/** Build the executor dependencies from server singletons. */
+function buildCommandExecutorDeps() {
+  return {
+    sessionManager: _workspaceSessionManager,
+    openWorkspace: async (path: string) => {
+      try {
+        const git = _gitExecutorOverride ?? (await import("../session/index.js")).defaultGitExecutor;
+        const result = await openWorkspace(path, git);
+        if (result.ok && result.workspace) {
+          const session = _workspaceSessionManager.listSessions().at(-1);
+          if (session) {
+            _workspaceSessionManager.appendEvents(session.id, result.events);
+            _workspaceSessionManager.bindWorkspace(session.id, result.workspace);
+            _workspaceSessionManager.updateStage(session.id, "workspace_binding");
+            _workspaceSessionManager.updateStatus(session.id, "active");
+          }
+        }
+        return { ok: result.ok, error: result.error };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+    cloneWorkspace: async (url: string, targetPath: string, branch?: string) => {
+      try {
+        const git = _gitExecutorOverride ?? (await import("../session/index.js")).defaultGitExecutor;
+        const result = await cloneWorkspace({ url, targetPath, branch }, git);
+        if (result.ok && result.workspace) {
+          const session = _workspaceSessionManager.listSessions().at(-1);
+          if (session) {
+            _workspaceSessionManager.appendEvents(session.id, result.events);
+            _workspaceSessionManager.bindWorkspace(session.id, result.workspace);
+            _workspaceSessionManager.updateStage(session.id, "workspace_binding");
+            _workspaceSessionManager.updateStatus(session.id, "active");
+          }
+        }
+        return { ok: result.ok, error: result.error };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+    detectHost: async () => {
+      const profile = await detectHost();
+      const session = _workspaceSessionManager.listSessions().at(-1);
+      if (session) {
+        const hostSummary = toHostSummary(profile);
+        _workspaceSessionManager.appendEvent(
+          session.id,
+          (await import("../session/index.js")).hostDetected(
+            `${hostSummary.os} / ${hostSummary.cpuModel} / ${hostSummary.totalRamGb ?? "?"}GB`,
+          ),
+        );
+        _workspaceSessionManager.updateStage(session.id, "host_detection");
+      }
+      return profile as unknown as Record<string, unknown>;
+    },
+    saveSession: async (sessionId: string) => {
+      try {
+        const persistence = getSessionPersistence();
+        const session = _workspaceSessionManager.getSession(sessionId);
+        if (!session) {
+          return { ok: false, error: `Session not found: ${sessionId}` };
+        }
+        await persistence.saveSession(session);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+    restoreSession: async (sessionId: string) => {
+      try {
+        const persistence = getSessionPersistence();
+        const persisted = await persistence.loadSession(sessionId);
+        if (!persisted) {
+          return { ok: false, error: `Session not found: ${sessionId}` };
+        }
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
