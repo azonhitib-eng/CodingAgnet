@@ -1193,6 +1193,7 @@ export function startServer(
   port: number,
   options?: StartServerOptions,
 ): ReturnType<typeof createServer> {
+  const isDesktop = process.env.ELECTRON_DESKTOP === "1";
   const server = createServer(handleRequest);
   server.listen(port, () => {
     const localUrl = `http://localhost:${port}`;
@@ -1200,7 +1201,11 @@ export function startServer(
     const line = "─".repeat(56);
     console.log();
     console.log(line);
-    console.log(`  CodingAgent App Shell  v${version}`);
+    if (isDesktop) {
+      console.log(`  CodingAgent Desktop  v${version}`);
+    } else {
+      console.log(`  CodingAgent App Shell  v${version}`);
+    }
     console.log(line);
     console.log();
     console.log(`  ➜  Local:   ${localUrl}`);
@@ -1214,14 +1219,18 @@ export function startServer(
     console.log("    • Command composer for workspace, MCP, agent, and workflow actions");
     console.log("    • Session save/restore with recent-session browsing");
     console.log();
-    console.log("  Quick tips:");
-    console.log("    - Open the URL above in your browser");
-    console.log("    - Demo mode is selected by default");
-    console.log("    - For real mode, prepare a data directory and host profile");
-    console.log("    - Or use the \"Detect Host\" button to detect your host live");
-    console.log("    - See docs/QUICKSTART.md for detailed instructions");
-    console.log();
-    console.log("  Press Ctrl+C to stop the server");
+    if (!isDesktop) {
+      console.log("  Quick tips:");
+      console.log("    - Open the URL above in your browser");
+      console.log("    - Demo mode is selected by default");
+      console.log("    - For real mode, prepare a data directory and host profile");
+      console.log("    - Or use the \"Detect Host\" button to detect your host live");
+      console.log("    - See docs/QUICKSTART.md for detailed instructions");
+      console.log();
+      console.log("  Press Ctrl+C to stop the server");
+    } else {
+      console.log("  Running as desktop app — close the window to stop.");
+    }
     console.log(line);
     console.log();
 

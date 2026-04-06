@@ -2,9 +2,11 @@
  * Electron main process for CodingAgent desktop wrapper.
  *
  * Architecture:
+ *   - Shows a loading page immediately in the BrowserWindow
  *   - Spawns the existing app-shell server as a child process
  *   - Waits for the server to be ready (detects the local URL from stdout)
- *   - Opens a BrowserWindow pointing to the local URL
+ *   - Navigates the window to the local URL
+ *   - Shows an error page if the server fails to start
  *   - Cleans up the child process on quit
  *
  * This is intentionally a thin wrapper — all app logic stays in the app-shell.
@@ -17,18 +19,13 @@ const { spawn } = require("node:child_process");
 const { createServer } = require("node:net");
 const path = require("node:path");
 
+const config = require("./config.cjs");
+
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
-/** Default window dimensions */
-const DEFAULT_WIDTH = 1280;
-const DEFAULT_HEIGHT = 860;
-const MIN_WIDTH = 800;
-const MIN_HEIGHT = 600;
-
-/** App title */
-const APP_TITLE = "CodingAgent";
+const isDev = process.env.ELECTRON_DEV === "1";
 
 // ---------------------------------------------------------------------------
 // Port utilities
@@ -88,7 +85,10 @@ function startAppShellServer(port) {
     // Watch stdout for the server ready signal (the URL line in the banner)
     serverProcess.stdout.on("data", (chunk) => {
       const text = chunk.toString();
-      process.stdout.write(text);
+      // In dev mode, forward server output to the terminal
+      if (isDev) {
+        process.stdout.write(text);
+      }
       if (!resolved && text.includes(`http://localhost:${port}`)) {
         resolved = true;
         resolve(expectedUrl);
@@ -96,7 +96,9 @@ function startAppShellServer(port) {
     });
 
     serverProcess.stderr.on("data", (chunk) => {
-      process.stderr.write(chunk.toString());
+      if (isDev) {
+        process.stderr.write(chunk.toString());
+      }
     });
 
     serverProcess.on("error", (err) => {
@@ -113,13 +115,13 @@ function startAppShellServer(port) {
       }
     });
 
-    // Timeout after 15 seconds
+    // Timeout after configured duration
     setTimeout(() => {
       if (!resolved) {
         resolved = true;
         reject(new Error("Timed out waiting for app-shell server to start"));
       }
-    }, 15000);
+    }, config.SERVER_START_TIMEOUT_MS);
   });
 }
 
@@ -129,12 +131,12 @@ function startAppShellServer(port) {
 function stopServer() {
   if (serverProcess && !serverProcess.killed) {
     serverProcess.kill("SIGTERM");
-    // Force kill after 3 seconds if still running
+    // Force kill after timeout if still running
     setTimeout(() => {
       if (serverProcess && !serverProcess.killed) {
         serverProcess.kill("SIGKILL");
       }
-    }, 3000);
+    }, config.GRACEFUL_KILL_TIMEOUT_MS);
   }
   serverProcess = null;
 }
@@ -147,17 +149,20 @@ function stopServer() {
 let mainWindow = null;
 
 /**
- * Create the main application window.
+ * Create the main application window and immediately show
+ * a loading page while the server boots.
  *
- * @param {string} url - Local URL to load
+ * @returns {BrowserWindow}
  */
-function createMainWindow(url) {
+function createMainWindow() {
+  const windowTitle = config.buildWindowTitle({ isDev });
+
   mainWindow = new BrowserWindow({
-    width: DEFAULT_WIDTH,
-    height: DEFAULT_HEIGHT,
-    minWidth: MIN_WIDTH,
-    minHeight: MIN_HEIGHT,
-    title: APP_TITLE,
+    width: config.DEFAULT_WIDTH,
+    height: config.DEFAULT_HEIGHT,
+    minWidth: config.MIN_WIDTH,
+    minHeight: config.MIN_HEIGHT,
+    title: windowTitle,
     webPreferences: {
       // Security: no Node.js integration in the renderer
       nodeIntegration: false,
@@ -172,35 +177,65 @@ function createMainWindow(url) {
       // Security: disable webview tag
       webviewTag: false,
     },
-    // Do not show until ready to prevent flash
+    // Show window with loading page immediately
     show: false,
+    backgroundColor: "#1a1a2e",
   });
 
-  // Show window once content is ready
+  // Show window once loading content is painted
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
     mainWindow.focus();
   });
 
-  // Load the local app-shell URL
-  mainWindow.loadURL(url);
+  // Load the loading page immediately
+  mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(config.renderLoadingHtml())}`);
 
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+
+  return mainWindow;
+}
+
+/**
+ * Configure security restrictions on a BrowserWindow for a given app origin.
+ * @param {BrowserWindow} win
+ * @param {string} allowedOrigin
+ */
+function applyNavigationSecurity(win, allowedOrigin) {
   // Security: prevent navigation away from local app
-  mainWindow.webContents.on("will-navigate", (event, navigationUrl) => {
+  win.webContents.on("will-navigate", (event, navigationUrl) => {
     const parsed = new URL(navigationUrl);
-    if (parsed.origin !== new URL(url).origin) {
+    if (parsed.origin !== allowedOrigin) {
       event.preventDefault();
     }
   });
 
   // Security: prevent new windows from opening
-  mainWindow.webContents.setWindowOpenHandler(() => {
+  win.webContents.setWindowOpenHandler(() => {
     return { action: "deny" };
   });
+}
 
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
+/**
+ * Navigate the main window to the running server URL.
+ * @param {string} url
+ */
+function navigateToApp(url) {
+  if (!mainWindow) return;
+  const origin = new URL(url).origin;
+  applyNavigationSecurity(mainWindow, origin);
+  mainWindow.loadURL(url);
+}
+
+/**
+ * Show the error page in the main window.
+ * @param {string} message
+ */
+function showErrorPage(message) {
+  if (!mainWindow) return;
+  mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(config.renderErrorHtml(message))}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -208,32 +243,40 @@ function createMainWindow(url) {
 // ---------------------------------------------------------------------------
 
 async function boot() {
-  console.log();
-  console.log("  CodingAgent — Desktop Mode (Electron)");
-  console.log("  " + "─".repeat(44));
-  console.log();
+  if (isDev) {
+    console.log();
+    console.log("  CodingAgent — Desktop Mode (Electron) [Dev]");
+    console.log("  " + "─".repeat(44));
+    console.log();
+  }
+
+  // Step 1: Create window immediately with loading page
+  createMainWindow();
 
   try {
-    // Step 1: Find available port
-    console.log("  Finding available port…");
+    // Step 2: Find available port
+    if (isDev) console.log("  Finding available port…");
     const port = await findAvailablePort();
-    console.log(`  Using port ${port}`);
-    console.log();
+    if (isDev) console.log(`  Using port ${port}\n`);
 
-    // Step 2: Start app-shell server
-    console.log("  Starting app-shell server…");
+    // Step 3: Start app-shell server
+    if (isDev) console.log("  Starting app-shell server…");
     const url = await startAppShellServer(port);
-    console.log();
-    console.log(`  ✅  Server ready at ${url}`);
-    console.log("  Opening desktop window…");
-    console.log();
+    if (isDev) {
+      console.log();
+      console.log(`  ✅  Server ready at ${url}`);
+      console.log();
+    }
 
-    // Step 3: Create window
-    createMainWindow(url);
+    // Step 4: Navigate window to the app
+    navigateToApp(url);
   } catch (err) {
-    console.error(`  ❌  Desktop startup failed: ${err.message}`);
-    stopServer();
-    app.quit();
+    const msg = err && err.message ? err.message : String(err);
+    if (isDev) {
+      console.error(`  ❌  Desktop startup failed: ${msg}`);
+    }
+    // Show error page instead of quitting
+    showErrorPage(msg);
   }
 }
 
@@ -259,10 +302,10 @@ app.on("web-contents-created", (_event, contents) => {
 // macOS: re-create window when dock icon is clicked
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0 && serverProcess) {
-    // Server is still running, re-create window
     const port = serverProcess.spawnargs.find((_a, i, arr) => arr[i - 1] === "--port");
     if (port) {
-      createMainWindow(`http://localhost:${port}`);
+      createMainWindow();
+      navigateToApp(`http://localhost:${port}`);
     }
   }
 });
@@ -274,10 +317,6 @@ app.on("activate", () => {
 if (typeof module !== "undefined") {
   module.exports = {
     findAvailablePort,
-    DEFAULT_WIDTH,
-    DEFAULT_HEIGHT,
-    MIN_WIDTH,
-    MIN_HEIGHT,
-    APP_TITLE,
+    config,
   };
 }

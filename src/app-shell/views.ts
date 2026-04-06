@@ -2002,6 +2002,13 @@ const CLIENT_JS = `
 
   // ── Init ──────────────────────────────────────────────────────────────
 
+  // Desktop detection: update title when running in Electron wrapper
+  if (window.desktop && window.desktop.isDesktop) {
+    document.title = window.desktop.appName + ' — Desktop';
+    var h1 = document.querySelector('header h1');
+    if (h1) h1.textContent = window.desktop.appName;
+  }
+
   restoreInputs();
   switchMode();
   initDemo();
