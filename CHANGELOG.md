@@ -6,6 +6,35 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 40** — Minimal LSP Bridge and Diagnostics Layer
+  - New module: `src/language-service/` (6 files: `types.ts`, `mapping.ts`, `availability.ts`, `collection.ts`, `session-integration.ts`, `index.ts`)
+  - `LanguageServiceKind` — 7 service kinds (typescript, javascript, python, php, rust, go, none)
+  - `LanguageServiceStatus` — 5 statuses (available, likely_available, unavailable, not_configured, unknown)
+  - `DiagnosticSeverity` — LSP-compatible levels (error, warning, information, hint)
+  - `FileDiagnostic` — structured diagnostic with file, line, column, severity, message, source, code
+  - `WorkspaceDiagnosticSummary` — aggregated summary with counts by severity, files affected, sample messages
+  - `LanguageContextHint` — what intelligence a service can provide (typecheck, lint, format, symbols info)
+  - `LanguageServiceAvailability` — full availability assessment with status, reason, evidence, context hint
+  - `LanguageServiceResultSummary` — combined availability + optional diagnostics collection result
+  - `mapProfileToServiceKind(profileId)` — deterministic mapping for all 8 profiles
+  - `getDiagnosticsSources(serviceKind)` — known diagnostics source names per service
+  - `getDiagnosticsCommandHints(serviceKind)` — shell command hints for diagnostics
+  - `buildContextHint(serviceKind)` — what each language service can do
+  - `hasConfigEvidence(serviceKind, files)` — detect workspace config for a service
+  - `assessLanguageServiceAvailability(profileId, files, toolsOnPath?)` — primary availability planner
+  - `hasLanguageServiceSupport(profileId)` / `getServiceLabel(profileId)` — quick helpers
+  - `parseSimpleDiagnostics(output, source)` — best-effort parser for `file:line:col: severity: message` output
+  - `buildDiagnosticsSummary(profileId, diagnostics, collected)` — aggregate diagnostics into summary
+  - `collectDiagnostics(profileId, workspacePath, files, runner, toolsOnPath?)` — explicit one-shot diagnostics collection
+  - 3 new session event kinds: `language_service_assessed`, `diagnostics_collected`, `diagnostics_collection_failed`
+  - 9 new `SessionSummary` fields: `languageServiceKind`, `languageServiceStatus`, `languageServiceLabel`, `diagnosticsAvailable`, `diagnosticsUnavailableReason`, `lastDiagnosticsErrorCount`, `lastDiagnosticsWarningCount`, `lastDiagnosticsTotalCount`, `lastDiagnosticsFilesAffected`
+  - 3 new commands: `inspect_language_service`, `collect_diagnostics`, `refresh_diagnostics_summary` (language_service category)
+  - `LanguageServiceSessionSummary` / `buildLanguageServiceSessionSummary()` — session-compatible summary extension
+  - DiagnosticsShellRunner dependency injection for testable collection
+  - Subpath export: `./language-service`
+  - `docs/LANGUAGE-SERVICE.md` — comprehensive documentation
+  - 108 new tests covering all profile mappings, availability paths, diagnostics parsing, collection, session integration, command integration, end-to-end scenarios
+
 - **Phase 39** — Profile-Aware Toolchain Adapter Layer and Workspace Checks
   - New module: `src/toolchain/` (6 files: `types.ts`, `mapping.ts`, `check-planning.ts`, `execution.ts`, `session-integration.ts`, `index.ts`)
   - `ToolchainAdapterId` — profile-bound adapter identifier (e.g. `typescript-node-toolchain`)
