@@ -102,6 +102,20 @@ ${CSS}
   <div id="console-status-header" class="console-status-header" style="display:none;"></div>
   <div id="console-presence-bar" class="console-presence-bar" style="display:none;"></div>
   <div id="console-filter-bar" class="console-filter-bar" style="display:none;"></div>
+  <!-- Phase 28: Command Composer -->
+  <div id="command-composer" class="command-composer" style="display:none;">
+    <h3 class="command-composer-title">⚡ Command Composer</h3>
+    <div class="command-composer-bar">
+      <select id="command-select" class="command-select">
+        <option value="">— Select command —</option>
+      </select>
+      <button id="command-submit-btn" type="button" class="btn-primary command-submit-btn" disabled>Run</button>
+    </div>
+    <div id="command-description" class="command-description"></div>
+    <div id="command-fields" class="command-fields"></div>
+    <div id="command-validation" class="command-validation" style="display:none;"></div>
+    <div id="command-result" class="command-result" style="display:none;"></div>
+  </div>
   <div id="session-console-container"></div>
   <div id="session-summary-container"></div>
   <div id="session-timeline-container"></div>
@@ -338,6 +352,25 @@ ul.plain { list-style: disc; padding-left: 1.25rem; margin: .25rem 0; font-size:
 .console-panel .console-toggle { cursor: pointer; background: none; border: 1px solid var(--card-border); border-radius: 4px; padding: .25rem .75rem; font-size: .82rem; color: var(--muted); margin-left: auto; }
 .console-panel .console-toggle:hover { background: #e9ecef; }
 .console-nav-link { color: var(--accent); font-size: .78rem; cursor: pointer; text-decoration: underline; margin-left: .5rem; }
+/* Phase 28: Command Composer styles */
+.command-composer { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.command-composer-title { margin: 0 0 .75rem; font-size: 1.1rem; }
+.command-composer-bar { display: flex; gap: .5rem; align-items: center; margin-bottom: .75rem; }
+.command-select { flex: 1; padding: .45rem .75rem; border: 1px solid var(--card-border); border-radius: 4px; font-size: .9rem; background: #fff; }
+.command-submit-btn { min-width: 70px; }
+.command-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+.command-description { font-size: .85rem; color: var(--muted); margin-bottom: .5rem; min-height: 1.2em; }
+.command-fields { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .5rem; }
+.command-fields label { font-size: .85rem; font-weight: 600; display: flex; flex-direction: column; gap: .2rem; }
+.command-fields input, .command-fields select { padding: .4rem .65rem; border: 1px solid var(--card-border); border-radius: 4px; font-size: .88rem; }
+.command-fields input.field-error { border-color: #dc3545; }
+.command-validation { padding: .5rem .75rem; border-radius: 4px; font-size: .85rem; margin-bottom: .5rem; }
+.command-validation.validation-error { background: #fff5f5; border: 1px solid #f5c6cb; color: #721c24; }
+.command-validation.validation-ok { background: #f0fff4; border: 1px solid #c3e6cb; color: #155724; }
+.command-result { padding: .5rem .75rem; border-radius: 4px; font-size: .85rem; margin-bottom: .5rem; }
+.command-result.result-completed { background: #f0fff4; border: 1px solid #c3e6cb; color: #155724; }
+.command-result.result-failed { background: #fff5f5; border: 1px solid #f5c6cb; color: #721c24; }
+.command-result.result-validation_failed { background: #fffbeb; border: 1px solid #ffeeba; color: #856404; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -1737,11 +1770,231 @@ const CLIENT_JS = `
     _currentSessionId = null;
   }
 
+  // ── Phase 28: Command Composer ──────────────────────────────────────
+
+  var $commandComposer = document.getElementById('command-composer');
+  var $commandSelect = document.getElementById('command-select');
+  var $commandSubmit = document.getElementById('command-submit-btn');
+  var $commandDesc = document.getElementById('command-description');
+  var $commandFields = document.getElementById('command-fields');
+  var $commandValidation = document.getElementById('command-validation');
+  var $commandResult = document.getElementById('command-result');
+  var _commandDefs = [];
+  var _commandAvailability = {};
+
+  /** Field definitions per command type. */
+  var COMMAND_FIELD_DEFS = {
+    open_workspace: [
+      { name: 'path', label: 'Workspace Path', placeholder: '/home/user/project', required: true }
+    ],
+    clone_repository: [
+      { name: 'url', label: 'Clone URL', placeholder: 'https://github.com/org/repo.git', required: true },
+      { name: 'targetPath', label: 'Target Path', placeholder: '/home/user/repos/repo', required: true },
+      { name: 'branch', label: 'Branch (optional)', placeholder: 'main', required: false }
+    ],
+    detect_host: [],
+    attach_mcp: [
+      { name: 'serverId', label: 'Server ID', placeholder: 'my-mcp-server', required: true },
+      { name: 'command', label: 'Command', placeholder: 'npx mcp-server', required: true },
+      { name: 'label', label: 'Label (optional)', placeholder: 'My MCP Server', required: false }
+    ],
+    refresh_mcp_health: [
+      { name: 'serverId', label: 'Server ID', placeholder: 'my-mcp-server', required: true }
+    ],
+    refresh_mcp_discovery: [
+      { name: 'serverId', label: 'Server ID', placeholder: 'my-mcp-server', required: true }
+    ],
+    attach_agent: [
+      { name: 'agentId', label: 'Agent ID', placeholder: 'agent-1', required: true },
+      { name: 'name', label: 'Agent Name', placeholder: 'Code Review Agent', required: true },
+      { name: 'kind', label: 'Kind (optional)', placeholder: 'llm', required: false }
+    ],
+    run_workflow: [
+      { name: 'dataDir', label: 'Data Directory', placeholder: '/path/to/data', required: true },
+      { name: 'hostFile', label: 'Host File (optional)', placeholder: '/path/to/host.json', required: false },
+      { name: 'artifactId', label: 'Artifact ID (optional)', placeholder: '', required: false },
+      { name: 'stopAfter', label: 'Stop After Stage (optional)', placeholder: '', required: false }
+    ],
+    save_session: [],
+    restore_session: [
+      { name: 'sessionId', label: 'Session ID', placeholder: 'session-xxx', required: true }
+    ]
+  };
+
+  /** Load command definitions and availability from the server. */
+  async function initCommandComposer() {
+    try {
+      var defsRes = await fetch('/api/commands');
+      if (defsRes.ok) _commandDefs = await defsRes.json();
+    } catch (e) { /* ignore */ }
+    await refreshCommandAvailability();
+    renderCommandSelect();
+    $commandComposer.style.display = 'block';
+  }
+
+  /** Refresh command availability from the server. */
+  async function refreshCommandAvailability() {
+    try {
+      var availRes = await fetch('/api/commands/availability');
+      if (availRes.ok) {
+        var items = await availRes.json();
+        _commandAvailability = {};
+        items.forEach(function(a) { _commandAvailability[a.commandId] = a; });
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  /** Populate the command select dropdown. */
+  function renderCommandSelect() {
+    var html = '<option value="">\\u2014 Select command \\u2014</option>';
+    var categories = {};
+    _commandDefs.forEach(function(def) {
+      if (!categories[def.category]) categories[def.category] = [];
+      categories[def.category].push(def);
+    });
+    Object.keys(categories).forEach(function(cat) {
+      html += '<optgroup label="' + cat.charAt(0).toUpperCase() + cat.slice(1) + '">';
+      categories[cat].forEach(function(def) {
+        var avail = _commandAvailability[def.id];
+        var disabled = avail && !avail.available;
+        var suffix = disabled ? ' (unavailable)' : '';
+        html += '<option value="' + def.id + '"' + (disabled ? ' disabled' : '') + '>' + def.label + suffix + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    $commandSelect.innerHTML = html;
+  }
+
+  /** Render input fields for the selected command. */
+  function renderCommandFields(commandId) {
+    var fields = COMMAND_FIELD_DEFS[commandId] || [];
+    if (fields.length === 0) {
+      $commandFields.innerHTML = '<span class="muted" style="font-size:.85rem;">No input required.</span>';
+      return;
+    }
+    var html = '';
+    fields.forEach(function(f) {
+      html += '<label>' + f.label + (f.required ? ' <span style="color:#dc3545;">*</span>' : '');
+      html += '<input type="text" id="cmd-field-' + f.name + '" name="' + f.name + '"';
+      html += ' placeholder="' + (f.placeholder || '') + '"';
+      html += (f.required ? ' required' : '') + ' />';
+      html += '</label>';
+    });
+    $commandFields.innerHTML = html;
+  }
+
+  /** Gather field values for the selected command. */
+  function gatherCommandData(commandId) {
+    var fields = COMMAND_FIELD_DEFS[commandId] || [];
+    var data = {};
+    fields.forEach(function(f) {
+      var el = document.getElementById('cmd-field-' + f.name);
+      if (el && el.value.trim()) data[f.name] = el.value.trim();
+      else if (el) data[f.name] = '';
+    });
+    return data;
+  }
+
+  /** Client-side validation before submit. */
+  function clientValidateCommand(commandId, data) {
+    var fields = COMMAND_FIELD_DEFS[commandId] || [];
+    var errors = [];
+    fields.forEach(function(f) {
+      if (f.required && (!data[f.name] || !data[f.name].trim())) {
+        errors.push(f.label + ' is required.');
+      }
+    });
+    return errors;
+  }
+
+  /** Show validation errors in the UI. */
+  function showCommandValidation(errors) {
+    if (errors.length === 0) {
+      $commandValidation.style.display = 'none';
+      return;
+    }
+    $commandValidation.className = 'command-validation validation-error';
+    $commandValidation.innerHTML = errors.map(function(e) { return '\\u26a0 ' + e; }).join('<br>');
+    $commandValidation.style.display = 'block';
+  }
+
+  /** Show command execution result. */
+  function showCommandResult(result) {
+    $commandResult.className = 'command-result result-' + (result.status || 'failed');
+    var icon = result.status === 'completed' ? '\\u2705' : result.status === 'validation_failed' ? '\\u26a0\\ufe0f' : '\\u274c';
+    $commandResult.innerHTML = icon + ' ' + (result.message || 'Unknown result.');
+    $commandResult.style.display = 'block';
+  }
+
+  $commandSelect.addEventListener('change', function() {
+    var cmdId = $commandSelect.value;
+    $commandValidation.style.display = 'none';
+    $commandResult.style.display = 'none';
+    if (!cmdId) {
+      $commandDesc.textContent = '';
+      $commandFields.innerHTML = '';
+      $commandSubmit.disabled = true;
+      return;
+    }
+    var def = _commandDefs.find(function(d) { return d.id === cmdId; });
+    $commandDesc.textContent = def ? def.description : '';
+    renderCommandFields(cmdId);
+    $commandSubmit.disabled = false;
+  });
+
+  $commandSubmit.addEventListener('click', async function() {
+    var cmdId = $commandSelect.value;
+    if (!cmdId) return;
+    var data = gatherCommandData(cmdId);
+    // Client validation
+    var errors = clientValidateCommand(cmdId, data);
+    if (errors.length > 0) {
+      showCommandValidation(errors);
+      return;
+    }
+    showCommandValidation([]);
+    $commandSubmit.disabled = true;
+    $commandSubmit.textContent = 'Running\\u2026';
+    try {
+      var body = JSON.stringify({ commandId: cmdId, data: data });
+      var resp = await fetch('/api/commands/execute', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body });
+      var result = await resp.json();
+      showCommandResult(result);
+      // Refresh session timeline/console after command execution
+      if (_currentSessionId) {
+        await loadSessionTimeline(_currentSessionId);
+      } else {
+        // Try loading current session
+        try {
+          var currentRes = await fetch('/api/session/current');
+          if (currentRes.ok) {
+            var currentData = await currentRes.json();
+            if (currentData.sessionId) {
+              _currentSessionId = currentData.sessionId;
+              await loadSessionTimeline(_currentSessionId);
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }
+      // Refresh command availability after execution
+      await refreshCommandAvailability();
+      renderCommandSelect();
+      // Re-select the command that was just run
+      $commandSelect.value = cmdId;
+    } catch (e) {
+      showCommandResult({ status: 'failed', message: 'Network error: ' + e.message });
+    } finally {
+      $commandSubmit.disabled = false;
+      $commandSubmit.textContent = 'Run';
+    }
+  });
+
   // ── Init ──────────────────────────────────────────────────────────────
 
   restoreInputs();
   switchMode();
   initDemo();
   initStages();
+  initCommandComposer();
 })();
 `;

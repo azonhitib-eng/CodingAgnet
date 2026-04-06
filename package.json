@@ -41,6 +41,10 @@
     "./agents": {
       "import": "./dist/agents/index.js",
       "types": "./dist/agents/index.d.ts"
+    },
+    "./commands": {
+      "import": "./dist/commands/index.js",
+      "types": "./dist/commands/index.d.ts"
     }
   },
   "bin": {

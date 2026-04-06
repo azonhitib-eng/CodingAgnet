@@ -6,6 +6,30 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 28** — Structured Command Composer / Session Input Layer
+  - New module: `src/commands/` with 6 files: types.ts, validation.ts, availability.ts, executor.ts, session-integration.ts, index.ts
+  - 10 structured command types: open_workspace, clone_repository, detect_host, attach_mcp, refresh_mcp_health, refresh_mcp_discovery, attach_agent, run_workflow, save_session, restore_session
+  - 6 command categories: workspace, host, mcp, agent, workflow, session
+  - Typed `CommandDefinition` with id, category, label, description, optional targetStage
+  - Typed payloads per command (e.g. `OpenWorkspacePayload`, `CloneRepositoryPayload`)
+  - `CommandValidationResult` with field-level `CommandFieldError` reporting
+  - `validateCommand()` dispatcher with per-command validators (path validation, URL validation, required field checks)
+  - `CommandContextState`-based availability checking: session-aware, MCP-aware
+  - `getCommandAvailability()`, `getAllCommandAvailability()`, `getAvailableCommandIds()`
+  - `CommandExecutorDeps` dependency injection interface for backend delegation
+  - `executeCommand()` — validates, emits session events, delegates to backend, returns `CommandExecutionResult`
+  - Session integration: `commandSubmitted()`, `commandCompleted()`, `commandFailed()`, `commandValidationFailed()` event factories
+  - `resultToSessionEvent()` mapper
+  - 4 new API endpoints: GET /api/commands, GET /api/commands/availability, POST /api/commands/validate, POST /api/commands/execute
+  - Command composer UI in app shell: category-grouped dropdown, contextual input fields, submit button, validation feedback, result display
+  - Command availability disables unavailable commands in the dropdown
+  - Command results refresh the session timeline/console
+  - CSS styles for command composer (`.command-composer`, `.command-select`, `.command-fields`, `.command-validation`, `.command-result`)
+  - Subpath export: `./commands` in package.json
+  - Re-exports from `app-shell/index.ts` for convenience
+  - 140 new tests covering model, validation, availability, executor, session integration, UI rendering, and server endpoints
+  - New documentation: `docs/COMMANDS.md`
+
 - **Phase 27** — Agent Routing and Stage Participation Model
   - New `AgentRoleHint` type: planner, reviewer, tester, editor, explorer, mcp_bridge, narrator, general
   - New `AgentRoutingMeta` interface on `AgentDefinition`: roleHint, preferredStages, routingPriority, participationEnabled
