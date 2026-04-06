@@ -1,4 +1,4 @@
-# Packaging Decision — Phases 17, 31, 33 & 35
+# Packaging Decision — Phases 17, 31, 33, 35 & 36
 
 ## Decision
 
@@ -70,6 +70,22 @@ See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
 8. Build path clarity: 5 distinct desktop scripts (desktop, desktop:dev, desktop:pack, desktop:build, desktop:installer)
 9. No code signing, no auto-update, no publishing
 
+## Phase 36 additions (code-signing readiness and release polish)
+
+1. Environment-driven code signing in `electron-builder.config.js`:
+   - macOS: `identity` is env-driven (`null` when `CSC_LINK` absent, signs when set)
+   - macOS: `notarize` enabled when `APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` are set
+   - Windows: Authenticode signing via `CSC_LINK` or `WIN_CSC_LINK`
+   - Linux: AppImage unsigned by default, optional GPG noted
+2. `SIGNING_ENV_VARS` map in `electron/config.cjs` — per-platform signing env var definitions
+3. `getSigningConfig(platform?)` — checks env var presence, reports readiness
+4. `isSigningConfigured(platform?)` — convenience boolean
+5. `getReleaseReadiness()` — comprehensive release metadata summary
+6. `docs/CODE-SIGNING.md` — full signing strategy documentation
+7. Updated `docs/ELECTRON.md` with signing readiness, unsigned behavior, OS warnings
+8. No fake signing — builds are honest about signing status
+9. No auto-update, no backend changes
+
 ## Phase 34 additions (first-run polish)
 
 1. Loading page adapts wording for packaged mode (user-friendly, no developer terms)
@@ -96,7 +112,7 @@ See [`docs/ELECTRON.md`](./ELECTRON.md) for full details.
 
 - Application icon and metadata
 - Auto-update mechanism (`electron-updater`)
-- Code signing for distribution (macOS notarization, Windows Authenticode)
+- Actual signing certificates (signing readiness is configured, certs are not — see `docs/CODE-SIGNING.md`)
 - Additional Linux package formats (deb, rpm, Snap, Flatpak)
 - Tray/dock integration
 - Offline-first asset bundling (embed server instead of spawning)

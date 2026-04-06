@@ -3,6 +3,7 @@
  *
  * Phase 33 — first distributable desktop build path.
  * Phase 35 — first installable artifact targets (AppImage, dmg, nsis).
+ * Phase 36 — code-signing readiness and release polish.
  *
  * This configuration produces packaged and installable artifacts for the
  * primary development platform. It wraps the existing Electron shell
@@ -16,8 +17,20 @@
  *
  * What is NOT included:
  *   - Auto-update support
- *   - Code signing
  *   - Multi-platform release automation
+ *
+ * Code signing:
+ *   Signing is environment-driven. When the correct environment variables are
+ *   set, electron-builder will sign artifacts automatically.
+ *
+ *   macOS:  set CSC_LINK (p12 cert path/base64) + CSC_KEY_PASSWORD
+ *           For notarization: APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+ *   Windows: set CSC_LINK (pfx cert path/base64) + CSC_KEY_PASSWORD
+ *            Or: WIN_CSC_LINK + WIN_CSC_KEY_PASSWORD
+ *   Linux:  AppImage is typically unsigned. Optional GPG via GPG_KEY_ID.
+ *
+ *   When no signing vars are set, builds are unsigned and users will see
+ *   OS security warnings (macOS Gatekeeper, Windows SmartScreen).
  */
 
 "use strict";
@@ -80,6 +93,8 @@ const config = {
   // and an installable target (Phase 35).
 
   // Linux — AppImage is a single portable binary, works on most distributions
+  // Code signing: AppImage is typically unsigned; no special env vars needed.
+  // Optional GPG signing can be applied post-build via GPG_KEY_ID.
   linux: {
     target: [{ target: "dir" }, { target: "AppImage" }],
     category: "Development",
@@ -100,8 +115,13 @@ const config = {
   mac: {
     target: [{ target: "dir" }, { target: "dmg" }],
     category: "public.app-category.developer-tools",
-    // No code signing in this phase
-    identity: null,
+    // Code signing: when CSC_LINK is set, electron-builder signs automatically.
+    // When not set, identity: null disables signing without error.
+    identity: process.env.CSC_LINK ? undefined : null,
+    // Notarization: enabled when Apple credentials are present.
+    // electron-builder reads APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID
+    // automatically. "notarize: false" skips it when creds are absent.
+    notarize: !!(process.env.APPLE_ID && process.env.APPLE_APP_SPECIFIC_PASSWORD),
   },
 
   // dmg-specific settings
@@ -111,6 +131,8 @@ const config = {
   },
 
   // Windows — nsis is the standard graphical installer
+  // Code signing: when CSC_LINK (or WIN_CSC_LINK) is set,
+  // electron-builder signs the exe automatically (Authenticode).
   win: {
     target: [{ target: "dir" }, { target: "nsis" }],
   },

@@ -6,6 +6,22 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 36** — Code-Signing Strategy and Desktop Release Polish
+  - Environment-driven code-signing readiness in `electron-builder.config.js`
+  - macOS: `identity` env-driven (signs when `CSC_LINK` set, `null` otherwise); `notarize` env-driven (active when Apple creds present)
+  - Windows: Authenticode signing via `CSC_LINK` or `WIN_CSC_LINK` + `CSC_KEY_PASSWORD`
+  - Linux: AppImage unsigned by default, optional GPG via `GPG_KEY_ID`
+  - `SIGNING_ENV_VARS` map in `electron/config.cjs` — per-platform signing env var definitions
+  - `getSigningConfig(platform?)` — checks env var presence, returns readiness status (configured/active/summary)
+  - `isSigningConfigured(platform?)` — convenience boolean check
+  - `getReleaseReadiness()` — comprehensive release readiness summary (version, productName, signing, icon, artifact naming, unsigned warning)
+  - `docs/CODE-SIGNING.md` — full per-platform signing guide with env vars, unsigned OS behavior, workarounds, and remaining steps
+  - Updated `docs/ELECTRON.md` with Phase 36 signing readiness section, unsigned behavior documentation, OS warning details
+  - Updated `docs/PACKAGING.md` with Phase 36 additions
+  - No fake signing — builds are honest about unsigned status when no credentials are set
+  - No auto-update, no backend changes, no new major subsystems
+  - Phase 36 deterministic test suite
+
 - **Phase 35** — Installer Generation / First Distributable Installer Slice
   - Installable targets added: AppImage (Linux), dmg (macOS), nsis (Windows) in `electron-builder.config.js`
   - `npm run desktop:installer` — compile TypeScript + electron-builder with `--publish never`
