@@ -119,7 +119,6 @@ export function loadAdapterConfigFromEnv(
 
   // Determine kind
   const rawKind = env[ENV_VARS.KIND]?.trim();
-  let kind: AdapterKind;
 
   if (!rawKind) {
     // Vars detected but no kind specified
@@ -152,7 +151,7 @@ export function loadAdapterConfigFromEnv(
     };
   }
 
-  kind = rawKind as AdapterKind;
+  const kind: AdapterKind = rawKind as AdapterKind;
 
   // Stub or echo_test — no additional config needed
   if (kind === "stub" || kind === "echo_test") {
