@@ -1,4 +1,4 @@
-# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33 + Phase 34 + Phase 35 + Phase 36
+# Electron Desktop Wrapper — Phase 31 + Phase 32 + Phase 33 + Phase 34 + Phase 35 + Phase 36 + Phase 37
 
 ## Overview
 
@@ -8,7 +8,9 @@ handling, versioned window titles, desktop-aware server banner, and a preload
 bridge. Phase 33 adds the first real distributable packaging flow using
 electron-builder. Phase 34 polishes the first-run and packaged-mode UX so
 the desktop app feels coherent and resilient in normal use. Phase 36 adds
-code-signing readiness and desktop release polish.
+code-signing readiness and desktop release polish. Phase 37 adds public beta
+readiness: product identity consistency, beta metadata helpers, desktop
+metadata validation, artifact naming validation, and tester-facing docs.
 
 ## Architecture
 
@@ -549,3 +551,93 @@ See [`docs/CODE-SIGNING.md`](./CODE-SIGNING.md) for the full signing strategy.
   a custom icon is defined at `assets/icon.png`
 - **Local-platform-only** — cross-compilation is not supported; build on each
   platform natively
+
+## Desktop Release Polish / Public Beta Readiness (Phase 37)
+
+Phase 37 adds the smallest practical desktop identity and beta readiness
+improvements to make the app ready for broader hands-on beta testing.
+
+### Product identity
+
+Canonical product metadata is now centralized in `electron/config.cjs`:
+
+| Constant | Value |
+|----------|-------|
+| `PRODUCT_APP_ID` | `com.codingagent.desktop` |
+| `PRODUCT_NAME` | `CodingAgent` |
+| `PRODUCT_DESCRIPTION` | (detailed product description) |
+
+`getProductIdentity()` returns all three in a single object for validation.
+
+### Beta metadata
+
+`getBetaMetadata()` returns a comprehensive snapshot of the current beta
+release state:
+
+```js
+const config = require("./electron/config.cjs");
+const meta = config.getBetaMetadata({ betaNumber: 1 });
+// → { version, betaVersion, betaLabel, productIdentity, signing, icon,
+//     knownLimitations, artifactNaming, platforms }
+```
+
+`getBetaVersion()` and `getBetaLabel()` produce version strings like
+`0.1.0-beta` or `0.1.0-beta.3`.
+
+### Icon configuration
+
+`getIconConfig()` reports icon status, expected path, supported formats, and
+a human-readable recommendation:
+
+```js
+config.getIconConfig();
+// → { present: false, path: null, placeholderPath: ".../assets/icon.png",
+//     supportedFormats: ["png", "icns", "ico"],
+//     recommendation: "No icon found at ... Place a 512×512 PNG there ..." }
+```
+
+### Desktop metadata validation
+
+`validateDesktopMetadata()` checks internal consistency of product identity,
+version format, appId format, icon path, description, and limitations list:
+
+```js
+config.validateDesktopMetadata();
+// → { ok: true, issues: [], checked: [...] }
+```
+
+### Artifact naming validation
+
+`validateArtifactNaming()` checks that all artifact naming patterns contain
+the required template variables:
+
+```js
+config.validateArtifactNaming();
+// → { ok: true, issues: [], checked: [...] }
+```
+
+### Beta testing documentation
+
+A new `docs/BETA-TESTING.md` provides:
+- Per-platform install/run guidance (Linux, macOS, Windows)
+- Unsigned build warning guidance and bypass instructions
+- First-run expectations
+- What-to-test checklist
+- Known limitations for beta testers
+- Issue reporting guidance
+- Signed vs unsigned expectations
+- Beta release checklist
+- Build commands reference
+
+### Known limitations list
+
+`BETA_KNOWN_LIMITATIONS` is a canonical array of strings that docs and
+release notes should mirror. Currently includes:
+- Unsigned build warnings
+- No auto-update
+- No custom icon
+- No tray/dock integration
+- Server startup delay
+- Local-platform-only builds
+- No crash reporting
+- Unoptimized dependency bundling

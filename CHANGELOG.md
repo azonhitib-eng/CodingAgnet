@@ -6,6 +6,31 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 37** — Desktop Release Polish / Public Beta Readiness
+  - Product identity constants: `PRODUCT_APP_ID`, `PRODUCT_NAME`, `PRODUCT_DESCRIPTION` in `electron/config.cjs`
+  - `getProductIdentity()` — canonical product metadata for consistency validation
+  - `getBetaLabel(opts?)` / `getBetaVersion(opts?)` — beta-decorated version strings (e.g. `0.1.0-beta`, `0.1.0-beta.3`)
+  - `getBetaMetadata(opts?)` — comprehensive beta release metadata snapshot (version, signing, icon, limitations, artifact naming, platforms)
+  - `getIconConfig()` — icon status, expected path, supported formats, human-readable recommendation
+  - `validateDesktopMetadata()` — structural consistency checks (product name, version, appId, icon path, description, limitations)
+  - `validateArtifactNaming()` — artifact naming pattern validation (checks required template variables)
+  - `BETA_KNOWN_LIMITATIONS` — canonical known limitations list for beta testers (8 items)
+  - `SUPPORTED_ICON_FORMATS` — supported icon file formats (`["png", "icns", "ico"]`)
+  - `docs/BETA-TESTING.md` — full tester-facing beta guide:
+    - Per-platform install/run guidance (Linux AppImage, macOS dmg, Windows NSIS)
+    - Unsigned build warning guidance with bypass instructions per platform
+    - First-run expectations and startup delay explanation
+    - What-to-test checklist (core functionality, error handling, platform-specific)
+    - Known limitations for beta testers
+    - Issue reporting guidance template
+    - Signed vs unsigned expectations comparison table
+    - Beta release checklist
+    - Build commands reference with prerequisites
+  - Updated `docs/ELECTRON.md` with Phase 37 beta readiness section
+  - Updated `docs/PACKAGING.md` with Phase 37 additions
+  - No auto-update, no code signing implementation, no new major features
+  - Phase 37 deterministic test suite (99 tests)
+
 - **Phase 36** — Code-Signing Strategy and Desktop Release Polish
   - Environment-driven code-signing readiness in `electron-builder.config.js`
   - macOS: `identity` env-driven (signs when `CSC_LINK` set, `null` otherwise); `notarize` env-driven (active when Apple creds present)
