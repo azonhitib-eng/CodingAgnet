@@ -122,9 +122,13 @@ export function detectSignals(
   return signals;
 }
 
-/** Normalize file path for matching (trim slashes, lowercase). */
+/** Normalize file path for matching (trim leading/trailing slashes). */
 function normalizeFilePath(p: string): string {
-  return p.replace(/^\/+/, "").replace(/\/+$/, "");
+  // Trim at most one leading slash and one trailing slash to avoid ReDoS
+  let result = p;
+  while (result.startsWith("/")) result = result.slice(1);
+  while (result.endsWith("/")) result = result.slice(0, -1);
+  return result;
 }
 
 /* ------------------------------------------------------------------ */
