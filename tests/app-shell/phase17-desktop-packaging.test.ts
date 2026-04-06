@@ -281,8 +281,8 @@ describe("docs/PACKAGING.md", () => {
   });
 
   it("describes why the choice fits the architecture", () => {
-    expect(content.toLowerCase()).toContain("zero new dependencies");
-    expect(content.toLowerCase()).toContain("minimal disruption");
+    expect(content.toLowerCase()).toContain("wrapper only");
+    expect(content.toLowerCase()).toContain("local-first");
   });
 
   it("lists what Phase 17 adds", () => {
@@ -293,7 +293,7 @@ describe("docs/PACKAGING.md", () => {
 
   it("lists what is still missing", () => {
     expect(content.toLowerCase()).toContain("still missing");
-    expect(content.toLowerCase()).toContain("native window");
+    expect(content.toLowerCase()).toContain("auto-update");
   });
 
   it("documents CodeQL alert status", () => {

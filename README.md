@@ -210,6 +210,7 @@ For real mode with your own data, see **[docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **[docs/AGENTS.md](docs/AGENTS.md)** — Agent registry and attachment model
 - **[docs/AGENT-ROUTING.md](docs/AGENT-ROUTING.md)** — Agent routing and stage participation
 - **[docs/COMMANDS.md](docs/COMMANDS.md)** — Structured command composer
+- **[docs/ELECTRON.md](docs/ELECTRON.md)** — Electron desktop wrapper (Phase 31)
 - **[docs/PACKAGING.md](docs/PACKAGING.md)** — Packaging and desktop launcher decisions
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — Architecture consistency audit and module map
 - **[CHANGELOG.md](CHANGELOG.md)** — Release notes
