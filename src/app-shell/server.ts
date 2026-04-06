@@ -39,7 +39,8 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { execFile } from "node:child_process";
-import { URL } from "node:url";
+import { URL, fileURLToPath } from "node:url";
+import { resolve as pathResolve } from "node:path";
 
 import { getVersion } from "../cli/version.js";
 
@@ -1393,13 +1394,15 @@ See docs/QUICKSTART.md for full setup instructions.
   attachGracefulShutdown(server);
 }
 
-// Run if this is the entry module
+// Run if this is the entry module.
+// Uses import.meta.url for robust cross-platform detection (works on
+// Windows backslash paths and regardless of how tsx/node resolves argv[1]).
+const _thisFile = fileURLToPath(import.meta.url);
+
 const isMain =
   typeof process !== "undefined" &&
   process.argv[1] &&
-  (process.argv[1].endsWith("/server.ts") ||
-   process.argv[1].endsWith("/server.js") ||
-   process.argv[1].includes("app-shell/server"));
+  pathResolve(process.argv[1]) === pathResolve(_thisFile);
 
 if (isMain) {
   main();
