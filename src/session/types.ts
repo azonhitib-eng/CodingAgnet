@@ -164,7 +164,14 @@ export type SessionEventKind =
   /* Language-service / diagnostics events (Phase 40) */
   | "language_service_assessed"
   | "diagnostics_collected"
-  | "diagnostics_collection_failed";
+  | "diagnostics_collection_failed"
+  /* MCP tool invocation events (Phase 41) */
+  | "mcp_tool_invocation_started"
+  | "mcp_tool_invocation_completed"
+  | "mcp_tool_invocation_failed"
+  | "mcp_tool_list_refreshed"
+  | "mcp_github_attached"
+  | "mcp_github_auth_missing";
 
 /** Structured session event. */
 export interface SessionEvent {

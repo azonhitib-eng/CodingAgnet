@@ -6,6 +6,37 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Phase 41** — GitHub MCP Integration and Tool Invocation Layer
+  - New: `src/mcp/tool-invocation.ts` — typed tool invocation domain
+    - `McpToolId`, `McpToolDefinition`, `McpToolInputSchemaSummary` types
+    - `McpToolInvocationRequest`, `McpToolInvocationStatus`, `McpToolInvocationResultSummary`, `McpToolInvocationError` types
+    - `SessionToolActionSummary` — per-session invocation aggregation
+    - `validateInvocationInput()` — validates request against tool schema
+    - `executeToolInvocation()` — core invocation flow with injected executor
+    - `buildSessionToolActionSummary()` — builds session-level summary
+  - New: `src/mcp/tool-registry.ts` — tool inventory per MCP server
+    - `McpToolRegistry` class — register, query, filter, enable/disable tools
+    - `McpToolState` (available / disabled / unavailable / unknown)
+    - `McpToolRegistryEntry` — tool definition + state + reason
+    - `extractInputSchemaSummary()` — extract parameter hints from JSON Schema
+    - Supports both runtime-discovered and manually-registered tools
+  - New: `src/mcp/github-mcp.ts` — first-class GitHub MCP integration
+    - `createGitHubMcpConfig()` — GitHub MCP server config factory
+    - `getKnownGitHubToolDefinitions()` — 10 read-only GitHub tool definitions
+    - `isGitHubAuthConfigured()` / `getGitHubAuthStatus()` — honest auth checking
+    - `assessGitHubMcpStatus()` — comprehensive readiness assessment
+    - `GITHUB_MCP_SERVER_ID`, `KNOWN_GITHUB_TOOL_IDS` constants
+  - New: `src/mcp/tool-session-integration.ts` — 6 new session event kinds
+    - `mcp_tool_invocation_started`, `mcp_tool_invocation_completed`, `mcp_tool_invocation_failed`
+    - `mcp_tool_list_refreshed`, `mcp_github_attached`, `mcp_github_auth_missing`
+    - `MCP_TOOL_EVENT_KINDS`, `isMcpToolEvent()`, `invocationResultToEvents()`
+  - 4 new commands: `list_mcp_tools`, `inspect_mcp_tool`, `invoke_mcp_tool`, `attach_github_mcp`
+  - 7 new `SessionSummary` fields: `toolInvocationCount`, `toolInvocationSuccessCount`, `toolInvocationFailureCount`, `toolsUsed`, `githubMcpAttached`, `githubAuthConfigured`, `githubMcpReadinessMessage`
+  - Supported GitHub read tools: `get_file_contents`, `list_pull_requests`, `pull_request_read`, `list_branches`, `list_commits`, `search_code`, `search_issues`, `search_pull_requests`, `get_commit`, `actions_list`
+  - Views/console integration: 6 new event kinds in inline maps
+  - Documentation: `docs/GITHUB-MCP.md`
+  - 130 new tests (tool invocation, registry, GitHub MCP, commands, session, honesty boundaries)
+
 - **Phase 40** — Minimal LSP Bridge and Diagnostics Layer
   - New module: `src/language-service/` (6 files: `types.ts`, `mapping.ts`, `availability.ts`, `collection.ts`, `session-integration.ts`, `index.ts`)
   - `LanguageServiceKind` — 7 service kinds (typescript, javascript, python, php, rust, go, none)

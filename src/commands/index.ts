@@ -22,6 +22,10 @@ export type {
   InspectToolchainPayload,
   RunWorkspaceCheckPayload,
   RefreshToolchainSummaryPayload,
+  ListMcpToolsPayload,
+  InspectMcpToolPayload,
+  InvokeMcpToolPayload,
+  AttachGitHubMcpPayload,
   CommandPayload,
   CommandFieldError,
   CommandValidationResult,
@@ -51,6 +55,8 @@ export {
   validateRunWorkflow,
   validateRestoreSession,
   validateRunWorkspaceCheck,
+  validateInspectMcpTool,
+  validateInvokeMcpTool,
 } from "./validation.js";
 
 /* availability */
