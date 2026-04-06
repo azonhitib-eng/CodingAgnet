@@ -293,9 +293,17 @@ export function hasConfigEvidence(
   return patterns.some((pattern) => {
     if (pattern.includes("*")) {
       // Simple glob: "tsconfig.*.json" → /^tsconfig\..*\.json$/
-      const escaped = pattern
-        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-        .replace(/\*/g, ".*");
+      // Character-by-character escape to avoid regex metachar issues
+      let escaped = "";
+      for (const ch of pattern) {
+        if (ch === "*") {
+          escaped += ".*";
+        } else if (".+^${}()|[]\\".includes(ch)) {
+          escaped += "\\" + ch;
+        } else {
+          escaped += ch;
+        }
+      }
       const re = new RegExp(`^${escaped}$`);
       return normalized.some((f) => re.test(f));
     }
